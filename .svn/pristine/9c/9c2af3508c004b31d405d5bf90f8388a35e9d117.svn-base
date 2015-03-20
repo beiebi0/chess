@@ -1,0 +1,29 @@
+package org.harshmehta.hw6.client;
+
+import java.io.Serializable;
+
+public class Update implements Serializable {
+  private static final long serialVersionUID = 1L;
+  private int gameId;
+  private String state;
+  private int playerNum;
+  
+  public int getGameId() {
+    return gameId;
+  }
+  public void setGameId(int gameId) {
+    this.gameId = gameId;
+  }
+  public String getState() {
+    return state;
+  }
+  public void setState(String state) {
+    this.state = state;
+  }
+  public int getPlayerNum() {
+    return playerNum;
+  }
+  public void setPlayerNum(int playerNum) {
+    this.playerNum = playerNum;
+  }
+}

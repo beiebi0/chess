@@ -1,0 +1,182 @@
+package org.corinnetaylor.hw3;
+
+import org.shared.chess.Color;
+import org.shared.chess.GameResult;
+import org.shared.chess.GameResultReason;
+import org.shared.chess.Piece;
+import org.shared.chess.State;
+import org.corinnetaylor.hw3.Presenter.View;
+
+import com.google.gwt.core.client.GWT;
+import com.google.gwt.event.dom.client.ClickEvent;
+import com.google.gwt.event.dom.client.ClickHandler;
+import com.google.gwt.uibinder.client.UiBinder;
+import com.google.gwt.uibinder.client.UiField;
+import com.google.gwt.user.client.Element;
+import com.google.gwt.user.client.ui.Button;
+import com.google.gwt.user.client.ui.Composite;
+import com.google.gwt.user.client.ui.DialogBox;
+import com.google.gwt.user.client.ui.Grid;
+import com.google.gwt.user.client.ui.Image;
+import com.google.gwt.user.client.ui.Label;
+import com.google.gwt.user.client.ui.Widget;
+
+public class Graphics extends Composite implements View {
+  private static GameImages gameImages = GWT.create(GameImages.class);
+  private static GraphicsUiBinder uiBinder = GWT.create(GraphicsUiBinder.class);
+
+  interface GraphicsUiBinder extends UiBinder<Widget, Graphics> {
+  }
+
+  @UiField GameCss css;
+  @UiField Label gameStatus;
+  @UiField Grid gameGrid;
+  private Image[][] board = new Image[8][8];
+  private Presenter presenter;
+  
+  
+  public Graphics() {
+	  presenter = new Presenter();
+    initWidget(uiBinder.createAndBindUi(this));
+    gameGrid.resize(8, 8);
+    gameGrid.setCellPadding(0);
+    gameGrid.setCellSpacing(0);
+    gameGrid.setBorderWidth(0);
+    for (int row = 0; row < 8; row++) {
+      for (int col = 0; col < 8; col++) {
+        final Image image = new Image();
+        board[row][col] = image;
+        final int r = row;
+		final int c = col;
+        image.setWidth("100%");
+        image.setResource(gameImages.blank());
+        image.addClickHandler(new ClickHandler() {
+			@Override
+			public void onClick(ClickEvent event) {
+				presenter.clickedOn(r, c);
+			}
+		});
+        gameGrid.setWidget(row, col, image);
+        gameGrid.getCellFormatter().setStyleName(row, col,
+				css.cellsizefix());
+      }
+    }
+    presenter.setView(this);
+    presenter.initNewGame(new State());
+  }
+
+  @Override
+  public void setPiece(int row, int col, Piece piece) {
+	  
+	  if (piece == null) {		
+		  board[row][col].setResource(gameImages.blank());
+			return;		
+		}
+	  
+    switch (piece.getKind()) {
+      case PAWN:
+        if (piece.getColor().isWhite()) {
+          board[row][col].setResource(gameImages.white_pawn());
+        } else {
+          board[row][col].setResource(gameImages.black_pawn());
+        }
+        break;
+      case KNIGHT:
+        if (piece.getColor().isWhite()) {
+          board[row][col].setResource(gameImages.white_knight());
+        } else {
+          board[row][col].setResource(gameImages.black_knight());
+        }
+        break;
+      case BISHOP:
+        if (piece.getColor().isWhite()) {
+          board[row][col].setResource(gameImages.white_bishop());
+        } else {
+          board[row][col].setResource(gameImages.black_bishop());
+        }
+        break;
+      case QUEEN:
+        if (piece.getColor().isWhite()) {
+          board[row][col].setResource(gameImages.white_queen());
+        } else {
+          board[row][col].setResource(gameImages.black_queen());
+        }
+        break;
+      case KING:
+        if (piece.getColor().isWhite()) {
+          board[row][col].setResource(gameImages.white_king());
+        } else {
+          board[row][col].setResource(gameImages.black_king());
+        }
+        break;
+      case ROOK:
+        if (piece.getColor().isWhite()) {
+          board[row][col].setResource(gameImages.white_rook());
+        } else {
+          board[row][col].setResource(gameImages.black_rook());
+        }
+        break;
+    }
+
+  }
+
+  @Override
+  public void setHighlighted(int row, int col, boolean highlighted) {
+    Element element = board[row][col].getElement();
+    if (highlighted) {
+      element.setClassName(css.highlighted());
+    } else {
+      element.removeClassName(css.highlighted());
+    }
+  }
+
+  @Override
+  public void setWhoseTurn(Color color) {
+	    if (color.isBlack()) {
+	        gameStatus.setText("Black's Turn");
+	      } else if (color.isWhite()) {
+	        gameStatus.setText("White's Turn");
+	      }
+  }
+
+  
+	public class GameOverState extends DialogBox {
+		public GameOverState() {
+			setTitle("Game Over!");
+			setText(gameStatus.toString());
+			setAnimationEnabled(true);
+			setGlassEnabled(true);
+
+			Button restart = new Button("Play Again?");
+			restart.addClickHandler(new ClickHandler() {
+				public void onClick(ClickEvent event) {
+					presenter.initNewGame(new State());
+					GameOverState.this.hide();
+				}
+			});
+			setWidget(restart);
+		}
+	}
+  
+  @Override
+  public void setGameResult(GameResult gameResult) {
+	  if (gameResult == null) {
+			return;
+		}
+	  GameResultReason reason = gameResult.getGameResultReason();  
+	  if (reason.equals("CHECKMATE")) {
+	        gameStatus.setText(gameResult.getWinner() + "Wins!");
+	      } else if (reason.equals("FIFTY_MOVE_RULE")) {
+	        gameStatus.setText("Draw due to the Fifty Move Rule!");
+	      } else if (reason.equals("THREEFOLD_REPITITION_RULE")){
+	        gameStatus.setText("Draw due to the Threefold Repitition Rule!");
+	      }else if (reason.equals("STALEMATE")){
+	    	  gameStatus.setText("Draw due to a Stalemate!");
+	      }else {
+	    	  gameStatus.setText("Unknown game over state!");
+	      }
+	  
+	  new GameOverState().show();
+
+  }
+}

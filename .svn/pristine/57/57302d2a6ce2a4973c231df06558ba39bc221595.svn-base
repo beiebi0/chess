@@ -1,0 +1,14 @@
+package org.harshmehta.hw3;
+
+import com.google.gwt.resources.client.CssResource;
+
+public interface GameCss extends CssResource {
+  String highlighted();
+  String board();
+  String grid();
+  String grid2();
+  String selected();
+  String hide();
+  String show();
+  String gameText();
+}

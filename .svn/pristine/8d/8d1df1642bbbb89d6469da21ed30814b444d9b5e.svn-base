@@ -1,0 +1,44 @@
+package org.wenjiechen.hw5;
+
+import org.shared.chess.Move;
+import org.shared.chess.StateChanger;
+//import org.shared.chess.Position;
+import org.wenjiechen.hw3.GameImages;
+import org.wenjiechen.hw3.HistoryCoder;
+import org.wenjiechen.hw3.Presenter;
+
+import com.google.gwt.animation.client.Animation;
+import com.google.gwt.core.client.GWT;
+import com.google.gwt.dom.client.Style.Position;
+import com.google.gwt.dom.client.Style.Unit;
+import com.google.gwt.event.dom.client.ClickEvent;
+import com.google.gwt.event.dom.client.ClickHandler;
+import com.google.gwt.user.client.ui.Grid;
+import com.google.gwt.user.client.ui.Image;
+import com.google.gwt.user.client.ui.Widget;
+
+public class FadeAnimation extends Animation{
+	private Widget image;
+	
+	public FadeAnimation(Widget image){
+		this.image = image;
+	}
+	
+	@Override
+	protected void onUpdate(double progress) {
+		if (progress >0 && progress < 0.25) {
+			image.getElement().getStyle().setOpacity(1 - 4*progress);
+		}else if (progress >= 0.25 && progress < 0.5) {
+			image.getElement().getStyle().setOpacity(1 - 4*(progress-0.25));
+		}else if (progress >= 0.5 && progress < 0.75) {
+			image.getElement().getStyle().setOpacity(1 - 4*(progress-0.5));
+		}else {
+			image.getElement().getStyle()
+					.setOpacity(1 - 4*(progress-0.75));
+		}
+	}	
+	@Override
+	protected void onComplete(){
+		image.getElement().getStyle().setOpacity(1);
+	}
+}

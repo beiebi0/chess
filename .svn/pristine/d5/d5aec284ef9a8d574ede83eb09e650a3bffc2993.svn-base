@@ -1,0 +1,445 @@
+package org.sanjana.hw7.server;
+
+import static com.googlecode.objectify.ObjectifyService.ofy;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.Set;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import org.sanjana.hw5.StateSerializer;
+import org.sanjana.hw6.LoginDetails;
+import org.sanjana.hw7.Match;
+import org.sanjana.hw7.MultiplayerChessService;
+import org.sanjana.hw7.Player;
+import org.sanjana.hw8.SanjanaRating;
+import org.shared.chess.Color;
+import org.shared.chess.State;
+
+import com.google.appengine.api.channel.ChannelMessage;
+import com.google.appengine.api.channel.ChannelService;
+import com.google.appengine.api.channel.ChannelServiceFactory;
+import com.google.appengine.api.users.User;
+import com.google.appengine.api.users.UserService;
+import com.google.appengine.api.users.UserServiceFactory;
+import com.google.gwt.user.server.rpc.RemoteServiceServlet;
+import com.googlecode.objectify.Key;
+import com.googlecode.objectify.ObjectifyService;
+
+public class MultiplayerChessServiceImpl extends RemoteServiceServlet implements MultiplayerChessService
+{
+	private static final Key<Player> aiKey = Key.create(Player.class, "AI");
+
+	static{
+		ObjectifyService.register(Player.class);
+		ObjectifyService.register(Match.class);
+	}
+
+	 public static void addHeadersForCORS(HttpServletRequest req, HttpServletResponse resp) {
+		    resp.setHeader("Access-Control-Allow-Methods", "POST"); // "GET, HEAD, POST, PUT, DELETE, TRACE, OPTIONS");
+		    resp.setHeader("Access-Control-Allow-Origin", "*");
+		    resp.setHeader("Access-Control-Allow-Headers", "X-GWT-Module-Base, X-GWT-Permutation, Content-Type"); 
+		  }
+	 
+	 @Override
+	  protected void doOptions(HttpServletRequest req, HttpServletResponse resp) {
+	    addHeadersForCORS(req, resp);
+	  }
+
+	  @Override
+	  protected void onAfterResponseSerialized(String serializedResponse) {
+	    super.onAfterResponseSerialized(serializedResponse);
+	    addHeadersForCORS(getThreadLocalRequest(), getThreadLocalResponse());
+	  }
+	  
+	private static final long serialVersionUID = 1L;
+
+	UserService userService = UserServiceFactory.getUserService();
+	ChannelService channelService = ChannelServiceFactory.getChannelService();
+
+	@Override
+	public String match()
+	{
+		if (userService.isUserLoggedIn()) 
+		{
+			User user = userService.getCurrentUser();
+			String channelId = user.getEmail();
+			Key<Player> playerKey = Key.create(Player.class, user.getEmail());
+			Player player = ofy().load().key(playerKey).get();
+
+			if (player == null)
+				player = new Player(user.getEmail(), user.getNickname());
+
+			double rating = player.getRating();
+			double RD = player.getRD();
+
+			ofy().save().entity(player).now();
+			String tokens = channelService.createChannel(channelId)+"*"+rating+"*"+RD;
+
+			return tokens;
+		}
+		return null;
+	}
+
+	@Override
+	public void addToken(String channelToken){
+		if (userService.isUserLoggedIn()){
+
+			User user = userService.getCurrentUser();
+			Key<Player> playerKey = Key.create(Player.class, user.getEmail());
+			Player player = ofy().load().key(playerKey).get();
+
+			player.addConnection(channelToken);
+			ofy().save().entity(player).now();		
+		}
+	}
+
+	@Override
+	public String automatch() 
+	{
+		if (userService.isUserLoggedIn()) 
+		{
+			User user = userService.getCurrentUser();
+			Key<Player> playerKey = Key.create(Player.class, user.getEmail());
+			Player player = ofy().load().key(playerKey).get();
+
+			List<Player> otherPlayers = ofy().load().type(Player.class).filter("automatch", true).list();
+
+			if (otherPlayers.isEmpty()) {
+				player.setAutomatch(true);
+				ofy().save().entity(player);
+				return null;
+			} 
+
+			else 
+			{
+				if(otherPlayers.get(0).equals(player)){
+					ofy().save().entity(player).now();
+					player.setAutomatch(true);
+					return null;
+				}
+
+				Player otherPlayer=otherPlayers.remove(0);
+				Date startDate = new Date();
+				otherPlayer.setAutomatch(false);
+
+				Key<Player> otherPlayerKey = Key.create(Player.class, otherPlayer.getEmail());
+
+				Match match=new Match(otherPlayerKey,playerKey,startDate,"");
+				ofy().save().entity(match).now();
+				Key<Match> matchKey = ofy().save().entity(match).now();
+				player.addMatch(matchKey);
+				otherPlayer.addMatch(matchKey);
+
+				ofy().save().entities(player,otherPlayer,match).now();
+
+				String message1 = "newgame*"+match.getId()+"*W*"+player.getEmail()+"*"+player.getRating()
+						+"*"+player.getRD()+"*"+ startDate.getTime();
+
+				String message2 = "newgame*"+match.getId()+"*B*"+otherPlayer.getEmail()+"*"+ 
+						otherPlayer.getRating() + "*" +otherPlayer.getRD()+"*"+startDate.getTime();
+
+				Set<String> tokens1 = player.getConnections();
+				Set<String> tokens2 = otherPlayer.getConnections();
+
+				for (String connection : tokens1)
+					channelService.sendMessage(new ChannelMessage(connection, message2));
+
+				for (String connection : tokens2)
+					channelService.sendMessage(new ChannelMessage(connection, message1));
+				return (tokens1.isEmpty())?"EMPRTY":"NOTEMPTY";
+			}
+		}
+		return null;
+	}
+
+	@Override
+	public void cancelAutoMatch() 
+	{
+		if (userService.isUserLoggedIn()) 
+		{	
+			User user = userService.getCurrentUser();
+			Key<Player> playerKey = Key.create(Player.class, user.getEmail());
+			Player player = ofy().load().key(playerKey).get();
+			player.setAutomatch(false);
+			ofy().save().entity(player);
+		}
+	}
+
+	@Override
+	public Boolean emailMatch(String email) 
+	{
+		if (userService.isUserLoggedIn()) 
+		{
+			User user = userService.getCurrentUser();
+			Key<Player> playerKey = Key.create(Player.class, user.getEmail());
+			Player player = ofy().load().key(playerKey).get();
+			Key<Player> otherPlayerKey = Key.create(Player.class,email);
+			Player otherPlayer = ofy().load().key(otherPlayerKey).get();
+
+			if (otherPlayer == null) {
+				return new Boolean(false);
+			}
+
+			Date startDate = new Date();
+			Match match = new Match(playerKey, otherPlayerKey,startDate,"");
+			Key<Match> matchKey = ofy().save().entity(match).now();
+			player.addMatch(matchKey);
+			otherPlayer.addMatch(matchKey);
+
+			//			ofy().save().entities(player, otherPlayer);
+
+			String message1 = "newgame*"+match.getId()+"*B*"+player.getName()+"*"+ 
+					player.getRating() + "*" +player.getRD()+"*"+startDate.getTime();
+
+			String message2 = "newgame*"+match.getId()+"*W*"+otherPlayer.getName()+"*"+ 
+					otherPlayer.getRating() + "*" + otherPlayer.getRD()+"*"+startDate.getTime();
+
+			Set<String> tokens1 = player.getConnections();
+			Set<String> tokens2 = otherPlayer.getConnections();
+			ofy().save().entities(player, otherPlayer, match).now();
+			for (String connection : tokens1) {
+				channelService.sendMessage(new ChannelMessage(connection, message2));
+			}
+			for (String connection : tokens2) {
+				channelService.sendMessage(new ChannelMessage(connection, message1));
+			}
+			return new Boolean(true);
+		}
+		return new Boolean(false);
+	}
+
+	@Override
+	public void sendMove(Long matchID, String stateString) 
+	{
+		if (userService.isUserLoggedIn()) 
+		{
+			User user = userService.getCurrentUser();
+			Key<Match> matchKey = Key.create(Match.class, matchID);
+			Match match = ofy().load().key(matchKey).get();
+
+			Key<Player> playerKey = Key.create(Player.class, user.getEmail());
+			Player player = ofy().load().key(playerKey).get();
+			Key<Player> otherPlayerKey = match.getOpponent(playerKey);
+			Player otherPlayer = ofy().load().key(otherPlayerKey).get();
+
+			match.setState(stateString);
+			ofy().save().entity(match).now();
+
+			String message = "move*" + matchID.toString() + "*" + stateString;
+			Set<String> tokens = otherPlayer.getConnections();
+			ofy().save().entities(otherPlayer, player).now();
+			if(!otherPlayerKey.equals(aiKey))
+				for (String connection : tokens) 
+					channelService.sendMessage(new ChannelMessage(connection, message));
+		}
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see org.sanjana.hw7.MultiplayerChessService#getMatch(java.lang.Long)
+	 */
+	@Override
+	public String getMatch(Long matchId)
+	{
+		if (userService.isUserLoggedIn()) 
+		{
+			User user = userService.getCurrentUser();
+			Key<Player> playerKey = Key.create(Player.class, user.getEmail());
+			Player player = ofy().load().key(playerKey).get();
+			Key<Match> matchKey = Key.create(Match.class, matchId);
+			Match match = ofy().load().key(matchKey).get();
+
+			String message = match.getId().toString();
+
+			if (match.getPlayerColor(playerKey).isWhite())
+				message += "*W*";
+			else
+				message += "*B*";
+
+			Key<Player> otherPlayerKey = match.getOpponent(playerKey);
+			if(otherPlayerKey.equals(aiKey)){
+				message+="AI*1500*350*"+match.getDate().getTime()+"*"+match.getState();
+			}
+			else{
+				Player opponent = ofy().load().key(otherPlayerKey).get();
+				message+= opponent.getName() + "*"+opponent.getRating() + "*"+opponent.getRD()+"*"+match.getDate().getTime()+"*"+match.getState();
+				ofy().save().entities(match,player,opponent).now();
+			}
+			ofy().save().entities(match).now();
+			return message;
+		}
+		return null;
+	}
+
+	@Override
+	public ArrayList<String> loadAllMatches(LoginDetails user)
+	{
+		Key<Player> playerKey = Key.create(Player.class, user.getEmailAddress());
+		Player player = ofy().load().key(playerKey).get();
+
+		ArrayList<String> results = new ArrayList<String>(player.numberOfMatches());
+
+		for (Match match : ofy().load().keys(player.getMatches()).values()) 
+		{
+			if (match == null) 
+				continue;
+
+			String message = match.getId().toString();
+			if (match.getPlayerColor(playerKey).isWhite())
+				message += "*W*";
+			else
+				message += "*B*";
+
+			Key<Player> opponentKey = match.getOpponent(playerKey);
+			if(opponentKey.equals(aiKey))
+				results.add(message+"AI*"+match.getDate().getTime()+"*"+match.getState());		
+
+			else{
+				Player opponent = ofy().load().key(opponentKey).get();
+				results.add( message+opponent.getName() + "*"+match.getDate().getTime()+"*"+match.getState());
+				ofy().save().entities(match, opponent).now();
+			}
+		}
+		ofy().save().entity(player).now();
+		return results;
+	}
+
+	@Override
+	public void removeMatch(Long matchID)
+	{
+		if (userService.isUserLoggedIn()) 
+		{
+			User user = userService.getCurrentUser();
+			Key<Player> playerKey = Key.create(Player.class,user.getEmail());
+			Player player = ofy().load().key(playerKey).get();
+			Key<Match> matchKey = Key.create(Match.class, matchID);
+			player.removeMatch(matchKey); 
+			ofy().save().entity(player).now();
+
+			Match match = ofy().load().key(matchKey).get();
+			Key<Player> opponentKey=match.getOpponent(playerKey);
+
+			if (opponentKey.equals(aiKey)) 
+				ofy().delete().entity(match);
+
+			else{
+				Player opponent = ofy().load().key(opponentKey).get();
+				if (! opponent.containsMatch(matchKey))
+					ofy().delete().entity(match);
+			
+				String message = "delete*" + matchID.toString();
+				Set<String> tokens = opponent.getConnections();
+					for (String connection : tokens) 
+						channelService.sendMessage(new ChannelMessage(connection, message));
+			}
+		}
+	}
+
+	@Override
+	public void UpdateRank(Long matchID, String stateString)
+	{
+		if (userService.isUserLoggedIn()) 
+		{
+			User user = userService.getCurrentUser();
+			Key<Match> matchKey = Key.create(Match.class, matchID);
+			Match match = ofy().load().key(matchKey).get();
+
+			State state = StateSerializer.deserialize(stateString);
+			Key<Player> playerKey = Key.create(Player.class, user.getEmail());
+			Player player = ofy().load().key(playerKey).get();
+			Key<Player> otherPlayerKey = match.getOpponent(playerKey);
+			Player otherPlayer = ofy().load().key(otherPlayerKey).get();
+
+			ofy().save().entity(match).now();
+
+			if(state.getGameResult()!=null && state.getGameResult().getWinner()!=null){
+				Color c=state.getGameResult().getWinner();
+
+				double playerRating=player.getRating();
+				double otherPlayerRating=otherPlayer.getRating();
+
+				double output;
+				if (match.getPlayerColor(playerKey).equals(c)) 
+					output = 1; //win
+				else if (match.getPlayerColor(otherPlayerKey).equals(c)) 
+					output = 0; //lose
+				else
+					output = 0.5; //Draw
+
+				int days=SanjanaRating.getDays(match.getStartDate(), new Date());
+
+				double playerNewRD = SanjanaRating.newRD(playerRating, player.getRD(),
+						otherPlayer.getRD(), otherPlayer.getRating(), days);
+
+				double playerNewRating = SanjanaRating.newRating(playerRating, player.getRD(), 
+						otherPlayer.getRating(), otherPlayer.getRD(), output, days);
+
+				double otherPlayerNewRD = SanjanaRating.newRD(otherPlayerRating, otherPlayer.getRD(), 
+						player.getRD(), player.getRating(), days);				
+
+				double otherPlayerNewRating = SanjanaRating.newRating(otherPlayerRating, 
+						otherPlayer.getRD(), player.getRating(), player.getRD(), 1-output, days);
+
+				player.setRating(playerNewRating);
+				player.setRD(playerNewRD);
+				otherPlayer.setRating(otherPlayerNewRating);
+				otherPlayer.setRD(otherPlayerNewRD);
+				ofy().save().entities(player,otherPlayer,match).now();
+
+			}
+		}
+	}
+
+	//AI
+
+	@Override
+	public String AIMatch(Color whichColor) 
+	{
+		if (userService.isUserLoggedIn()) 
+		{
+			User user = userService.getCurrentUser();
+			Key<Player> playerKey = Key.create(Player.class, user.getEmail());
+			Player player = ofy().load().key(playerKey).get();
+
+			Date startDate = new Date();
+			Match match;
+
+			match = new Match(aiKey, playerKey, startDate,"");
+
+			ofy().save().entity(match).now();
+			Key<Match> matchKey = ofy().save().entity(match).now();
+			player.addMatch(matchKey);
+			ofy().save().entities(player, match).now();
+
+			String message="aimatch*" + match.getId() + "*" + startDate.getTime();
+			return message;
+		}
+		return null;
+	}
+
+	@Override
+	public String makeAIMove(Long matchId,String stateStr) 
+	{
+		if (userService.isUserLoggedIn()) 
+		{	
+			Key<Match> matchKey = Key.create(Match.class, matchId);
+			Match match = ofy().load().key(matchKey).get();
+			match.setState(stateStr);
+			ofy().save().entity(match).now();
+
+			return stateStr;
+		}
+		return null;
+	}
+	
+	@Override
+	public Match getGame(Long id) {
+		Match game = ofy().load().type(Match.class).id(id).get();
+		return game;
+	}
+	
+}

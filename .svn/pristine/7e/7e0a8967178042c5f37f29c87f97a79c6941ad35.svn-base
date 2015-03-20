@@ -1,0 +1,437 @@
+package org.karthikmahadevan.hw6.server;
+
+import java.io.UnsupportedEncodingException;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.List;
+import java.util.Properties;
+
+import javax.jdo.annotations.PersistenceCapable;
+import javax.jdo.annotations.Persistent;
+import javax.mail.Message;
+import javax.mail.MessagingException;
+import javax.mail.Session;
+import javax.mail.Transport;
+import javax.mail.internet.AddressException;
+import javax.mail.internet.InternetAddress;
+import javax.mail.internet.MimeMessage;
+
+import org.karthikmahadevan.hw6.client.GameService;
+import org.karthikmahadevan.hw7.Match;
+import org.karthikmahadevan.hw7.Player;
+import org.karthikmahadevan.hw8.GlickoRating;
+
+import com.google.gwt.i18n.shared.DateTimeFormat;
+import com.google.gwt.i18n.shared.DateTimeFormat.PredefinedFormat;
+import com.google.gwt.user.server.rpc.RemoteServiceServlet;
+import com.google.appengine.api.channel.ChannelMessage;
+import com.google.appengine.api.channel.ChannelService;
+import com.google.appengine.api.channel.ChannelServiceFactory;
+import com.google.appengine.api.users.User;
+import com.google.appengine.api.users.UserService;
+import com.google.appengine.api.users.UserServiceFactory;
+import com.googlecode.objectify.Key;
+import com.googlecode.objectify.Objectify;
+import com.googlecode.objectify.ObjectifyService;
+
+import static com.googlecode.objectify.ObjectifyService.ofy;
+
+@PersistenceCapable
+public class GameServiceImpl extends RemoteServiceServlet implements
+		GameService {
+	/**
+	 * 
+	 */
+	static {
+		ObjectifyService.register(Player.class);
+		ObjectifyService.register(Match.class);
+	}
+	private static final long serialVersionUID = 1L;
+	@Persistent
+	private static String[] clientIDs = { "", "" };
+
+	@Override
+	public String getToken(String clientID) {
+		// TODO Auto-generated method stub
+		ChannelService channelService = ChannelServiceFactory
+				.getChannelService();
+		String token = channelService.createChannel(clientID);
+
+		if (clientIDs[0] == "") {
+			clientIDs[0] = clientID;
+		} else {
+			clientIDs[1] = clientID;
+			ChannelService opponentChannelService = ChannelServiceFactory
+					.getChannelService();
+			ChannelMessage channelMessage = new ChannelMessage(clientIDs[0],
+					"init");
+			opponentChannelService.sendMessage(channelMessage);
+		}
+		return token;
+	}
+
+	@Override
+	public void updateState(String moveMadeBy, String state) {
+		ChannelService opponentChannelService = ChannelServiceFactory
+				.getChannelService();
+		String opponent;
+		if (moveMadeBy.equals(clientIDs[0])) {
+			opponent = clientIDs[1];
+		} else {
+			opponent = clientIDs[0];
+		}
+		opponentChannelService.sendMessage(new ChannelMessage(opponent, state));
+	}
+
+	@Override
+	public void testCommunication() {
+		ChannelService playerChannelService = ChannelServiceFactory
+				.getChannelService();
+		ChannelMessage channelMessage = new ChannelMessage(clientIDs[0],
+				"test message");
+		playerChannelService.sendMessage(channelMessage);
+	}
+
+	@Override
+	public String addNewConnection() {
+
+		// TODO Auto-generated method stub
+		String clientID = String
+				.valueOf((long) (Math.random() * (double) 100000));
+		String token = createToken(clientID);
+		User user = getCurrentUser();
+		String email = user.getEmail();
+		// ofy().cache(false).delete().type(Player.class).id(email);
+		String name = user.getNickname();
+		
+		Objectify ofy1 = ofy().transaction();
+		ofy1.cache(false);
+		Player player = ofy1.load().type(Player.class).id(email).get();
+		if (player == null) {
+			player = new Player(email, name, new Date());
+			player.getTokens().add(clientID);
+			ofy1.save().entities(player).now();
+		} else {
+			Date lastLogin = player.getLastLogin();
+			if (lastLogin != null) {
+				Date today = new Date();
+				Calendar calLastLogin = Calendar.getInstance();
+				calLastLogin.setTime(lastLogin);
+				Calendar calToday = Calendar.getInstance();
+				calToday.setTime(today);
+				long diffInMilliSec = calToday.getTimeInMillis() - calLastLogin.getTimeInMillis();
+				int diffInDays = (int) diffInMilliSec / (24 * 60 * 60 * 1000);
+				player.setRatings_deviation(GlickoRating.updateRDDueToInactivity(
+						player.getRatings_deviation(),player.getRatings(),diffInDays));
+			}
+			player.setLastLogin(new Date());
+			
+			List<String> tokens = player.getTokens();
+			// List<String> tokens = new ArrayList<String>();
+			// if (tokens == null) tokens = new ArrayList<String>();
+			tokens.add(clientID);
+			player.setTokens(tokens);
+			List<Long> matches = player.getMatches();
+			if (matches == null)
+				matches = new ArrayList<Long>();
+			player.setMatches(matches);
+			ofy1.save().entities(player).now();
+		}
+		ofy1.getTxn().commit();
+		return token;
+	}
+
+	private User getCurrentUser() {
+		UserService userService = UserServiceFactory.getUserService();
+		User user = userService.getCurrentUser();
+		return user;
+	}
+
+	@Override
+	public void getOpponentThroughAutoMatch() {
+		User user = getCurrentUser();
+		Player curPlayer = ofy().cache(false).load().type(Player.class)
+				.id(user.getEmail()).get();
+		Player opponent = (Player) ofy().cache(false).load().type(Player.class)
+				.filter("availablityForAutoMatch", true)
+				.filter("email !=", curPlayer.getEmail()).first().get();
+		if (opponent == null) {
+			curPlayer.setAvailablityForAutoMatch(true);
+			ofy().cache(false).save().entities(curPlayer).now();
+		} else {
+			createNewMatch(opponent.getEmail(), curPlayer.getEmail(), true);
+		}
+	}
+
+	private String createToken(String clientID) {
+		ChannelService channelService = ChannelServiceFactory
+				.getChannelService();
+		String token = channelService.createChannel(clientID);
+		return token;
+	}
+
+	private void sendMessage(String clientID, String message) {
+		ChannelService channelService = ChannelServiceFactory
+				.getChannelService();
+		ChannelMessage channelMessage = new ChannelMessage(clientID, message);
+		channelService.sendMessage(channelMessage);
+	}
+
+	@Override
+	public void updateMove(Long MatchID, String state) {
+		Objectify ofy1 = ofy().transaction();
+		ofy1.cache(false);
+		Match match = ofy1.load().type(Match.class).id(MatchID).get();
+		match.setState(state);
+		ofy1.save().entities(match).now();
+		Player white, black;
+		String whiteEmail = match.getWhite();
+		String blackEmail = match.getBlack();
+
+		white = ofy1.load().type(Player.class).id(whiteEmail).get();
+		black = ofy1.load().type(Player.class).id(blackEmail).get();
+		ofy1.getTxn().commit();
+
+		if (white != null) {
+			sendMessageToPlayer(white,
+				state.toString() + ",MatchID=" + String.valueOf(MatchID));
+		}
+		if (black != null) {
+			sendMessageToPlayer(black,
+				state.toString() + ",MatchID=" + String.valueOf(MatchID));
+		}
+	}
+
+	private void sendMessageToPlayer(Player player, String message) {
+		if (player != null) {
+			for (int i = 0; i < player.getTokens().size(); ++i) {
+				sendMessage(player.getTokens().get(i), message);
+			}
+		}
+	}
+
+	@Override
+	public List<Long> getMatches() {
+		User user = getCurrentUser();
+		Player player = ofy().cache(false).cache(false).load()
+				.key(Key.create(Player.class, user.getEmail())).get();
+		return player.getMatches();
+	}
+
+	@Override
+	public String getMatchInfo(Long matchID) {
+		Match match = ofy().cache(false).load().type(Match.class).id(matchID)
+				.get();
+		StringBuilder matchInfo = new StringBuilder(String.valueOf(matchID));
+
+		matchInfo.append("~" + match.getState() + "~");
+
+		User user = getCurrentUser();
+		String email = user.getEmail();
+		Date startDate = match.getStartDate();
+		String serializedDate = serializeDate(startDate);
+		if (email.equals(match.getWhite())) {
+			matchInfo.append("W");
+			matchInfo.append("~");
+			matchInfo.append(match.getBlack());
+			matchInfo.append("~");
+			matchInfo.append(serializedDate);
+			matchInfo.append("~");
+		} else {
+			matchInfo.append("B");
+			matchInfo.append("~");
+			matchInfo.append(match.getWhite());
+			matchInfo.append("~");
+			matchInfo.append(serializedDate);
+			matchInfo.append("~");
+		}
+
+		return matchInfo.toString();
+	}
+
+	private String serializeDate(Date startDate) {
+		StringBuilder serializedDate = new StringBuilder("");
+		Calendar cal = Calendar.getInstance();
+		cal.setTime(startDate);
+		serializedDate.append(cal.get(Calendar.MONTH));
+		serializedDate.append("~");
+		serializedDate.append(cal.get(Calendar.DATE));
+		serializedDate.append("~");
+		serializedDate.append(cal.get(Calendar.YEAR));
+		return serializedDate.toString();
+	}
+
+	@Override
+	public void deleteMatch(Long matchID) {
+		// TODO Auto-generated method stub
+		User user = getCurrentUser();
+		String email = user.getEmail();
+
+		Player curPlayer = ofy().cache(false).load().type(Player.class)
+				.id(email).get();
+		List<Long> curPlayerMatches = curPlayer.getMatches();
+		curPlayerMatches.remove(matchID);
+		ofy().cache(false).save().entities(curPlayer).now();
+
+		Match match = ofy().cache(false).load().type(Match.class).id(matchID)
+				.get();
+		String whiteEmail = match.getWhite();
+		String opponentEmail;
+		if (email.equals(whiteEmail)) {
+			opponentEmail = match.getBlack();
+		} else {
+			opponentEmail = whiteEmail;
+		}
+		Player opponentPlayer = ofy().cache(false).load().type(Player.class)
+				.id(opponentEmail).get();
+		if (opponentPlayer != null && !opponentPlayer.getMatches().contains(matchID)) {
+			ofy().cache(false).delete().type(Match.class).id(matchID);
+		}
+	}
+
+	@Override
+	public String playWith(String opponentEmail) {
+		String status;
+		Player opponent = ofy().cache(false).load().type(Player.class)
+				.id(opponentEmail).get();
+		if (opponent == null) {
+			opponent = new Player(opponentEmail, opponentEmail, null);
+			ofy().cache(false).save().entities(opponent).now();
+		}
+		User user = getCurrentUser();
+		createNewMatch(user.getEmail(), opponentEmail, false);
+		Properties props = new Properties();
+		Session session = Session.getDefaultInstance(props, null);
+
+		String msgBody = user.getNickname()
+				+ " has invited you to play a game of chess :)"
+				+ "Please visit http://chess-karthik.appspot.com/karthikmahadevan.html to get started.";
+
+		try {
+			Message msg = new MimeMessage(session);
+			msg.setFrom(new InternetAddress(user.getEmail(), user.getNickname()));
+			msg.addRecipient(Message.RecipientType.TO, new InternetAddress(
+					opponentEmail, "Buddy"));
+			msg.setSubject("Invitation to play a game of chess!");
+			msg.setText(msgBody);
+			Transport.send(msg);
+			status = "Invitation sent!";
+		} catch (AddressException e) {
+			status = "That is an invaid email address!";
+		} catch (MessagingException e) {
+			status = "An error occurred sending an invitation!";
+		} catch (UnsupportedEncodingException e) {
+			status = "An error occurred sending an invitation!";
+		}
+		return status;
+	}
+
+	private void createNewMatch(String whiteEmail, String blackEmail,
+			boolean disableAutoMatch) {
+		Objectify ofy1 = ofy().transaction();
+		ofy1.cache(false);
+		Match match = new Match(whiteEmail, blackEmail);
+		ofy1.save().entities(match).now();
+		Player player1 = ofy1.load().type(Player.class).id(whiteEmail).get();
+		if (player1 != null) {
+			List<Long> player1Matches = player1.getMatches();
+			if (player1Matches == null) {
+				player1Matches = new ArrayList<Long>();
+			}
+			player1Matches.add(match.getMatchID());
+			player1.setMatches(player1Matches);
+			
+			if (disableAutoMatch) {
+				player1.setAvailablityForAutoMatch(false);
+			}
+			
+			ofy1.save().entities(player1).now();
+		}
+
+		Player player2 = ofy1.load().type(Player.class).id(blackEmail).get();
+		if (player2 != null) {
+			List<Long> player2Matches = player2.getMatches();
+			if (player2Matches == null) {
+				player2Matches = new ArrayList<Long>();
+			}
+			player2Matches.add(match.getMatchID());
+			player2.setMatches(player2Matches);
+			
+			if (disableAutoMatch) {
+				player2.setAvailablityForAutoMatch(false);
+			}
+			
+			ofy1.save().entities(player2).now();
+		}
+		
+		ofy1.getTxn().commit();
+
+		String serializedStartDate = serializeDate(match.getStartDate());
+		
+		String message = match.getMatchID() + "~~";
+		String player1Name =  player1 == null ? "AI" : player1.getName();
+		String player2Name =  player2 == null ? "AI" : player2.getName();
+		sendMessageToPlayer(player1, message + 
+				"W~" + player2Name + "~" + serializedStartDate + "~");
+		sendMessageToPlayer(player2, message + 
+				"B~" + player1Name + "~" + serializedStartDate + "~");
+	}
+
+	@Override
+	public String getCurrentUserEmailAndRating() {
+		User user = getCurrentUser();
+		String email = user.getEmail();
+		Player player = ofy().load().type(Player.class).id(email).get();
+		return email + "~" + player.getRatings() + "~" + player.getRatings_deviation() + "~";
+	}
+
+	@Override
+	public void updateRating(String white, String black, String winner) {
+		double s_i_player_white,s_i_player_black;
+		if (winner == null) {
+			s_i_player_white = 0.5;
+			s_i_player_black = 0.5;
+		}
+		else if (winner.startsWith("W")) {
+			s_i_player_white = 1;
+			s_i_player_black = 0;
+		}
+		else {
+			s_i_player_white = 0;
+			s_i_player_black = 1;
+		}
+		
+		
+		//Objectify ofy1 = ofy().transaction();
+		Player player_white = ofy().load().type(Player.class).id(white).get();
+		Player player_black = ofy().load().type(Player.class).id(black).get();
+		int player_white_ratings = player_white.getRatings();
+		int player_white_ratings_deviation = player_white.getRatings_deviation();
+		int player_black_ratings = player_black.getRatings();
+		int player_black_ratings_deviation = player_black.getRatings_deviation();
+		
+		Integer updated_ratings_white [] = GlickoRating.getUpdatedRatings(player_white_ratings_deviation, 
+				player_white_ratings, player_black_ratings_deviation, player_black_ratings, s_i_player_white);
+		player_white.setRatings(updated_ratings_white[0]);
+		player_white.setRatings_deviation(updated_ratings_white[1]);
+		
+		Integer updated_ratings_black [] = GlickoRating.getUpdatedRatings(player_black_ratings_deviation, 
+				player_black_ratings, player_white_ratings_deviation, player_white_ratings, s_i_player_black);
+		player_black.setRatings(updated_ratings_black[0]);
+		player_black.setRatings_deviation(updated_ratings_black[1]);
+		
+		ofy().save().entities(player_white);
+		ofy().save().entities(player_black);
+		//ofy().getTxn().commit();
+		
+		sendMessageToPlayer(player_white,"ratings~" + updated_ratings_white[0] + "~" + updated_ratings_white[1] + "~");
+		sendMessageToPlayer(player_black,"ratings~" + updated_ratings_black[0] + "~" + updated_ratings_black[1] + "~");
+	}
+
+	@Override
+	public void newMatchWithAI() {
+		User user = getCurrentUser();
+		createNewMatch(user.getEmail(), "AI", false);
+	}
+}

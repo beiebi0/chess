@@ -1,0 +1,16 @@
+package org.haoxiangzuo.hw3;
+
+public class StringWrapper {
+	String key = "";
+	public StringWrapper()
+	{
+		key = "";
+	}
+	public String getKey() {
+		return key;
+	}
+	public void setKey(String key) {
+		this.key = key;
+	}
+	
+}

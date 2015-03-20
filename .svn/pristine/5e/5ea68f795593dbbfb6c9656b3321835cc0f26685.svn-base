@@ -1,0 +1,11 @@
+package org.jiangfengchen.hw3;
+
+import com.google.gwt.resources.client.CssResource;
+
+public interface GameCss extends CssResource {
+  String highlighted();
+  String grid();
+  String board();
+  String start();
+  String cg();
+}

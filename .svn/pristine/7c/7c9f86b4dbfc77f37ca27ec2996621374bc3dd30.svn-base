@@ -1,0 +1,63 @@
+package org.jiangfengchen.hw7;
+
+import java.io.Serializable;
+import java.util.Date;
+import com.googlecode.objectify.annotation.Entity;
+import com.googlecode.objectify.annotation.Id;
+
+@Entity
+public class Player implements Serializable{
+	@Id String email;
+	String id;
+	boolean online;
+	double Rating=1500;
+	double RD=350;
+	Date lastPlayed;
+	private Player(){}
+	public Player(String mail,String userId){
+		this.email=mail;
+		this.id=userId;
+		online=true;
+		lastPlayed=new Date();
+
+	}
+	public String getEmail() {
+		return email;
+	}
+	public void setEmail(String email) {
+		this.email = email;
+	}
+	public String getId() {
+		return id;
+	}
+	public void setId(String id) {
+		this.id = id;
+	}
+	public boolean isOnline() {
+		return online;
+	}
+	public void setOnline(boolean online) {
+		this.online = online;
+	}
+	public double getRating() {
+		return Rating;
+	}
+	public void setRating(double rating) {
+		Rating = rating;
+	}
+	public double getRD() {
+		return RD;
+	}
+	public void setRD(double rD) {
+		RD = rD;
+	}
+	public Date getLastPlayed() {
+		return lastPlayed;
+	}
+	public void setLastPlayed(Date lastPlayed) {
+		this.lastPlayed = lastPlayed;
+	}
+	
+	
+	
+}

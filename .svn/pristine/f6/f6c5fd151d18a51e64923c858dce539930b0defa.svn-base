@@ -1,0 +1,66 @@
+package org.alishah.hw6.client;
+
+import java.util.Date;
+
+import org.shared.chess.Color;
+
+import com.googlecode.objectify.Key;
+import com.googlecode.objectify.annotation.Entity;
+import com.googlecode.objectify.annotation.Id;
+
+@Entity
+public class MatchInformation {
+	
+	@Id Long matchId;
+	Date matchCreated;
+	String currentState;
+	
+	Key<PlayerInformation> whitePlayer;
+	Key<PlayerInformation> blackPlayer;
+	
+	public MatchInformation() {
+		/* necessary */
+	}
+	
+	public MatchInformation(String state,
+			Key<PlayerInformation> whitePlayer,
+			Key<PlayerInformation> blackPlayer) {
+		
+		this.currentState = state;
+		this.whitePlayer = whitePlayer;
+		this.blackPlayer = blackPlayer;
+		this.matchCreated = new Date();
+	}
+	
+	public Long matchId() {
+		return matchId;
+	}
+	
+	public Date matchCreated() {
+		return matchCreated;
+	}
+	
+	public String currentState() {
+		return currentState();
+	}
+	
+	public void setState(String state) {
+		this.currentState = state;
+	}
+	
+	public Color getPlayerColor(Key<PlayerInformation> player) {
+		if (player.equals(blackPlayer)) {
+			return Color.BLACK;
+		} else {
+			return Color.WHITE;
+		}
+	}
+	
+	public Key<PlayerInformation> getOpponent(Key<PlayerInformation> player) {
+		if (player.equals(blackPlayer)) {
+			return whitePlayer;
+		} else {
+			return blackPlayer;
+		}
+	}
+}

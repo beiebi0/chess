@@ -1,0 +1,786 @@
+package org.yuehlinchung.hw2;
+
+import org.shared.chess.Color;
+import org.shared.chess.GameResult;
+import org.shared.chess.GameResultReason;
+import org.shared.chess.IllegalMove;
+import org.shared.chess.Move;
+import org.shared.chess.Piece;
+import org.shared.chess.PieceKind;
+import org.shared.chess.Position;
+import org.shared.chess.State;
+import org.shared.chess.StateChanger;
+
+public class StateChangerImpl implements StateChanger {
+	public void makeMove(State state, Move move) throws IllegalMove {
+		if (state.getGameResult() != null) {
+			// Game already ended!
+			throw new IllegalMove();
+		}
+		Position from = move.getFrom();
+		Piece piece = state.getPiece(from);
+		if (piece == null) {
+			// Nothing to move!
+			throw new IllegalMove();
+		}
+		Color color = piece.getColor();
+		
+		if (color != state.getTurn()) {
+			// Wrong player moves!
+			throw new IllegalMove();
+		}
+		// TODO: implement chess logic in HW2.
+		Position to = move.getTo();
+		int to_Col = to.getCol();
+		int to_Row = to.getRow();
+		int from_Col = from.getCol();
+		int from_Row = from.getRow();
+
+		// Move to same place = cancel move
+		if (from_Col == to_Col && from_Row == to_Row) {
+			throw new IllegalMove();
+		}
+		// Move out of bound
+		if (to_Col > 7 || to_Col < 0 || to_Row > 7 || to_Row < 0) {
+			throw new IllegalMove();
+		}
+		// Illegal promote
+		if (!legalPromote(state, move)) {
+			throw new IllegalMove();
+		}		
+		State estimatedState = state.copy();
+		// Move Correctly
+		if (!moveCorrect(state, estimatedState, move)) {
+			throw new IllegalMove();
+		}
+		// Check if is check by opponent
+		if (kingUnderCheck(estimatedState, color)) {
+			throw new IllegalMove();
+		}
+		// Change Turn
+		estimatedState.setTurn(color.getOpposite());
+		// Copy State
+		copyState(state, estimatedState);
+		// Fifty moves rule
+		if (state.getNumberOfMovesWithoutCaptureNorPawnMoved() == 100) {
+			if (kingUnderCheck(state, color)) {
+				state.setGameResult(new GameResult(color, GameResultReason.CHECKMATE));
+			} else {
+				state.setGameResult(new GameResult(null, GameResultReason.FIFTY_MOVE_RULE));
+			}
+			return;
+		}
+		// Check if there is possible move
+		if (!possibleMove(state, color.getOpposite()) 
+				&& kingUnderCheck(state, color.getOpposite())) {
+			state.setGameResult(new GameResult(color, GameResultReason.CHECKMATE));
+		} else if (!possibleMove(state, color.getOpposite()) 
+				&& !kingUnderCheck(state, color.getOpposite())) {
+			state.setGameResult(new GameResult(null, GameResultReason.STALEMATE));
+		}
+	}
+
+	public boolean moveCorrect(State state, State estimatedState, Move move) {
+		Position from = move.getFrom();
+		Piece piece = state.getPiece(from);
+		Position to = move.getTo();
+		Color color = piece.getColor();
+		int to_Col = to.getCol();
+		int to_Row = to.getRow();
+		int from_Col = from.getCol();
+		int from_Row = from.getRow();
+		int tmp_Row = Math.abs(to_Row - from_Row);
+		int tmp_Col = Math.abs(to_Col - from_Col);
+				
+		// Capture
+		if (state.getPiece(to) != null) {
+			// Capture same color
+			if (state.getPiece(to).getColor() == color) {
+				return false;
+			}
+			//
+			estimatedState.setNumberOfMovesWithoutCaptureNorPawnMoved(0);
+			if (state.getPiece(to).getKind() == PieceKind.ROOK) {
+				if (to_Col == 0) {
+					if (state.isCanCastleQueenSide(color.getOpposite()))
+						estimatedState.setCanCastleQueenSide(color.getOpposite(), false);
+				} else if (to_Col == 7) {
+					if (state.isCanCastleKingSide(color.getOpposite()))
+						estimatedState.setCanCastleKingSide(color.getOpposite(), false);
+				}
+			}
+		} else {
+			int tmp = estimatedState
+					.getNumberOfMovesWithoutCaptureNorPawnMoved();
+			estimatedState.setNumberOfMovesWithoutCaptureNorPawnMoved(tmp + 1);
+		}
+		// Move
+		estimatedState.setPiece(to, null);
+		estimatedState.setPiece(to, piece);
+		estimatedState.setPiece(from, null);
+		estimatedState.setEnpassantPosition(null);
+
+		switch (piece.getKind()) {
+		case PAWN:
+			estimatedState.setNumberOfMovesWithoutCaptureNorPawnMoved(0);
+			// White
+			if (color == Color.WHITE) {
+				// Pawn at first place
+				if (from_Row == 1) {
+					// Move 2 squares
+					if ((tmp_Row == 2) && (from_Col == to_Col)
+							&& (to_Row > from_Row)) {
+						if (state.getPiece(to) != null
+								|| (state.getPiece(2, to_Col) != null)) {
+							return false;
+						} else {
+							estimatedState.setEnpassantPosition(to);
+						}
+					// Move 1 square
+					} else if ((tmp_Row == 1) && (from_Col == to_Col)
+							&& (to_Row > from_Row)) {
+						if (state.getPiece(to) != null) {
+							return false;
+						}
+					// Capture
+					} else if ((tmp_Row == 1) && (tmp_Col == 1)
+							&& (to_Row > from_Row)) {
+						if (state.getPiece(to) == null) {
+							return false;
+						}
+					} else {
+						return false;
+					}
+				// Pawn not at first place
+				} else if (from_Row != 1) {
+					// Move 1 square
+					if ((tmp_Row == 1) && (from_Col == to_Col)
+							&& (to_Row > from_Row)) {
+						if (state.getPiece(to) != null) {
+							return false;
+						}
+					// Capture
+					} else if ((tmp_Row == 1) && (tmp_Col == 1)
+							&& (to_Row > from_Row)) {
+						if (state.getPiece(to) == null) {
+							// EnpassantPosition
+							if (state.getEnpassantPosition() != null) {
+								if (from_Row == state.getEnpassantPosition()
+										.getRow()) {
+									if (to_Col == state.getEnpassantPosition()
+											.getCol()) {
+										estimatedState.setPiece(
+												state.getEnpassantPosition(),
+												null);
+										estimatedState.setPiece(to, piece);
+										estimatedState.setPiece(from, null);
+										estimatedState
+												.setEnpassantPosition(null);
+									} else {
+										return false;
+									}
+								} else {
+									return false;
+								}
+							} else {
+								return false;
+							}
+						}
+					} else {
+						return false;
+					}
+				}
+				// Promote
+				if (to_Row == 7 && move.getPromoteToPiece() != null) {
+					PieceKind promoteKind = move.getPromoteToPiece();
+					estimatedState.setPiece(to, null);
+					estimatedState.setPiece(to, new Piece(color, promoteKind));
+				} else if (to_Row != 7 && move.getPromoteToPiece() != null) {
+					return false;
+				} else if (to_Row == 7 && move.getPromoteToPiece() == null) {
+					return false;
+				}
+				return true;
+			// Black
+			} else if (color == Color.BLACK) {
+				// Pawn at first place
+				if (from_Row == 6) {
+					// Move 2 squares
+					if ((tmp_Row == 2) && (from_Col == to_Col)
+							&& (to_Row < from_Row)) {
+						if (state.getPiece(to) != null
+								|| (state.getPiece(5, to_Col) != null)) {
+							return false;
+						} else {
+							estimatedState.setEnpassantPosition(to);
+						}
+					// Move 1 square
+					} else if ((tmp_Row == 1) && (from_Col == to_Col)
+							&& (to_Row < from_Row)) {
+						if (state.getPiece(to) != null) {
+							return false;
+						}
+					// Capture
+					} else if ((tmp_Row == 1) && (tmp_Col == 1)
+							&& (to_Row < from_Row)) {
+						if (state.getPiece(to) == null) {
+							return false;
+						}
+					} else {
+						return false;
+					}
+				// Pawn not at first place
+				} else if (from_Row != 6) {
+					// Move 1 square
+					if ((tmp_Row == 1) && (from_Col == to_Col)
+							&& (to_Row < from_Row)) {
+						if (state.getPiece(to) != null) {
+							return false;
+						}
+					// Capture
+					} else if ((tmp_Row == 1) && (tmp_Col == 1)
+							&& (to_Row < from_Row)) {
+						if (state.getPiece(to) == null) {
+							// EnpassantPosition
+							if (state.getEnpassantPosition() != null) {
+								if (from_Row == state.getEnpassantPosition()
+										.getRow()) {
+									if (to_Col == state.getEnpassantPosition()
+											.getCol()) {
+										estimatedState.setPiece(
+												state.getEnpassantPosition(),
+												null);
+										estimatedState.setPiece(to, piece);
+										estimatedState.setPiece(from, null);
+										estimatedState
+												.setNumberOfMovesWithoutCaptureNorPawnMoved(0);
+										estimatedState
+												.setEnpassantPosition(null);
+									} else {
+										return false;
+									}
+								} else {
+									return false;
+								}
+							} else {
+								return false;
+							}
+						}
+					} else {
+						return false;
+					}
+				}
+				// Promote
+				if (to_Row == 0 && move.getPromoteToPiece() != null) {
+					PieceKind promoteKind = move.getPromoteToPiece();
+					estimatedState.setPiece(to, null);
+					estimatedState.setPiece(to, new Piece(color, promoteKind));
+				} else if (to_Row != 0 && move.getPromoteToPiece() != null) {
+					return false;
+				} else if (to_Row == 0 && move.getPromoteToPiece() == null) {
+					return false;
+				}
+				return true;
+			}
+			break;
+		case KING:
+			if ((tmp_Row == 1 && from_Col == to_Col)
+					|| (tmp_Col == 1 && from_Row == to_Row)
+					|| (tmp_Col == 1 && tmp_Row == 1)) {
+				estimatedState.setCanCastleKingSide(color, false);
+				estimatedState.setCanCastleQueenSide(color, false);
+				return true;
+				// Castling
+			} else if (color == Color.WHITE
+					&& state.isCanCastleKingSide(color) == true
+					&& !kingUnderCheck(state, color)
+					&& from_Col == 4 && from_Row == 0 && to_Col == 6
+					&& to_Row == 0 && state.getPiece(0, 5) == null
+					&& state.getPiece(0, 6) == null) {
+				if (castlingCapture(state, color, 0, 5)
+						|| castlingCapture(state, color, 0, 6))
+					return false;
+				estimatedState.setPiece(to, null);
+				estimatedState.setPiece(to, piece);
+				estimatedState.setPiece(from, null);
+				estimatedState.setPiece(0, 5, estimatedState.getPiece(0, 7));
+				estimatedState.setPiece(0, 7, null);
+				estimatedState.setEnpassantPosition(null);
+				estimatedState.setCanCastleKingSide(color, false);
+				estimatedState.setCanCastleQueenSide(color, false);
+				return true;
+			} else if (color == Color.WHITE
+					&& state.isCanCastleQueenSide(color) == true
+					&& !kingUnderCheck(state, color)
+					&& from_Col == 4 && from_Row == 0 && to_Col == 2
+					&& to_Row == 0 && state.getPiece(0, 1) == null
+					&& state.getPiece(0, 2) == null
+					&& state.getPiece(0, 3) == null) {
+				if (castlingCapture(state, color, 0, 2)
+						|| castlingCapture(state, color, 0, 3))
+					return false;
+				estimatedState.setPiece(to, null);
+				estimatedState.setPiece(to, piece);
+				estimatedState.setPiece(from, null);
+				estimatedState.setPiece(0, 3, estimatedState.getPiece(0, 0));
+				estimatedState.setPiece(0, 0, null);
+				estimatedState.setEnpassantPosition(null);
+				estimatedState.setCanCastleKingSide(color, false);
+				estimatedState.setCanCastleQueenSide(color, false);
+				return true;
+			} else if (color == Color.BLACK
+					&& state.isCanCastleKingSide(color) == true
+					&& !kingUnderCheck(state, color)
+					&& from_Col == 4 && from_Row == 7 && to_Col == 6
+					&& to_Row == 7 && state.getPiece(7, 5) == null
+					&& state.getPiece(7, 6) == null) {
+				if (castlingCapture(state, color, 7, 5)
+						|| castlingCapture(state, color, 7, 6))
+					return false;
+				estimatedState.setPiece(to, null);
+				estimatedState.setPiece(to, piece);
+				estimatedState.setPiece(from, null);
+				estimatedState.setPiece(7, 5, estimatedState.getPiece(7, 7));
+				estimatedState.setPiece(7, 7, null);
+				estimatedState.setEnpassantPosition(null);
+				estimatedState.setCanCastleKingSide(color, false);
+				estimatedState.setCanCastleQueenSide(color, false);
+				return true;
+			} else if (color == Color.BLACK
+					&& state.isCanCastleQueenSide(color) == true
+					&& !kingUnderCheck(state, color)
+					&& from_Col == 4 && from_Row == 7 && to_Col == 2
+					&& to_Row == 7 && state.getPiece(7, 1) == null
+					&& state.getPiece(7, 2) == null
+					&& state.getPiece(7, 3) == null) {
+				if (castlingCapture(state, color, 7, 2)
+						|| castlingCapture(state, color, 7, 3))
+					return false;
+				estimatedState.setPiece(to, null);
+				estimatedState.setPiece(to, piece);
+				estimatedState.setPiece(from, null);
+				estimatedState.setPiece(7, 3, estimatedState.getPiece(7, 0));
+				estimatedState.setPiece(7, 0, null);
+				estimatedState.setEnpassantPosition(null);
+				estimatedState.setCanCastleKingSide(color, false);
+				estimatedState.setCanCastleQueenSide(color, false);
+				return true;
+			}
+			break;
+		case QUEEN:
+			if ((tmp_Row == tmp_Col) || (to_Col == from_Col)
+					|| (to_Row == from_Row)) {
+				// If there is some piece on the path
+				if ((to_Col > from_Col) && (to_Row > from_Row)) {
+					for (int i = 1; i < tmp_Row; i++) {
+						if (state.getPiece(from_Row + i, from_Col + i) != null) {
+							return false;
+						}
+					}
+				} else if ((to_Col < from_Col) && (to_Row > from_Row)) {
+					for (int i = 1; i < tmp_Row; i++) {
+						if (state.getPiece(from_Row + i, from_Col - i) != null) {
+							return false;
+						}
+					}
+				} else if ((to_Col > from_Col) && (to_Row < from_Row)) {
+					for (int i = 1; i < tmp_Row; i++) {
+						if (state.getPiece(from_Row - i, from_Col + i) != null) {
+							return false;
+						}
+					}
+				} else if ((to_Col < from_Col) && (to_Row < from_Row)) {
+					for (int i = 1; i < tmp_Row; i++) {
+						if (state.getPiece(from_Row - i, from_Col - i) != null) {
+							return false;
+						}
+					}
+				} else if ((to_Row == from_Row) && (to_Col > from_Col)) {
+					for (int i = 1; i < tmp_Col; i++) {
+						if (state.getPiece(from_Row, from_Col + i) != null) {
+							return false;
+						}
+					}
+				} else if ((to_Row == from_Row) && (to_Col < from_Col)) {
+					for (int i = 1; i < tmp_Col; i++) {
+						if (state.getPiece(from_Row, from_Col - i) != null) {
+							return false;
+						}
+					}
+				} else if ((to_Row > from_Row) && (to_Col == from_Col)) {
+					for (int i = 1; i < tmp_Row; i++) {
+						if (state.getPiece(from_Row + i, from_Col) != null) {
+							return false;
+						}
+					}
+				} else if ((to_Row < from_Row) && (to_Col == from_Col)) {
+					for (int i = 1; i < tmp_Row; i++) {
+						if (state.getPiece(from_Row - i, from_Col) != null) {
+							return false;
+						}
+					}
+				}
+				return true;
+			}
+			break;
+		case KNIGHT:
+			if (((tmp_Row == 2) && (tmp_Col == 1))
+					|| ((tmp_Row == 1) && (tmp_Col == 2))) {
+				return true;
+			}
+			break;
+		case ROOK:
+			if ((to_Col == from_Col) || (to_Row == from_Row)) {
+				// If there is some piece on the path
+				if ((to_Row == from_Row) && (to_Col > from_Col)) {
+					for (int i = 1; i < tmp_Col; i++) {
+						if (state.getPiece(from_Row, from_Col + i) != null) {
+							return false;
+						}
+					}
+				} else if ((to_Row == from_Row) && (to_Col < from_Col)) {
+					for (int i = 1; i < tmp_Col; i++) {
+						if (state.getPiece(from_Row, from_Col - i) != null) {
+							return false;
+						}
+					}
+				} else if ((to_Row > from_Row) && (to_Col == from_Col)) {
+					for (int i = 1; i < tmp_Row; i++) {
+						if (state.getPiece(from_Row + i, from_Col) != null) {
+							return false;
+						}
+					}
+				} else if ((to_Row < from_Row) && (to_Col == from_Col)) {
+					for (int i = 1; i < tmp_Row; i++) {
+						if (state.getPiece(from_Row - i, from_Col) != null) {
+							return false;
+						}
+					}
+				}
+				// Move from first place
+				if (from_Col == 0 && (from_Row == 0 || from_Row == 7)) {
+					estimatedState.setCanCastleQueenSide(color, false);
+				} else if (from_Col == 7 && (from_Row == 0 || from_Row == 7)) {
+					estimatedState.setCanCastleKingSide(color, false);
+				}
+				return true;
+			}
+			break;
+		case BISHOP:
+			if (tmp_Row == tmp_Col) {
+				// If there is some piece on the path
+				if ((to_Col > from_Col) && (to_Row > from_Row)) {
+					for (int i = 1; i < tmp_Row; i++) {
+						if (state.getPiece(from_Row + i, from_Col + i) != null) {
+							return false;
+						}
+					}
+				} else if ((to_Col < from_Col) && (to_Row > from_Row)) {
+					for (int i = 1; i < tmp_Row; i++) {
+						if (state.getPiece(from_Row + i, from_Col - i) != null) {
+							return false;
+						}
+					}
+				} else if ((to_Col > from_Col) && (to_Row < from_Row)) {
+					for (int i = 1; i < tmp_Row; i++) {
+						if (state.getPiece(from_Row - i, from_Col + i) != null) {
+							return false;
+						}
+					}
+				} else if ((to_Col < from_Col) && (to_Row < from_Row)) {
+					for (int i = 1; i < tmp_Row; i++) {
+						if (state.getPiece(from_Row - i, from_Col - i) != null) {
+							return false;
+						}
+					}
+				}
+				return true;
+			}
+			break;
+		}
+		return false;
+	}
+
+	public boolean legalPromote(State state, Move move) {
+		Position from = move.getFrom();
+		Piece piece = state.getPiece(from);
+		int to_Row = move.getTo().getRow();
+		if (move.getPromoteToPiece() != null) {
+			if (piece.getKind() != PieceKind.PAWN
+					|| move.getPromoteToPiece() == PieceKind.KING
+					|| move.getPromoteToPiece() == PieceKind.PAWN) {
+				if (to_Row != 7 || to_Row != 0) {
+					return false;
+				}
+			}
+		}
+		return true;
+	}
+	
+	private boolean kingUnderCheck(State estimatedState, Color color) {
+		Position kingPosition = new Position(0, 0);
+		Piece king = new Piece(color, PieceKind.KING);
+		Color opColor = color.getOpposite();
+		Move testMove;
+		for (int i = 0; i < 8; i++) {
+			for (int j = 0; j < 8; j++) {
+				if (estimatedState.getPiece(i, j) != null
+						&& estimatedState.getPiece(i, j).equals(king)) {
+					kingPosition = new Position(i, j);
+				}
+			}
+		}
+		for (int i = 0; i < 8; i ++) {
+			for (int j = 0; j < 8; j++) {
+				if (estimatedState.getPiece(i, j) != null
+						&& estimatedState.getPiece(i, j).getColor() == opColor) {
+					State testState = estimatedState.copy();
+					testMove = new Move(new Position(i, j), kingPosition, null);
+					if (capturePossible(estimatedState, testState, testMove)) {
+						return true;
+					}
+				}
+			}
+		}
+		return false;
+	}
+
+	private boolean capturePossible(State estimatedState, State testState, Move testMove) {
+		Position from = testMove.getFrom();
+		Piece piece = estimatedState.getPiece(from);
+		Position to = testMove.getTo();
+		Color color = piece.getColor();
+		int to_Col = to.getCol();
+		int to_Row = to.getRow();
+		int from_Col = from.getCol();
+		int from_Row = from.getRow();
+		int tmp_Row = Math.abs(to_Row - from_Row);
+		int tmp_Col = Math.abs(to_Col - from_Col);
+
+		// Move
+		testState.setPiece(to, null);
+		testState.setPiece(to, piece);
+		testState.setPiece(from, null);
+		testState.setEnpassantPosition(null);
+
+		switch (piece.getKind()) {
+		case PAWN:
+			// White
+			if (color == Color.WHITE) {
+				// Capture
+				if ((tmp_Row == 1) && (tmp_Col == 1)
+						&& (to_Row > from_Row)) {
+					if (estimatedState.getPiece(to) == null) {
+						return false;
+					}
+				} else {
+					return false;
+				}
+				return true;
+			// Black
+			} else if (color == Color.BLACK) {
+				// Capture
+				if ((tmp_Row == 1) && (tmp_Col == 1)
+							&& (to_Row < from_Row)) {
+					if (estimatedState.getPiece(to) == null) {
+							return false;
+					}
+				} else {
+					return false;
+				}
+				return true;
+			}
+			break;
+		case KING:
+			if ((tmp_Row == 1 && from_Col == to_Col)
+					|| (tmp_Col == 1 && from_Row == to_Row)
+					|| (tmp_Col == 1 && tmp_Row == 1)) {
+				return true;
+			}
+			break;
+		case QUEEN:
+			if ((tmp_Row == tmp_Col) || (to_Col == from_Col)
+					|| (to_Row == from_Row)) {
+				// If there is some piece on the path
+				if ((to_Col > from_Col) && (to_Row > from_Row)) {
+					for (int i = 1; i < tmp_Row; i++) {
+						if (estimatedState.getPiece(from_Row + i, from_Col + i) != null) {
+							return false;
+						}
+					}
+				} else if ((to_Col < from_Col) && (to_Row > from_Row)) {
+					for (int i = 1; i < tmp_Row; i++) {
+						if (estimatedState.getPiece(from_Row + i, from_Col - i) != null) {
+							return false;
+						}
+					}
+				} else if ((to_Col > from_Col) && (to_Row < from_Row)) {
+					for (int i = 1; i < tmp_Row; i++) {
+						if (estimatedState.getPiece(from_Row - i, from_Col + i) != null) {
+							return false;
+						}
+					}
+				} else if ((to_Col < from_Col) && (to_Row < from_Row)) {
+					for (int i = 1; i < tmp_Row; i++) {
+						if (estimatedState.getPiece(from_Row - i, from_Col - i) != null) {
+							return false;
+						}
+					}
+				} else if ((to_Row == from_Row) && (to_Col > from_Col)) {
+					for (int i = 1; i < tmp_Col; i++) {
+						if (estimatedState.getPiece(from_Row, from_Col + i) != null) {
+							return false;
+						}
+					}
+				} else if ((to_Row == from_Row) && (to_Col < from_Col)) {
+					for (int i = 1; i < tmp_Col; i++) {
+						if (estimatedState.getPiece(from_Row, from_Col - i) != null) {
+							return false;
+						}
+					}
+				} else if ((to_Row > from_Row) && (to_Col == from_Col)) {
+					for (int i = 1; i < tmp_Row; i++) {
+						if (estimatedState.getPiece(from_Row + i, from_Col) != null) {
+							return false;
+						}
+					}
+				} else if ((to_Row < from_Row) && (to_Col == from_Col)) {
+					for (int i = 1; i < tmp_Row; i++) {
+						if (estimatedState.getPiece(from_Row - i, from_Col) != null) {
+							return false;
+						}
+					}
+				}
+				return true;
+			}
+			break;
+		case KNIGHT:
+			if (((tmp_Row == 2) && (tmp_Col == 1))
+					|| ((tmp_Row == 1) && (tmp_Col == 2))) {
+				return true;
+			}
+			break;
+		case ROOK:
+			if ((to_Col == from_Col) || (to_Row == from_Row)) {
+				// If there is some piece on the path
+				if ((to_Row == from_Row) && (to_Col > from_Col)) {
+					for (int i = 1; i < tmp_Col; i++) {
+						if (estimatedState.getPiece(from_Row, from_Col + i) != null) {
+							return false;
+						}
+					}
+				} else if ((to_Row == from_Row) && (to_Col < from_Col)) {
+					for (int i = 1; i < tmp_Col; i++) {
+						if (estimatedState.getPiece(from_Row, from_Col - i) != null) {
+							return false;
+						}
+					}
+				} else if ((to_Row > from_Row) && (to_Col == from_Col)) {
+					for (int i = 1; i < tmp_Row; i++) {
+						if (estimatedState.getPiece(from_Row + i, from_Col) != null) {
+							return false;
+						}
+					}
+				} else if ((to_Row < from_Row) && (to_Col == from_Col)) {
+					for (int i = 1; i < tmp_Row; i++) {
+						if (estimatedState.getPiece(from_Row - i, from_Col) != null) {
+							return false;
+						}
+					}
+				}
+				return true;
+			}
+			break;
+		case BISHOP:
+			if (tmp_Row == tmp_Col) {
+				// If there is some piece on the path
+				if ((to_Col > from_Col) && (to_Row > from_Row)) {
+					for (int i = 1; i < tmp_Row; i++) {
+						if (estimatedState.getPiece(from_Row + i, from_Col + i) != null) {
+							return false;
+						}
+					}
+				} else if ((to_Col < from_Col) && (to_Row > from_Row)) {
+					for (int i = 1; i < tmp_Row; i++) {
+						if (estimatedState.getPiece(from_Row + i, from_Col - i) != null) {
+							return false;
+						}
+					}
+				} else if ((to_Col > from_Col) && (to_Row < from_Row)) {
+					for (int i = 1; i < tmp_Row; i++) {
+						if (estimatedState.getPiece(from_Row - i, from_Col + i) != null) {
+							return false;
+						}
+					}
+				} else if ((to_Col < from_Col) && (to_Row < from_Row)) {
+					for (int i = 1; i < tmp_Row; i++) {
+						if (estimatedState.getPiece(from_Row - i, from_Col - i) != null) {
+							return false;
+						}
+					}
+				}
+				return true;
+			}
+			break;
+		}
+		return false;
+	}
+	
+	private boolean castlingCapture(State state, Color color, int row, int col) {
+		State testState = state.copy();
+		if (color == Color.WHITE) {
+			testState.setPiece(0, 4, null);
+			testState.setPiece(row, col, state.getPiece(0, 4));
+		} else if (color == Color.BLACK) {
+			testState.setPiece(7, 4, null);
+			testState.setPiece(row, col, state.getPiece(7, 4));
+		}
+		if  (kingUnderCheck(testState, color)) {
+			return true;
+		} else { 
+			return false;
+		}
+	}
+	
+	private boolean possibleMove(State state, Color color) {
+		for (int i = 0; i < 8; i++) {
+			for (int j = 0; j < 8; j++) {
+				if (state.getPiece(i, j) != null && state.getPiece(i, j).getColor() == color) {
+					for (int x = 0; x < 8; x++) {
+						for (int y = 0; y < 8; y++) {
+							State testState = state.copy();
+							Move testMove = new Move(new Position(i, j), new Position(x, y), null);
+							if (moveCorrect(state, testState, testMove) 
+									&& !kingUnderCheck(testState, color)) {
+								return true;
+							}
+						}
+					}
+				}
+			}
+		}
+		return false;
+	}
+	
+	private void copyState(State state, State estimatedState) {
+		for (int i = 0; i < 8; i++) {
+			for (int j = 0; j < 8; j++) {
+				state.setPiece(i, j, estimatedState.getPiece(i, j));
+			}
+		}
+		state.setCanCastleKingSide(Color.BLACK,
+				estimatedState.isCanCastleKingSide(Color.BLACK));
+		state.setCanCastleKingSide(Color.WHITE,
+				estimatedState.isCanCastleKingSide(Color.WHITE));
+		state.setCanCastleQueenSide(Color.BLACK,
+				estimatedState.isCanCastleQueenSide(Color.BLACK));
+		state.setCanCastleQueenSide(Color.WHITE,
+				estimatedState.isCanCastleQueenSide(Color.WHITE));
+		state.setEnpassantPosition(estimatedState.getEnpassantPosition());
+		state.setGameResult(estimatedState.getGameResult());
+		state.setNumberOfMovesWithoutCaptureNorPawnMoved(estimatedState
+				.getNumberOfMovesWithoutCaptureNorPawnMoved());
+		state.setTurn(estimatedState.getTurn());
+	}
+	
+}

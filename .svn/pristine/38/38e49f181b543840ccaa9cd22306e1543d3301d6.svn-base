@@ -1,0 +1,219 @@
+package org.karthikmahadevan.hw3;
+
+import org.shared.chess.Color;
+import org.shared.chess.GameResultReason;
+import org.shared.chess.Piece;
+import org.shared.chess.PieceKind;
+import org.shared.chess.Position;
+import org.shared.chess.State;
+import org.shared.chess.GameResult;
+
+public class StateParser {
+	String strState;
+    public StateParser(String state) {
+    	this.strState = state;
+    }
+    
+    public State getState() {
+    	State state = new State();
+    	int i = 1;
+    	
+    	//skip to where turn is
+    	while (strState.charAt(i) != '=') {
+    		++i;
+    	}
+    	state.setTurn(getTurn(strState.charAt(++i)));
+    	
+    	int boardStartIndex, boardEndIndex;
+    	//skip to the beginning of board
+    	while (strState.charAt(i) != '=') {
+    		++i;
+    	}
+    	boardStartIndex = i + 2;
+    	//skip to end of board
+    	//
+    	while (true) {
+    		if (strState.charAt(i++) == ']' && strState.charAt(i) == ']') {
+    			break;
+    		}
+    	}
+    	boardEndIndex = i;
+        Piece[][] board = getPieces(strState.substring(boardStartIndex, boardEndIndex + 1));
+        for (int row = 0; row < State.ROWS; ++row) {
+        	for (int col = 0; col < State.COLS; ++col) {
+        		state.setPiece(new Position(row, col), board[row][col]);
+        	}
+        }
+        
+        //skip to castlekingsidewhite
+        while (strState.charAt(i) != '=') {
+        	++i;
+        }
+        if (strState.charAt(i + 2) == 't') {
+        	state.setCanCastleKingSide(Color.WHITE, true);
+        }
+        else {
+        	state.setCanCastleKingSide(Color.WHITE, false);
+        }
+        
+        //skip to castleKingsideblack
+        while (strState.charAt(i) != ',') {
+        	++i;
+        }
+        if (strState.charAt(i + 2) == 't') {
+        	state.setCanCastleKingSide(Color.BLACK, true);
+        }
+        else {
+        	state.setCanCastleKingSide(Color.BLACK, false);
+        }
+        
+        //skip to castlequeensidewhite
+        while (strState.charAt(i) != '=') {
+        	++i;
+        }
+        if (strState.charAt(i + 2) == 't') {
+        	state.setCanCastleQueenSide(Color.WHITE, true);
+        }
+        else {
+        	state.setCanCastleQueenSide(Color.WHITE, false);
+        }
+        
+        //skip to castlequeensideblack
+        while (strState.charAt(i) != ',') {
+        	++i;
+        }
+        if (strState.charAt(i + 2) == 't') {
+        	state.setCanCastleQueenSide(Color.BLACK, true);
+        }
+        else {
+        	state.setCanCastleQueenSide(Color.BLACK, false);
+        }
+        
+        int index = strState.indexOf("gameResult");
+        if (index != -1) {
+        	GameResult gameResult = getGameResult(strState.substring(index));
+        	state.setGameResult(gameResult);
+        }
+        
+        //skip to enpassant pos
+        int enpassantIndex = strState.indexOf("enpassant");
+        if (enpassantIndex != -1) {
+            i = enpassantIndex;
+        	while (strState.charAt(i) != '=') {
+        		++i;
+        	}
+        	state.setEnpassantPosition(new Position(Character.digit(strState.charAt(i + 2),10), 
+        			Character.digit(strState.charAt(i + 4),10)));
+        }
+        else {
+        	state.setEnpassantPosition(null);
+        }
+        
+        i = strState.indexOf("numberOfMoves");
+        i = strState.indexOf("=",i);
+        StringBuilder numberOfMoves = new StringBuilder();
+        numberOfMoves.append(strState.charAt(i + 1));
+        if (strState.charAt(i + 2) != ']') {
+        	numberOfMoves.append(strState.charAt(i + 2));
+        	if (strState.charAt(i + 3) != ']') {
+            	numberOfMoves.append(strState.charAt(i + 3));
+            }
+        }
+        state.setNumberOfMovesWithoutCaptureNorPawnMoved(Integer.parseInt(numberOfMoves.toString()));
+        
+        return state;
+    }
+    
+    public Color getTurn(char turn) {
+    	if (turn == 'W') {
+    		return Color.WHITE;
+    	}
+    	else {
+    		return Color.BLACK;
+    	}
+    }
+    
+    public Piece[][] getPieces(String board) {
+    	Piece[][] pieces = new Piece[State.ROWS][State.COLS];
+    	int row = -1;
+    	int col = 0;
+    	for (int i = 0; i < board.length(); ++i) {
+    		char curChar = board.charAt(i);
+    		if (curChar == '[') {
+    			++row;
+    			if (board.charAt(i + 1) == 'n') {
+    				//push null and skip the next 4 characters
+    				pieces[row][col] = null;
+    				i = i + 4;
+    			}
+    		}
+    		else if (curChar == '(') {
+    			Color color;
+    			PieceKind kind;
+    			char tempColor = board.charAt(++i);
+    			if (tempColor == 'W') {
+    				color = Color.WHITE;
+    			}
+    			else {
+    				color = Color.BLACK;
+    			}
+    			StringBuilder tempKind = new StringBuilder();
+    			for (i += 2; board.charAt(i) != ')'; ++i) {
+    				tempKind.append(board.charAt(i));
+    			}
+    			kind = PieceKind.valueOf(tempKind.toString());
+    			pieces[row][col] = new Piece(color,kind);
+    		}
+    		else if (curChar == ',') {
+        		col = (++col)%State.COLS;
+        		++i; //skipping the white space
+        		if (board.charAt(i + 1) == 'n') {
+        			pieces[row][col] = null;
+        			i = i + 4;
+        		}
+        	}
+    	}
+    	return pieces;
+    }
+    
+    public GameResult getGameResult(String gameResultSubstr) {
+    	int i;
+    	Color winner;
+    	GameResultReason gameResultReason;
+    	int winnerIndex = gameResultSubstr.indexOf("winner");
+    	if (winnerIndex == -1) {
+    		winner = null;
+    	}
+    	else {
+    		i = winnerIndex;
+    		while (gameResultSubstr.charAt(i) != '=') {
+            	++i;
+            }
+    		if (gameResultSubstr.charAt(i + 1) == 'W') {
+    			winner = Color.WHITE;
+    		}
+    		else {
+    			winner = Color.BLACK;
+    		}
+    	}
+    	int reasonIndex = gameResultSubstr.indexOf("gameResultReason");
+    	i = reasonIndex;
+    	while (gameResultSubstr.charAt(i) != '=') {
+        	++i;
+        }
+    	char reasonBeginsWith = gameResultSubstr.charAt(i + 1);
+    	if (reasonBeginsWith == 'C') {
+    		gameResultReason = GameResultReason.CHECKMATE;
+    	}
+    	else if (reasonBeginsWith == 'F') {
+    		gameResultReason = GameResultReason.FIFTY_MOVE_RULE;
+    	}
+    	else if (reasonBeginsWith == 'S') {
+    		gameResultReason = GameResultReason.STALEMATE;
+    	}
+    	else {
+    		gameResultReason = GameResultReason.THREEFOLD_REPETITION_RULE;
+    	}
+    	return new GameResult(winner, gameResultReason);
+    }
+}

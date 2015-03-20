@@ -1,0 +1,193 @@
+package org.yuehlinchung.hw6.client;
+
+import org.shared.chess.Color;
+import org.shared.chess.GameResult;
+import org.shared.chess.GameResultReason;
+import org.shared.chess.Piece;
+import org.shared.chess.PieceKind;
+import org.shared.chess.Position;
+import org.shared.chess.State;
+
+public class StateHistory {
+	
+	public static String encode(State state) {
+		String str = "";
+		String castling = "";
+		
+		// Castling Information
+		castling += state.isCanCastleKingSide(Color.WHITE) ? "Y" : "N";
+		castling += state.isCanCastleQueenSide(Color.WHITE) ? "Y" : "N";
+		castling += state.isCanCastleKingSide(Color.BLACK) ? "Y" : "N";
+		castling += state.isCanCastleQueenSide(Color.BLACK) ? "Y" : "N";
+		str += "castling=" + castling;
+		// Enpassant Postion Information
+		if (state.getEnpassantPosition() != null) {
+			str += "&enpassant=" + state.getEnpassantPosition().getRow()
+					+ state.getEnpassantPosition().getCol();
+		}
+		// Turn Information
+		str += "&turn=" + state.getTurn();
+		// Game Result Information
+		if (state.getGameResult() != null) {
+			str += "&winner=" + state.getGameResult().getWinner();
+			str += "&reason=" + state.getGameResult().getGameResultReason();
+		}
+		// Number of Moves Without Capture Nor Pawn Moved
+		str += "&numberOfMovesWithoutCaptureNorPawnMoved="
+				+ state.getNumberOfMovesWithoutCaptureNorPawnMoved();
+		// Board Information
+		String board = "";
+		for (int i = 0; i < 8; i++) {
+			for (int j = 0; j < 8; j++) {
+				Piece piece = state.getPiece(i, j);
+				if (piece != null) {
+					board += i + "" + j + ":" + piece.getColor()
+							+ kindCode(piece.getKind()) + ",";
+				}
+			}
+		}
+		str += "&board=" + board;
+		/*String threefold = "";
+		for (int i = 0; i < 8; i++) {
+			for (int j = 0; j < 8; j++) {
+				for (int k = 0; k < 12; k++) {
+					threefold += i + "" + j + "" + k + ":"
+							+ times[i][j][k] + ",";
+				}
+			}
+		}
+		str += "&threefold=" + threefold;*/
+		return str;
+	}
+	
+	public static State decode(String str) {
+		//int[][][] times = null;
+		boolean whiteCanCastleKingSide = false;
+		boolean whiteCanCastleQueenSide = false;
+		boolean blackCanCastleKingSide = false;
+		boolean blackCanCastleQueenSide = false;
+		Position enpassant = null;
+		Color turn = Color.WHITE;
+		Color winner = null;
+		GameResult result = null;
+		GameResultReason reason = null;
+		int numberOfMovesWithoutCaptureNorPawnMoved = 0;
+		Piece[][] board = null;
+		
+		for (String keyValue : str.split("&")) {
+			String[] keyValueArr = keyValue.split("=");
+			String key = keyValueArr[0];
+			String value = keyValueArr[1];
+			
+			if (key.equals("castling")) {
+				whiteCanCastleKingSide = value.charAt(0) == 'Y';
+				whiteCanCastleQueenSide = value.charAt(1) == 'Y';
+				blackCanCastleKingSide = value.charAt(2) == 'Y';
+				blackCanCastleQueenSide = value.charAt(3) == 'Y';
+			} else if (key.equals("enpassant")) {
+				int row = Integer.parseInt(String.valueOf(value.charAt(0)));
+				int col = Integer.parseInt(String.valueOf(value.charAt(1)));
+				enpassant = new Position(row, col);
+			} else if (key.equals("turn")) {
+				turn = value.equals("W") ? Color.WHITE : Color.BLACK;
+			} else if (key.equals("winner")) {
+				winner = value.equals("W") ? Color.WHITE : Color.BLACK;
+			} else if (key.equals("reason")) {
+				if (value.equals("CHECKMATE")) {
+					reason = GameResultReason.CHECKMATE;
+				} else if (value.equals("FIFTY_MOVE_RULE")) {
+					reason = GameResultReason.FIFTY_MOVE_RULE;
+				} else if (value.equals("THREEFOLD_REPETITION_RULE")) {
+					reason = GameResultReason.THREEFOLD_REPETITION_RULE;
+				} else if (value.equals("STALEMATE")) {
+					reason = GameResultReason.STALEMATE;
+				}
+			} else if (key.equals("numberOfMovesWithoutCaptureNorPawnMoved")) {
+				numberOfMovesWithoutCaptureNorPawnMoved = Integer.parseInt(value);
+			} else if (key.equals("board")) {
+				board = boardSet(value);
+			} /*else if (key.equals("threefold")) {
+				times = threefoldSet(value);
+			}*/
+		}
+		if (reason != null) {
+			result = new GameResult(winner, reason);
+		}
+		return new State(turn, board, new boolean[] {whiteCanCastleKingSide,
+				blackCanCastleKingSide}, new boolean[] {whiteCanCastleQueenSide,
+				blackCanCastleQueenSide}, enpassant,
+				numberOfMovesWithoutCaptureNorPawnMoved, result);
+	}
+	
+	private  static String kindCode(PieceKind kind) {
+		switch(kind) {
+		case PAWN:
+			return "P";
+		case KING:
+			return "K";
+		case QUEEN:
+			return "Q";
+		case KNIGHT:
+			return "N";
+		case BISHOP:
+			return "B";
+		case ROOK:
+			return "R";
+		}
+		return "";
+	}
+	/*
+	private static int[][][] threefoldSet(String value) {
+		int[][][] times = new int[8][8][12];
+		int row, col, type, time;
+		for (String piece: value.split(",")) {
+			String[] pieceArr = piece.split(":");
+			String pos = pieceArr[0];
+			String kind = pieceArr[1];
+			row = Integer.parseInt(String.valueOf(pos.charAt(0)));
+			col = Integer.parseInt(String.valueOf(pos.charAt(1)));
+			type = Integer.parseInt(String.valueOf(pos.charAt(2)));
+			time = Integer.parseInt(String.valueOf(kind.charAt(0)));
+			times[row][col][type] = time;
+		}
+		return times;
+	}*/
+	
+	private static Piece[][] boardSet(String value) {
+		Piece[][] board = new Piece[8][8];
+		int row, col;
+		Color color;
+		PieceKind kind;
+		char kindChar;
+		
+		for (String piece : value.split(",")) {
+			String[] pieceArr = piece.split(":");
+			String pos = pieceArr[0];
+			String colorKind = pieceArr[1];
+			// Piece Position
+			row = Integer.parseInt(String.valueOf(pos.charAt(0)));
+			col = Integer.parseInt(String.valueOf(pos.charAt(1)));
+			// Piece Color
+			color = colorKind.charAt(0) == 'W' ? Color.WHITE : Color.BLACK;
+			// Piece Kind
+			kindChar = colorKind.charAt(1);
+			if (kindChar == 'P') {
+				kind = PieceKind.PAWN;
+			} else if (kindChar == 'K') {
+				kind = PieceKind.KING;
+			} else if (kindChar == 'Q') {
+				kind = PieceKind.QUEEN;
+			} else if (kindChar == 'N') {
+				kind = PieceKind.KNIGHT;
+			} else if (kindChar == 'B') {
+				kind = PieceKind.BISHOP;
+			} else if (kindChar == 'R') {
+				kind = PieceKind.ROOK;
+			} else {
+				kind = null;
+			}
+			board[row][col] = new Piece(color, kind);
+		}
+		return board;
+	}
+}

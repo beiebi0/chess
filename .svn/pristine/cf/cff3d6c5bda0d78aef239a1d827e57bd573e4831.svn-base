@@ -1,0 +1,13 @@
+package org.kuangchelee.hw2_5;
+
+import org.shared.chess.AbstractStateExplorerAllTest;
+//import org.kuangchelee.hw2_5.StateExplorerImplTest;
+import org.shared.chess.StateExplorer;
+
+public class StateExplorerImplAllTest extends AbstractStateExplorerAllTest {
+//public class StateExplorerImplAllTest extends StateExplorerImplTest {
+  @Override
+  public StateExplorer getStateExplorer() {
+    return new StateExplorerImpl();
+  }
+}

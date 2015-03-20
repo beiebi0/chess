@@ -1,0 +1,156 @@
+package org.jiangfengchen.hw1;
+
+import static org.shared.chess.Color.BLACK;
+import static org.shared.chess.Color.WHITE;
+import static org.shared.chess.PieceKind.BISHOP;
+import static org.shared.chess.PieceKind.PAWN;
+import static org.shared.chess.PieceKind.QUEEN;
+import static org.shared.chess.PieceKind.KNIGHT;
+import static org.shared.chess.PieceKind.KING;
+import static org.shared.chess.PieceKind.ROOK;
+import static org.shared.chess.State.COLS;
+import static org.shared.chess.State.ROWS;
+
+import org.junit.Test;
+import org.shared.chess.AbstractStateChangerTest;
+import org.shared.chess.GameResult;
+import org.shared.chess.GameResultReason;
+import org.shared.chess.IllegalMove;
+import org.shared.chess.Move;
+import org.shared.chess.Piece;
+import org.shared.chess.Position;
+import org.shared.chess.State;
+
+public abstract class AbstractStateChangerIllegalBlackCapture extends AbstractStateChangerTest{
+	@Test(expected = IllegalMove.class)
+	  public void testIllegalPawnCapture() {
+		boolean[] CastleBool={true, true};
+		Piece[][] board = new Piece[ROWS][COLS];
+	    Move move = new Move(new Position(4, 5), new Position(3, 5), null);
+	    State original= new State(BLACK,board,CastleBool,CastleBool,null,7,null);
+	    original.setPiece(4, 5,new Piece(BLACK,PAWN));
+	    original.setPiece(3, 5,new Piece(WHITE,PAWN));
+	    stateChanger.makeMove(original, move);
+	  }
+	@Test(expected = IllegalMove.class)
+	  public void testIllegalEnPassant() {
+		boolean[] CastleBool={false, false};
+		Piece[][] board = new Piece[ROWS][COLS];
+	    Move move = new Move(new Position(3, 2), new Position(2, 1), null);
+	    State original= new State(BLACK,board,CastleBool,CastleBool,null,0,null);
+	    original.setPiece(3, 2,new Piece(BLACK,PAWN));
+	    original.setPiece(3, 1,new Piece(WHITE,PAWN));
+	    original.setPiece(0, 0,new Piece(BLACK,KING));
+	    original.setPiece(7, 7,new Piece(WHITE,KING));
+	    stateChanger.makeMove(original, move);
+	  }
+	@Test(expected = IllegalMove.class)
+	  public void testIllegalQueenCaptureVertical() {
+		boolean[] CastleBool={false,false};
+		Piece[][] board = new Piece[ROWS][COLS];
+	    Move move = new Move(new Position(4, 5), new Position(2, 5), null);
+	    State original= new State(BLACK,board,CastleBool,CastleBool,null,0,null);
+	    original.setPiece(0, 0,new Piece(BLACK,KING));
+	    original.setPiece(7, 7,new Piece(WHITE,KING));
+	    original.setPiece(4, 5,new Piece(BLACK,QUEEN));
+	    original.setPiece(3, 5,new Piece(BLACK,KNIGHT));
+	    original.setPiece(2, 5,new Piece(WHITE,PAWN));
+	    stateChanger.makeMove(original, move);
+	  }
+	@Test(expected = IllegalMove.class)
+	  public void testIllegalQueenCaptureDiagonal() {
+		boolean[] CastleBool={true, true};
+		Piece[][] board = new Piece[ROWS][COLS];
+	    Move move = new Move(new Position(2, 3), new Position(5, 6), null);
+	    State original= new State(BLACK,board,CastleBool,CastleBool,null,0,null);
+	    original.setPiece(2, 3,new Piece(BLACK,QUEEN));
+	    original.setPiece(4, 5,new Piece(WHITE,ROOK));
+	    original.setPiece(5, 6,new Piece(WHITE,PAWN));
+	    stateChanger.makeMove(original, move);
+	  }
+	@Test(expected = IllegalMove.class)
+	  public void testIllegalBishopCaptureVertical() {
+		boolean[] CastleBool={false,false};
+		Piece[][] board = new Piece[ROWS][COLS];
+	    Move move = new Move(new Position(4, 5), new Position(2, 5), null);
+	    State original= new State(BLACK,board,CastleBool,CastleBool,null,0,null);
+	    original.setPiece(0, 0,new Piece(BLACK,KING));
+	    original.setPiece(7, 7,new Piece(WHITE,KING));
+	    original.setPiece(4, 5,new Piece(BLACK,BISHOP));
+	    original.setPiece(2, 5,new Piece(WHITE,PAWN));
+	    stateChanger.makeMove(original, move);
+	  }
+	@Test(expected = IllegalMove.class)
+	  public void testIllegalBishopCaptureDiagonal() {
+		boolean[] CastleBool={false, false};
+		Piece[][] board = new Piece[ROWS][COLS];
+	    Move move = new Move(new Position(2, 3), new Position(5, 6), null);
+	    State original= new State(BLACK,board,CastleBool,CastleBool,null,0,null);
+	    original.setPiece(0, 0,new Piece(BLACK,KING));
+	    original.setPiece(7, 7,new Piece(WHITE,KING));
+	    original.setPiece(2, 3,new Piece(BLACK,BISHOP));
+	    original.setPiece(4, 5,new Piece(BLACK,KNIGHT));
+	    original.setPiece(5, 6,new Piece(WHITE,ROOK));
+	    stateChanger.makeMove(original, move);
+	  }
+	@Test(expected = IllegalMove.class)
+	  public void testIllegalKnightCapture() {
+		boolean[] CastleBool={true, true};
+		Piece[][] board = new Piece[ROWS][COLS];
+	    Move move = new Move(new Position(1, 2), new Position(3, 4), null);
+	    State original= new State(BLACK,board,CastleBool,CastleBool,null,0,null);
+	    original.setPiece(1, 2,new Piece(BLACK,KNIGHT));
+	    original.setPiece(3, 4,new Piece(WHITE,QUEEN));
+	    stateChanger.makeMove(original, move);
+	  }
+	@Test(expected = IllegalMove.class)
+	  public void testIllegalRookCaptureSkew() {
+		boolean[] CastleBool={false, false};
+		Piece[][] board = new Piece[ROWS][COLS];
+	    Move move = new Move(new Position(2, 4), new Position(3, 1), null);
+	    State original= new State(BLACK,board,CastleBool,CastleBool,null,0,null);
+	    original.setPiece(0, 0,new Piece(BLACK,KING));
+	    original.setPiece(7, 7,new Piece(WHITE,KING));
+	    original.setPiece(2, 4,new Piece(BLACK,ROOK));
+	    original.setPiece(3, 1,new Piece(WHITE,KNIGHT));
+	    stateChanger.makeMove(original, move);
+	  }
+	@Test(expected = IllegalMove.class)
+	  public void testIllegalRookCaptureVertical() {
+		boolean[] CastleBool={false, false};
+		Piece[][] board = new Piece[ROWS][COLS];
+	    Move move = new Move(new Position(4, 5), new Position(2, 5), null);
+	    State original= new State(BLACK,board,CastleBool,CastleBool,null,0,null);
+	    original.setPiece(0, 0,new Piece(BLACK,KING));
+	    original.setPiece(7, 7,new Piece(WHITE,KING));
+	    original.setPiece(4, 5,new Piece(BLACK,ROOK));
+	    original.setPiece(3, 5,new Piece(BLACK,KNIGHT));
+	    original.setPiece(2, 5,new Piece(WHITE,PAWN));
+	    stateChanger.makeMove(original, move);
+	  }
+	@Test(expected = IllegalMove.class)
+	  public void testIllegalKingCaptureTooFar() {
+		boolean[] CastleBool={false, false};
+		Piece[][] board = new Piece[ROWS][COLS];
+	    Move move = new Move(new Position(1, 2), new Position(3, 2), null);
+	    State original= new State(BLACK,board,CastleBool,CastleBool,null,0,null);
+	    original.setPiece(0, 0,new Piece(BLACK,KING));
+	    original.setPiece(7, 7,new Piece(WHITE,KING));
+	    original.setPiece(1, 2,new Piece(BLACK,KING));
+	    original.setPiece(3, 2,new Piece(WHITE,BISHOP));
+	    stateChanger.makeMove(original, move);
+	  }
+	@Test(expected = IllegalMove.class)
+	  public void testIllegalKingCaptureGetDangerous() {
+		boolean[] CastleBool={true, true};
+		Piece[][] board = new Piece[ROWS][COLS];
+	    Move move = new Move(new Position(3, 4), new Position(4, 4), null);
+	    State original= new State(BLACK,board,CastleBool,CastleBool,null,0,null);
+	    original.setPiece(3, 4,new Piece(BLACK,KING));
+	    original.setPiece(6, 6,new Piece(WHITE,BISHOP));
+	    original.setPiece(4, 4,new Piece(WHITE,KNIGHT));
+	    original.setPiece(7, 7,new Piece(WHITE,KING));
+	    stateChanger.makeMove(original, move);
+	  }
+	
+}

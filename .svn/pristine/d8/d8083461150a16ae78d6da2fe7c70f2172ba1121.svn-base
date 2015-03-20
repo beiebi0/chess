@@ -1,0 +1,58 @@
+package org.shihweihuang.hw7;
+
+import java.util.HashSet;
+import java.util.Set;
+
+import com.googlecode.objectify.annotation.Entity;
+import com.googlecode.objectify.annotation.Id;
+import com.googlecode.objectify.annotation.Serialize;
+
+@Entity
+public class Player {
+  @Id String email;
+  String name;
+  @Serialize Set<String> tokens;
+  @Serialize Set<String> matches;
+  double ranking;
+
+  public double getRanking() {
+		return ranking;
+	}
+
+	public void setRanking(double ranking) {
+		this.ranking = ranking;
+	}
+
+	public Player(){
+  	email = "";
+  	name = "";
+  	tokens = new HashSet<String>();
+  	matches = new HashSet<String>();
+  	ranking = 1500.00;
+  }
+  
+	public String getEmail() {
+		return email;
+	}
+	public void setEmail(String email) {
+		this.email = email;
+	}
+	public String getName() {
+		return name;
+	}
+	public void setName(String name) {
+		this.name = name;
+	}
+	public Set<String> getTokens() {
+		return tokens;
+	}
+	public void setTokens(Set<String> tokens) {
+		this.tokens = tokens;
+	}
+	public Set<String> getMatches() {
+		return matches;
+	}
+	public void setMatches(Set<String> matches) {
+		this.matches = matches;
+	}
+}

@@ -1,0 +1,70 @@
+package org.leozis.hw9;
+
+import org.leozis.hw2_5.StateExplorerImpl;
+import org.shared.chess.Color;
+import org.shared.chess.Move;
+import org.shared.chess.Piece;
+import org.shared.chess.State;
+import org.shared.chess.StateExplorer;
+
+public class Heuristic {
+
+	public Iterable<Move> getOrderedMoves(State state) {
+		StateExplorer se = new StateExplorerImpl();
+		
+		Iterable<Move> moves = se.getPossibleMoves(state);
+		
+		
+		
+		return moves;
+	}
+
+	public int getStateValue(State state) {
+		int score = 0;
+
+		for (int r = 0; r < 8; r++) {
+			for (int c = 0; c < 8; c++) {
+				Piece piece = state.getPiece(r, c);
+				if (piece != null) {
+					score += pieceValue(piece);
+				}
+			}
+		}
+
+		return score;
+	}
+
+	private int pieceValue(Piece piece) {
+		int pieceValue = 0;
+
+		switch (piece.getKind()) {
+		case PAWN:
+			pieceValue = 1;
+			break;
+		case ROOK:
+			pieceValue = 5;
+			break;
+		case KNIGHT:
+			pieceValue = 3;
+			break;
+		case BISHOP:
+			pieceValue = 3;
+			break;
+		case QUEEN:
+			pieceValue = 9;
+			break;
+		case KING:
+			pieceValue = 0;
+			break;
+		default:
+			break;
+		}
+
+		if (piece.getColor().equals(Color.BLACK)) {
+			pieceValue *= -1;
+		}
+
+		return pieceValue;
+	}
+
+}

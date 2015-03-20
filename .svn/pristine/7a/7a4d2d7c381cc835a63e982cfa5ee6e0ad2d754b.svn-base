@@ -1,0 +1,14 @@
+package org.vorasahil.hw6.server;
+import java.util.*;
+
+public class GameManager {
+
+	private static HashMap<Integer,Game> games=new HashMap<Integer,Game>();
+	public static void addGame(Game game){
+		games.put(game.getGameId(),game);
+	}
+	
+	public static Game getGame(int gameId){
+		return games.get(gameId);
+	}
+}

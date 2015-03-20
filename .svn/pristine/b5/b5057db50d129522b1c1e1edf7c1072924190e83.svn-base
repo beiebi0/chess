@@ -1,0 +1,88 @@
+package org.wenjiechen.hw9;
+
+import java.util.Comparator;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Set;
+
+import org.wenjiechen.hw2.StateChangerImpl;
+import org.wenjiechen.hw2_5.StateExplorerImpl;
+import org.shared.chess.Color;
+import org.shared.chess.Move;
+import org.shared.chess.State;
+import org.shared.chess.StateChanger;
+import org.shared.chess.StateExplorer;
+
+import java.util.Collections;
+
+public class HeuristicImpl implements Heuristic {
+	// private StateExplorer stateExplorer = new StateExplorerImpl();
+	private StateChanger stateChanger = new StateChangerImpl();
+
+	/**
+	 * heuristic piece value come from chess manual, which assign different
+	 * values for a specific kind of piece according to their different
+	 * locations
+	 */
+	@Override
+	public int getStateValue(State state) {
+		if (state.getGameResult() != null) {
+			if (state.getGameResult().getWinner() == Color.WHITE)
+				return Integer.MAX_VALUE;
+			if (state.getGameResult().getWinner() == Color.BLACK)
+				return Integer.MIN_VALUE;
+		}
+		int stateValue = 0;
+		for (int row = 0; row < 8; ++row) {
+			for (int col = 0; col < 8; ++col) {
+				int pv = ChessManual.getPieceValue(state.getPiece(row, col),
+						row, col);
+				stateValue += pv;
+			}
+		}
+		return stateValue;
+	}
+
+	@Override
+	public Iterable<Move> getOrderedMoves(State state) {
+		StateExplorer stateExplorer = new StateExplorerImpl();
+		Set<Move> allPossibleMoves = stateExplorer.getPossibleMoves(state);
+		List<Move> orderedMoves = new LinkedList<Move>();
+		List<MoveWithScore> allMovesWithScore = new LinkedList<MoveWithScore>();
+
+		for (Move move : allPossibleMoves) {
+			State newState = state.copy();
+			stateChanger.makeMove(newState, move);
+			int value = getStateValue(newState);
+			allMovesWithScore.add(new MoveWithScore(move, value));
+		}
+
+		if (allMovesWithScore.size() == 0) {
+			return null;
+		}
+		Collections.sort(allMovesWithScore, new ComparatorMovewithscore());
+		for (MoveWithScore m : allMovesWithScore) {
+			orderedMoves.add(m.move);
+		}
+		return orderedMoves;
+	}
+
+	class MoveWithScore {
+		Move move;
+		int value;
+
+		public MoveWithScore(Move move, int value) {
+			this.move = move;
+			this.value = value;
+		}
+	}
+
+	class ComparatorMovewithscore implements Comparator {
+		@Override
+		public int compare(Object o1, Object o2) {
+			MoveWithScore m1 = (MoveWithScore) o1;
+			MoveWithScore m2 = (MoveWithScore) o2;
+			return m1.value - m2.value;
+		}
+	}
+}

@@ -1,0 +1,122 @@
+package org.wenjiechen.hw7.client;
+
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.TreeSet;
+
+import org.wenjiechen.hw7.client.Match;
+
+import com.googlecode.objectify.Key;
+import com.googlecode.objectify.annotation.Entity;
+import com.googlecode.objectify.annotation.Id;
+import com.googlecode.objectify.annotation.Index;
+import com.googlecode.objectify.condition.IfTrue;
+
+@Entity
+/**
+ *  
+ * @author WnejieChen
+ *
+ */
+public class Player {
+	@Id String email;
+	String name;
+	int rank;
+	Set<Key<Match>> matches = new HashSet<Key<Match>>();
+	Set<String> channels  = new HashSet<String>();
+//	@Index(IfTrue.class) boolean automatch;
+
+	public Player(){
+//	 matches = new HashSet<Key<Match>>();
+//	 channels= new HashSet<String>();
+	}
+	
+	/**
+	 *  a Player is a user, and he has a list of matches, 
+	 *  which contains all on-going chess state playing by him.
+	 *  @param channels is the Id used to create a channel
+	 *  @param mathces refer to the match which is playing by the user and opponent
+	 */
+	public Player(String email, String name){
+		this.email = email;
+		this.name = name;
+		rank = 1500;
+//		channels = new HashSet<String>();
+//		matches = new HashSet<Key<Match>>();
+	}
+	
+	public int getRank(){
+		return rank;
+	}
+	
+	public void setRank(int rank){
+		this.rank = rank;
+	}
+	
+	public String getEmail(){
+		return email;
+	}
+	
+	public void setEmail(String email){
+		this.email = email;
+	}
+	
+	public String getName(){
+		return name;
+	}
+	
+	public void setName(String name){
+		this.name = name;
+	}
+	
+	public Set<String> getAllChannels(){
+		return Collections.unmodifiableSet(channels);
+	}
+	
+	public int getChannelsNum(){
+		return channels.size();
+	}
+	
+	/**
+	 * @param channelId is the Id used to create a channel
+	 */
+	public void addchannel(String channelId){
+		channels.add(channelId);
+	}
+	
+	/**
+	 * @param ClientId is the Id used to create a channel
+	 */
+	public void removechannel(String channelId){
+		channels.remove(channelId);
+	}
+	
+	public Set<Key<Match>> getAllMatches(){
+		return Collections.unmodifiableSet(matches);
+	}
+
+	public boolean isMatchEmpty(){
+		System.out.println(matches.toString());
+		if(matches.isEmpty())
+			return true;
+		else
+			return false;
+	}
+	
+	public void addMatch(Key<Match> match){
+		matches.add(match);
+	}
+
+	public void removeMatch(Key<Match> match){
+		matches.remove(match);
+	}
+	
+//	public boolean isAutomatch(){
+//		return automatch;
+//	}
+//	
+//	public void setAutomatch(boolean syn){
+//		automatch = syn;
+//	}
+}

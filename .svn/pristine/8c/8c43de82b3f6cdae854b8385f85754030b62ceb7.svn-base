@@ -1,0 +1,159 @@
+package org.kuangchelee.hw3;
+
+import org.junit.Before;
+import org.junit.Test;
+import org.mockito.Mockito;
+import org.shared.chess.Color;
+import org.shared.chess.Piece;
+import org.shared.chess.PieceKind;
+import org.shared.chess.State;
+import org.shared.chess.Move;
+import org.shared.chess.Position;
+
+/**
+ * Tests for the Presenter class.
+ */
+public class PresenterTest {
+  Presenter presenter;
+  Presenter.View view;
+  
+  @Before
+  public void setup() {
+    presenter = new Presenter();
+    view = Mockito.mock(Presenter.View.class); 
+    presenter.setView(view);
+  }
+  @Test
+  public void testSetPromotePanelWhenCapturedAndPromote() {
+    presenter.state.setPiece(1, 1, null);
+    presenter.state.setPiece(6, 1, new Piece(Color.WHITE, PieceKind.PAWN));
+    presenter.clickedPosition = new Position(6, 1);
+    presenter.PromotePosition = null;
+    presenter.clickOnBoard(0, 0);
+    Mockito.verify(view).setPromotePanel(true);
+  }
+  @Test
+  public void testDisablePromotePanel() {
+    presenter.state.setPiece(1, 1, null);
+    presenter.state.setPiece(7, 1, null);
+    presenter.state.setPiece(6, 1, new Piece(Color.WHITE, PieceKind.PAWN));
+    presenter.clickedPosition = new Position(6, 1);
+    presenter.PromotePosition = new Position(7, 1);
+    presenter.clickOnBoard(3, 3);
+    Mockito.verify(view).setPromotePanel(false);
+  }
+  @Test
+  public void testClickedOnBlackPositionToPromote() {
+    presenter.state.setTurn(Color.BLACK);
+    presenter.state.setPiece(6, 7, null);
+    presenter.state.setPiece(0, 7, null);
+    presenter.state.setPiece(1, 7, new Piece(Color.BLACK, PieceKind.PAWN));
+    presenter.clickedPosition = new Position(1, 7);
+    presenter.clickOnBoard(7, 7);
+    Mockito.verify(view).setGameText("Choose one piecekind below for promotion.");
+    Mockito.verify(view).setPromotePanel(true);
+  }
+  @Test
+  public void testClickedOnBlackPositionByCaptureToPromote() {
+    presenter.state.setTurn(Color.BLACK);
+    presenter.state.setPiece(6, 5, null);
+    presenter.state.setPiece(0, 6, new Piece(Color.WHITE, PieceKind.KNIGHT));
+    presenter.state.setPiece(1, 5, new Piece(Color.BLACK, PieceKind.PAWN));
+    presenter.clickedPosition = new Position(1, 5);
+    presenter.clickOnBoard(7, 6);
+    Mockito.verify(view).setGameText("Choose one piecekind below for promotion.");
+    Mockito.verify(view).setPromotePanel(true);
+  }
+  @Test
+  public void testClickedOnWhitePositionToPromote() {
+    presenter.state.setTurn(Color.WHITE);
+    presenter.state.setPiece(1, 1, null);
+    presenter.state.setPiece(7, 1, null);
+    presenter.state.setPiece(6, 1, new Piece(Color.WHITE, PieceKind.PAWN));
+    presenter.clickedPosition = new Position(6, 1);
+    presenter.clickOnBoard(0, 1);
+    Mockito.verify(view).setGameText("Choose one piecekind below for promotion.");
+    Mockito.verify(view).setPromotePanel(true);
+  }
+  @Test
+  public void testClickedOnWhitePositionByCaptureToPromote() {
+    presenter.state.setTurn(Color.WHITE);
+    presenter.state.setPiece(1, 1, null);
+    presenter.state.setPiece(7, 0, new Piece(Color.BLACK, PieceKind.ROOK));
+    presenter.state.setPiece(6, 1, new Piece(Color.WHITE, PieceKind.PAWN));
+    presenter.clickedPosition = new Position(6, 1);
+    presenter.clickOnBoard(0, 0);
+    Mockito.verify(view).setGameText("Choose one piecekind below for promotion.");
+    Mockito.verify(view).setPromotePanel(true);
+  }
+  @Test
+  public void testclickOnBoardWhenNoPromotion() {
+    State state = new State();
+    presenter.PromotePosition = new Position(7, 0);
+    presenter.clickOnBoard(4, 4);
+    Mockito.verify(view).setPromotePanel(false);
+    Mockito.verify(view).setWhoseTurn(state.getTurn());
+  }
+  @Test
+  public void testHighLightOnClickedPiece() {
+    presenter.clickedPosition = null;
+    presenter.clickOnBoard(7, 0);
+    Mockito.verify(view).setHighlighted(7, 0, true);
+  }
+  @Test
+  public void testHighLightOffClickedPiece(){
+    presenter.clickedPosition = new Position(1, 0);
+    presenter.clickOnBoard(7, 0);
+    Mockito.verify(view).setHighlighted(6, 0, false);
+  }
+  @Test
+  public void testHighLightPossibleMovesForKing() {
+	State state = new State();
+	state.setTurn(Color.WHITE);
+	presenter.setState(state);
+    presenter.clickedPosition = null;
+    presenter.clickOnBoard(7, 4);
+    Mockito.verify(view).setHighlighted(7, 4, true);
+  }
+  @Test
+  public void testHighLightPossibleMovesForKnight() {
+	State state = new State();
+	presenter.setState(state);
+    presenter.clickedPosition = null;
+    presenter.clickOnBoard(7, 1);
+    Mockito.verify(view).setHighlighted(7, 1, true);
+    Mockito.verify(view).setHighlighted(5, 0, true);
+    Mockito.verify(view).setHighlighted(5, 2, true);
+  }
+  @Test
+  public void testHighLightPossibleMovesForPawn() {
+    presenter.clickedPosition = null;
+    presenter.clickOnBoard(6, 0);
+    Mockito.verify(view).setHighlighted(6, 0, true);
+    Mockito.verify(view).setHighlighted(5, 0, true);
+    Mockito.verify(view).setHighlighted(4, 0, true);
+  }
+  @Test
+  public void testClearAllHighLightsForPawnPossibleMoves() {
+	  presenter.PossibleMovesFromPosition.add(new Move(new Position(1, 0), new Position(3, 0), null));
+	  presenter.PossibleMovesFromPosition.add(new Move(new Position(1, 0), new Position(2, 0), null));
+	  presenter.clearAllHighlights();
+	  Mockito.verify(view).setHighlighted(5, 0, false);
+	  Mockito.verify(view).setHighlighted(4, 0, false);  
+  }
+  @Test
+  public void testHightLightClickedOnPromotePanel() {
+	  presenter.clickedPosition = new Position(6, 1);
+	  presenter.PromotePosition = new Position(7, 0);
+	  presenter.clickedOnPromotePanel(0, 0);
+	  Mockito.verify(view).setHighlighted(1, 1, false);
+  }
+  @Test
+  public void testClickedOnAMovablePieceThenClickedOnAnother() {
+	  State state = new State();
+	  presenter.setState(state);
+	  presenter.clickedPosition = new Position(0, 6);
+	  presenter.clickOnBoard(2, 7);
+	  Mockito.verify(view).setHighlighted(7, 6, false);
+  }
+}

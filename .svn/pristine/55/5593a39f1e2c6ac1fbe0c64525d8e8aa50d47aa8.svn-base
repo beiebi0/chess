@@ -1,0 +1,13 @@
+package org.sanjana.hw6;
+
+
+import com.google.gwt.user.client.rpc.RemoteService;
+import com.google.gwt.user.client.rpc.RemoteServiceRelativePath;
+
+@RemoteServiceRelativePath("service")
+public interface ChessService extends RemoteService{
+	
+	public void update(StateManager updateState);
+//	public String send(String state, String ID);
+//	public String createUserChannel();
+}

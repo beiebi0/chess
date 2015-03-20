@@ -1,0 +1,193 @@
+package org.alishah.hw3;
+
+import static org.shared.chess.Color.WHITE;
+
+import org.shared.chess.Color;
+import org.shared.chess.GameResult;
+import org.shared.chess.Piece;
+import org.alishah.hw3.Presenter.View;
+
+import com.google.gwt.core.client.GWT;
+import com.google.gwt.resources.client.ImageResource;
+import com.google.gwt.uibinder.client.UiBinder;
+import com.google.gwt.uibinder.client.UiField;
+import com.google.gwt.user.client.Element;
+import com.google.gwt.user.client.History;
+import com.google.gwt.user.client.ui.Composite;
+import com.google.gwt.user.client.ui.FlowPanel;
+import com.google.gwt.user.client.ui.Grid;
+import com.google.gwt.user.client.ui.Image;
+import com.google.gwt.user.client.ui.Label;
+import com.google.gwt.user.client.ui.Widget;
+
+public class Graphics extends Composite implements View {
+  private static GameImages gameImages = GWT.create(GameImages.class);
+  private static GraphicsUiBinder uiBinder = GWT.create(GraphicsUiBinder.class);
+
+  interface GraphicsUiBinder extends UiBinder<Widget, Graphics> {
+  }
+
+  @UiField GameCss css;
+  @UiField Label gameStatus;
+  @UiField Grid gameGrid;
+  
+  @UiField Grid whitePromotionChooser;
+  @UiField Grid blackPromotionChooser;
+  private Image[][] board = new Image[8][8];
+  
+  public Graphics() {
+    initWidget(uiBinder.createAndBindUi(this));
+    gameGrid.resize(8, 8);
+    gameGrid.setCellPadding(0);
+    gameGrid.setCellSpacing(0);
+    gameGrid.setBorderWidth(0);
+    for (int row = 0; row < 8; row++) {
+      for (int col = 0; col < 8; col++) {
+        final Image image = new Image();
+        board[row][col] = image;
+        image.setWidth("100%");
+        image.setHeight("100%");
+        FlowPanel panel = new FlowPanel();
+        if (row % 2 == 0 && col % 2 == 1 || row % 2 == 1 && col % 2 == 0) {
+        	panel.setStylePrimaryName("grey-square");
+        } else {
+        	panel.setStylePrimaryName("white-square");
+        }
+        panel.add(image);
+        gameGrid.setWidget(row, col, panel);
+      }
+    }
+    
+    whitePromotionChooser.resize(1, 4);
+    whitePromotionChooser.setWidget(0, 0, new Image(gameImages.whiteKnight()));
+    whitePromotionChooser.setWidget(0, 1, new Image(gameImages.whiteBishop()));
+    whitePromotionChooser.setWidget(0, 2, new Image(gameImages.whiteRook()));
+    whitePromotionChooser.setWidget(0, 3, new Image(gameImages.whiteQueen()));
+    
+    blackPromotionChooser.resize(1, 4);
+    blackPromotionChooser.setWidget(0, 0, new Image(gameImages.blackKnight()));
+    blackPromotionChooser.setWidget(0, 1, new Image(gameImages.blackBishop()));
+    blackPromotionChooser.setWidget(0, 2, new Image(gameImages.blackRook()));
+    blackPromotionChooser.setWidget(0, 3, new Image(gameImages.blackQueen()));
+    
+    whitePromotionChooser.setVisible(false);
+    blackPromotionChooser.setVisible(false);
+  }
+  @Override
+  public void setPiece(int row, int col, Piece piece) {
+    if (piece != null) {
+    	board[row][col].setResource(getImageResourceForPiece(piece));
+    } else {
+    	board[row][col].setUrl("");
+    	board[row][col].setWidth("100%");
+    	board[row][col].setHeight("100%");
+    }
+  }
+
+  @Override
+  public void setHighlightedPrimary(int row, int col, boolean highlighted) {
+    Element element = board[row][col].getElement();
+    if (highlighted) {
+      element.setClassName(css.highlightedPrimary());
+    } else {
+      element.removeClassName(css.highlightedPrimary());
+    }
+  }
+  
+  @Override
+  public void setHighlightedSecondary(int row, int col, boolean highlighted) {
+    Element element = board[row][col].getElement();
+    if (highlighted) {
+      element.setClassName(css.highlightedSecondary());
+    } else {
+      element.removeClassName(css.highlightedSecondary());
+    }
+  }
+
+  @Override
+  public void setWhoseTurn(Color color) {
+  	switch (color) {
+  		case WHITE:
+  			gameStatus.setText("White\'s turn");
+  			break;
+  		case BLACK:
+  			gameStatus.setText("Black\'s turn");
+  			break;
+  	}
+  }
+
+  @Override
+  public void setGameResult(GameResult gameResult) {
+  	if (gameResult == null) {
+  		return;
+  	}
+  	switch(gameResult.getGameResultReason()) {
+  		case CHECKMATE:
+  			String winner = gameResult.getWinner().toString();
+  			gameStatus.setText("Checkmate. " +  winner + " wins.");
+  			break;
+  		case FIFTY_MOVE_RULE:
+  			gameStatus.setText("Fifty move rule. Game over.");
+  			break;
+  		case THREEFOLD_REPETITION_RULE:
+  			gameStatus.setText("Threefold repitition rule. Game over.");
+  			break;
+  		case STALEMATE:
+  			gameStatus.setText("Stalemate. Game over.");
+  			break;
+  		default:
+  			break;
+  	}
+  }
+  
+  public void addToHistory(String stateString) {
+  	History.newItem(stateString);
+  }
+  
+  public void showWhitePromotionChooser(boolean show) {
+  	whitePromotionChooser.setVisible(show);
+  }
+  
+  public void showBlackPromotionChooser(boolean show) {
+  	blackPromotionChooser.setVisible(show);
+  }
+  
+	public Grid getGrid() {
+		return gameGrid;
+	}
+
+	public Grid getWhitePromotionChooser() {
+		return whitePromotionChooser;
+	}
+
+	public Grid getBlackPromotionChooser() {
+		return blackPromotionChooser;
+	}
+  
+  private ImageResource getImageResourceForPiece(Piece piece) {
+  	if (piece == null) {
+  		return null;
+  	}
+  	switch (piece.getKind()) {
+  		case PAWN:
+  			return piece.getColor() == WHITE ? gameImages.whitePawn()
+  																			 : gameImages.blackPawn();
+  		case ROOK:
+  			return piece.getColor() == WHITE ? gameImages.whiteRook()
+						 														 : gameImages.blackRook();
+  		case KNIGHT:
+  			return piece.getColor() == WHITE ? gameImages.whiteKnight()
+						 														 : gameImages.blackKnight();
+  		case BISHOP:
+  			return piece.getColor() == WHITE ? gameImages.whiteBishop()
+						 														 : gameImages.blackBishop();
+  		case QUEEN:
+  			return piece.getColor() == WHITE ? gameImages.whiteQueen()
+						 														 : gameImages.blackQueen();
+  		case KING:
+  			return piece.getColor() == WHITE ? gameImages.whiteKing()
+						 														 : gameImages.blackKing();
+  	}
+		return null;
+  }
+}

@@ -1,0 +1,73 @@
+<!DOCTYPE ui:UiBinder SYSTEM "http://dl.google.com/gwt/DTD/xhtml.ent">
+
+<ui:UiBinder xmlns:ui="urn:ui:com.google.gwt.uibinder"
+	xmlns:g="urn:import:com.google.gwt.user.client.ui" xmlns:mgwt="urn:import:com.googlecode.mgwt.ui.client.widget">
+	<ui:style field="css" type="org.peigenyou.hw3.GameCss">
+		.highlighted {
+			outline: solid red 3px;
+		}
+		
+		.dotted {
+			outline: dotted green 1px;
+		}
+		
+		.fontSize {
+			font-size: 18px;
+			color: red;
+		}
+		
+		.myBoard {
+			background-image:
+				url("http://digital-static.net/Files/Source/Chess/Classes/Graphics/ChessBoard.png");
+		}
+		
+		td img {
+			display: block
+		}
+		
+		.gwt-SuggestBox {
+			border: 1px solid #666;
+			text-align: left;
+			width: 400px;
+		}
+		
+		.gwt-SuggestBoxPopup {
+			text-align: left;
+			cursor: pointer;
+			cursor: hand;
+			border: 1px solid #666;
+			border-top: 0;
+			background-color: #fff;
+		}
+		
+		.gwt-SuggestBoxPopup .item {
+			border: 1px dotted #aaa;
+			width: 398px;
+		}
+		
+		.gwt-SuggestBoxPopup .item-selected {
+			background-color: #ffc;
+		}
+	</ui:style>
+
+	<g:HTMLPanel>
+		<mgwt:HeaderPanel ui:field="header" />
+
+		<mgwt:LayoutPanel ui:field="MatchWith" />
+		<div>
+			<g:AbsolutePanel ui:field="container" />
+		</div>
+		<div>
+			<g:Label ui:field="gameStatus" text="" />
+			<mgwt:LayoutPanel ui:field="UserInfo" />
+			<g:Label ui:field="matchInfo" text="" />
+		</div>
+		<div>
+		</div>
+		<div>
+			<mgwt:LayoutPanel ui:field="ControlPanel" />
+		</div>
+
+	</g:HTMLPanel>
+
+</ui:UiBinder> 

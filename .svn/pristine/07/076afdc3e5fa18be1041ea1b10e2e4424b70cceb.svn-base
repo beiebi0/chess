@@ -1,0 +1,75 @@
+package org.harshmehta.hw8;
+
+import com.google.gwt.i18n.client.LocalizableResource.DefaultLocale;
+import com.google.gwt.i18n.client.LocalizableResource.Generate;
+import com.google.gwt.i18n.client.Messages;
+
+/**
+ * Default Language (en) strings for the Chess application using the Messages interface
+ * @author Harsh
+ *
+ */
+@Generate(format = "com.google.gwt.i18n.rebind.format.PropertiesFormat")
+@DefaultLocale("en")
+public interface ChessMessages extends Messages {
+  @DefaultMessage("Logged in as {0} ({1})")
+  String userInfo(String playerName, String playerEmail);
+  @DefaultMessage("Sign Out")
+  String signOut();
+  @DefaultMessage("Your Turn!")
+  String yourTurn();
+  @DefaultMessage("Their Turn")
+  String theirTurn();
+  @DefaultMessage("You WON!")
+  String youWon();
+  @DefaultMessage("Match DRAWN!")
+  String matchDrawn();
+  @DefaultMessage("You Lost :(")
+  String youLost();
+  @DefaultMessage("Checkmate")
+  String checkmate();
+  @DefaultMessage("Fifty-Move Rule")
+  String fiftyMoveRule();
+  @DefaultMessage("Threefold Repetition Rule")
+  String threefoldRepetitionRule();
+  @DefaultMessage("Stalemate")
+  String stalemate();
+  @DefaultMessage("Match ID: {0} ({1}) - {2}")
+  String matchListItem(String matchId, String opponentName, String turnText);
+  @DefaultMessage("--Select Match--")
+  String matchListItemSelectMatch();
+  @DefaultMessage("Server error!")
+  String serverError();
+  @DefaultMessage("Match ID: {0}")
+  String matchId(Long matchId);
+  @DefaultMessage("Error while loading matches!")
+  String loadMatchesError();
+  @DefaultMessage("Match ID: {0}; Your Turn")
+  String matchIdYourTurn(String matchId);
+  @DefaultMessage("White")
+  String white();
+  @DefaultMessage("Black")
+  String black();
+  @DefaultMessage("Error while deleting match!")
+  String matchDeleteError();
+  @DefaultMessage("Error loading match!")
+  String matchLoadError();
+  @DefaultMessage("User not found!")
+  String userNotFound();
+  @DefaultMessage("Invalid email address!")
+  String invalidEmail();
+  @DefaultMessage("Waiting For Opponent")
+  String waitingForOpponent();
+  @DefaultMessage("Game Over! Winner: {0} ({1})")
+  String gameOver(String winner, String reason);
+  @DefaultMessage("No Opponent")
+  String noOpponent();
+  @DefaultMessage("Not Begun")
+  String notBegun();
+  @DefaultMessage("Rating: [{0},{1}]")
+  String rating(double r1, double r2);
+  @DefaultMessage("Match started on: {0}")
+  String started(String date);
+  @DefaultMessage("Playing Against AI")
+  String playingAgainstAI();
+}

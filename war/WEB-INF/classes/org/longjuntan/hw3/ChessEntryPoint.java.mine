@@ -1,0 +1,164 @@
+package org.longjuntan.hw3;
+
+import org.longjuntan.hw6.client.GameService;
+import org.longjuntan.hw6.client.GameServiceAsync;
+import org.longjuntan.hw8.GameConstants;
+
+import com.google.gwt.core.client.EntryPoint;
+import com.google.gwt.core.client.GWT;
+import com.google.gwt.event.dom.client.ClickEvent;
+import com.google.gwt.event.dom.client.ClickHandler;
+import com.google.gwt.user.client.Window;
+import com.google.gwt.user.client.rpc.ServiceDefTarget;
+import com.google.gwt.user.client.ui.Button;
+import com.google.gwt.user.client.ui.RootPanel;
+import com.google.gwt.user.client.ui.TextBox;
+import com.googlecode.gwtphonegap.client.PhoneGap;
+import com.googlecode.gwtphonegap.client.PhoneGapAvailableEvent;
+import com.googlecode.gwtphonegap.client.PhoneGapAvailableHandler;
+import com.googlecode.gwtphonegap.client.PhoneGapTimeoutEvent;
+import com.googlecode.gwtphonegap.client.PhoneGapTimeoutHandler;
+import com.googlecode.gwtphonegap.client.util.PhonegapUtil;
+
+public class ChessEntryPoint implements EntryPoint {
+	private static GameConstants constants = GWT.create(GameConstants.class);
+
+	private Presenter presenter;
+
+	/*
+	 * private LoginInfo loginInfo = null; private VerticalPanel loginPanel =
+	 * new VerticalPanel(); private VerticalPanel logoutPanel = new
+	 * VerticalPanel(); private Label loginLabel = new
+	 * Label(constants.loginInfo()); private Anchor signInLink = new
+	 * Anchor(constants.loginAnchor()); private Anchor signOutLink = new
+	 * Anchor(constants.logoutAnchor());
+	 */
+
+	final PhoneGap phoneGap = GWT.create(PhoneGap.class);
+
+	final GameServiceAsync service = GWT.create(GameService.class);
+
+	@Override
+	public void onModuleLoad() {
+//		GWT.setUncaughtExceptionHandler(new GWT.UncaughtExceptionHandler() {
+//
+//			@Override
+//			public void onUncaughtException(Throwable e) {
+////				System.out.println(e.getMessage());
+//				Window.alert("phoneGap uncaught: " + e.getLocalizedMessage());
+//				Window.alert("phoneGap"+e.getMessage());
+//			}
+//		});
+
+		phoneGap.addHandler(new PhoneGapAvailableHandler() {
+
+			@Override
+			public void onPhoneGapAvailable(PhoneGapAvailableEvent event) {
+				startLoadPage();
+
+			}
+		});
+
+		phoneGap.addHandler(new PhoneGapTimeoutHandler() {
+
+			@Override
+			public void onPhoneGapTimeout(PhoneGapTimeoutEvent event) {
+				Window.alert("can not load phonegap");
+
+			}
+		});
+
+		phoneGap.initializePhoneGap();
+		// final Graphics graphics = new Graphics();
+		// Presenter presenter = new Presenter();
+		// presenter.setView(graphics);
+		// graphics.setPresenter(presenter);
+		//
+		// State state;
+		// if (History.getToken().isEmpty()) {
+		// state = new State();
+		// } else {
+		// state = HistoryParser.setStateByHistory(History.getToken());
+		// }
+		//
+		// presenter.setState(state);
+		// RootPanel.get().add(graphics);
+	}
+
+	public void startLoadPage() {
+/*		((ServiceDefTarget) service)
+				.setServiceEntryPoint("http://chessgamebylongjuntan.appspot.com/longjuntan/move");
+		PhonegapUtil.prepareService((ServiceDefTarget) service,
+				"http://chessgamebylongjuntan.appspot.com/longjuntan/",
+				"move");*/
+
+		
+
+		// Check login status using login service.
+		/*
+		 * LoginServiceAsync loginService = GWT.create(LoginService.class);
+		 * loginService.login(GWT.getHostPageBaseURL() +
+		 * "longjuntan.html?locale=" +
+		 * LocaleInfo.getCurrentLocale().getLocaleName(), new
+		 * AsyncCallback<LoginInfo>() { public void onFailure(Throwable error) {
+		 * }
+		 * 
+		 * public void onSuccess(LoginInfo result) { loginInfo = result; if
+		 * (loginInfo.isLoggedIn()) { loadLogout();
+		 */
+
+		// HTMLPanel myInfo = new HTMLPanel(null);
+		final TextBox myEmail = new TextBox();
+		myEmail.setText("longjuntan@gmail.com");
+		Button save = new Button("Save");
+		RootPanel.get().add(myEmail);
+		RootPanel.get().add(save);
+		save.addClickHandler(new ClickHandler() {
+			@Override
+			public void onClick(ClickEvent event) {
+				RootPanel.get().clear();
+				final Graphics graphics = new Graphics();
+				presenter = new Presenter();
+				graphics.setPresenter(presenter);
+				// Presenter presenter = new Presenter();
+				presenter.setView(graphics);
+
+				presenter.setEmail(myEmail.getText());
+				
+				graphics.setSuggestionBoxOracle(phoneGap);
+				RootPanel.get().add(graphics);
+				presenter.init();
+				presenter.loadMatchList();
+				
+			}
+		});
+
+		// State state;
+		/*
+		 * if (History.getToken().isEmpty()) { state = new State(); } else {
+		 * state = Utils.setStateByHistory(History .getToken()); }
+		 */
+
+		// presenter.setState(state);
+		// presenter.setEmail(loginInfo.getEmailAddress());
+
+		/*
+		 * } else { loadLogin(); }
+		 */
+		// }
+		// });
+
+	}
+
+	/*
+	 * public void loadLogin() { // TODO Auto-generated method stub
+	 * signInLink.setHref(loginInfo.getLoginUrl()); loginPanel.add(loginLabel);
+	 * loginPanel.add(signInLink); RootPanel.get().add(loginPanel); }
+	 * 
+	 * public void loadLogout() { signOutLink.setHref(loginInfo.getLogoutUrl());
+	 * Label logoutLabel = new Label(constants.greeting() +
+	 * loginInfo.getNickname()); logoutPanel.add(logoutLabel);
+	 * logoutPanel.add(signOutLink); RootPanel.get().add(logoutPanel); }
+	 */
+
+}

@@ -1,0 +1,300 @@
+package org.sanjana.hw5;
+
+import org.sanjana.hw11.PopulateContacts;
+import org.sanjana.hw11.SuggestionBox;
+import org.sanjana.hw6.LoginDetails;
+import org.sanjana.hw6.LoginService;
+import org.sanjana.hw6.LoginServiceAsync;
+import org.sanjana.hw8.ChessMessages;
+
+import com.google.gwt.core.client.EntryPoint;
+import com.google.gwt.core.client.GWT;
+import com.google.gwt.event.logical.shared.ValueChangeEvent;
+import com.google.gwt.event.logical.shared.ValueChangeHandler;
+import com.google.gwt.user.client.History;
+import com.google.gwt.user.client.Window;
+import com.google.gwt.user.client.rpc.AsyncCallback;
+import com.google.gwt.user.client.ui.Anchor;
+import com.google.gwt.user.client.ui.Label;
+import com.google.gwt.user.client.ui.RootPanel;
+import com.google.gwt.user.client.ui.SuggestBox;
+import com.google.gwt.user.client.ui.VerticalPanel;
+import com.googlecode.gwtphonegap.client.PhoneGap;
+import com.googlecode.gwtphonegap.client.PhoneGapAvailableEvent;
+import com.googlecode.gwtphonegap.client.PhoneGapAvailableHandler;
+import com.googlecode.gwtphonegap.client.PhoneGapTimeoutEvent;
+import com.googlecode.gwtphonegap.client.PhoneGapTimeoutHandler;
+
+public class ChessEntryPoint implements EntryPoint 
+{
+	private static ChessMessages messages = GWT.create(ChessMessages.class);
+	final PhoneGap phoneGap = GWT.create(PhoneGap.class);
+
+	private LoginDetails userInfo = null;
+	private VerticalPanel loginPanel = new VerticalPanel();
+
+	private Label loginLabel = new Label(messages.needSingIn());
+	private Anchor signIn = new Anchor(messages.signIn());
+	private Anchor signOut = new Anchor(messages.signOut());
+	private Label welcome;
+
+	@Override
+	public void onModuleLoad() 
+	{
+		phoneGap.addHandler(new PhoneGapAvailableHandler() {
+
+			@Override
+			public void onPhoneGapAvailable(PhoneGapAvailableEvent event) {
+				startloadpage();
+
+			}
+		});
+
+		phoneGap.addHandler(new PhoneGapTimeoutHandler() {
+
+			@Override
+			public void onPhoneGapTimeout(PhoneGapTimeoutEvent event) {
+				Window.alert("can not load phonegap");
+
+			}
+		});
+
+		phoneGap.initializePhoneGap();
+
+	}
+
+	public void userLogin() 
+	{
+		signIn.setHref(userInfo.getLoginUrl());
+		loginPanel.add(loginLabel);
+		loginPanel.add(signIn);		
+		RootPanel.get().add(loginPanel);
+	}
+
+	void startloadpage(){
+		LoginServiceAsync loginService = GWT.create(LoginService.class);
+		loginService.login(GWT.getHostPageBaseURL()+"sanjana.html",new AsyncCallback<LoginDetails>(){
+
+			public void onFailure(Throwable error) {
+				//				Window.alert("Sign in Error!");
+			}
+
+			public void onSuccess(final LoginDetails result) 
+			{
+				//				Window.alert("Successful Sign in.");
+				userInfo = result;
+				if (userInfo.isLoggedIn()) 
+					loadchess(result);
+
+				else 
+					userLogin();
+			}
+		});	
+	}
+
+	public void loadchess(LoginDetails result)
+	{
+		final Presenter presenter = new Presenter();
+		final Graphics graphics = new Graphics(presenter);
+		presenter.setView(graphics);
+
+		welcome = new Label(messages.hello() + "  "+userInfo.getNickname()+"  "+userInfo.getEmailAddress());
+
+		graphics.add(result);
+		RootPanel.get().add(welcome);
+		signOut.setHref(userInfo.getLogoutUrl());
+		RootPanel.get().add(signOut);
+//		(new PopulateContacts(phoneGap)).populateContacts();
+//		SuggestionBox s=new SuggestionBox();
+//		s.demo();
+		final SuggestBox s = new SuggestBox(PopulateContacts.contactOracle());
+		loginPanel.add(s);
+		VerticalPanel panel = new VerticalPanel();
+		panel.add(new Label("Enter Opponent Email"));
+		panel.add(s);
+		panel.addStyleName("demo-panel-padded");
+		RootPanel.get().add(panel);
+		RootPanel.get().add(graphics);
+
+		History.addValueChangeHandler(new ValueChangeHandler<String>(){
+			@Override
+			public void onValueChange(ValueChangeEvent<String> event) {
+				String historyToken = event.getValue();
+				if (!History.getToken().isEmpty())
+					graphics.manageHistory(historyToken);						
+			}
+		});
+	}
+}
+
+
+
+//package org.sanjana.hw5;
+//
+//import org.sanjana.hw11.PopulateContacts;
+//import org.sanjana.hw6.LoginDetails;
+//import org.sanjana.hw6.LoginService;
+//import org.sanjana.hw6.LoginServiceAsync;
+//import org.sanjana.hw8.ChessMessages;
+//
+//import com.google.gwt.core.client.EntryPoint;
+//import com.google.gwt.core.client.GWT;
+//import com.google.gwt.event.logical.shared.ValueChangeEvent;
+//import com.google.gwt.event.logical.shared.ValueChangeHandler;
+//import com.google.gwt.user.client.History;
+//import com.google.gwt.user.client.Window;
+//import com.google.gwt.user.client.rpc.AsyncCallback;
+//import com.google.gwt.user.client.rpc.ServiceDefTarget;
+//import com.google.gwt.user.client.ui.Anchor;
+//import com.google.gwt.user.client.ui.Label;
+//import com.google.gwt.user.client.ui.RootPanel;
+//import com.google.gwt.user.client.ui.VerticalPanel;
+//import com.googlecode.gwtphonegap.client.PhoneGap;
+//import com.googlecode.gwtphonegap.client.PhoneGapAvailableEvent;
+//import com.googlecode.gwtphonegap.client.PhoneGapAvailableHandler;
+//import com.googlecode.gwtphonegap.client.PhoneGapTimeoutEvent;
+//import com.googlecode.gwtphonegap.client.PhoneGapTimeoutHandler;
+//import com.googlecode.gwtphonegap.client.util.PhonegapUtil;
+//
+//public class ChessEntryPoint implements EntryPoint 
+//{
+//	//	private static MultiplayerChessServiceAsync  chessService = GWT.create(MultiplayerChessService.class);
+//	private static ChessMessages messages = GWT.create(ChessMessages.class);
+//	private LoginDetails userInfo = null;
+//	private VerticalPanel loginPanel = new VerticalPanel();
+//
+//	private Label loginLabel = new Label(messages.needSingIn());
+//	private Anchor signIn = new Anchor(messages.signIn());
+//	private Anchor signOut = new Anchor(messages.signOut());
+//	private Label welcome;
+//
+//	final PhoneGap phoneGap = GWT.create(PhoneGap.class);
+//
+//	@Override
+//	public void onModuleLoad() 
+//	{
+//		//		phoneGap.initializePhoneGap();
+//		phoneGap.addHandler(new PhoneGapAvailableHandler() {
+//			@Override
+//			public void onPhoneGapAvailable(PhoneGapAvailableEvent event) {
+//				// start your app - phonegap is ready
+//				Window.alert("PhoneGapAvailable");
+//				start();
+//			}
+//
+//		});
+//
+//		phoneGap.addHandler(new PhoneGapTimeoutHandler() {
+//
+//			@Override
+//			public void onPhoneGapTimeout(PhoneGapTimeoutEvent event) {
+//				// can not start phonegap - something is for with your setup
+//				Window.alert("PhoneGapTimeout");
+//			}
+//		});
+//
+//		//		LoginServiceAsync loginService = GWT.create(LoginService.class);
+//		//		loginService.login(GWT.getHostPageBaseURL()+"sanjana.html",new AsyncCallback<LoginDetails>(){
+//		//
+//		//			public void onFailure(Throwable error) {
+//		//				//				Window.alert("Sign in Error!");
+//		//			}
+//		//
+//		//			public void onSuccess(final LoginDetails result) 
+//		//			{
+//		//				//				Window.alert("Successful Sign in.");
+//		//				userInfo = result;
+//		//				if (userInfo.isLoggedIn()) 
+//		//					loadchess(result);
+//		//
+//		//				else 
+//		//					userLogin();
+//		//			}
+//		//		});	
+//	}
+//
+//	public void start(){
+//
+//		LoginServiceAsync loginService = GWT.create(LoginService.class);
+//
+//		((ServiceDefTarget) loginService).setServiceEntryPoint("http://multiplayergameofchess.appspot.com/sanjana/login");
+//		PhonegapUtil.prepareService((ServiceDefTarget) loginService, "http://multiplayergameofchess.appspot.com/sanjana/", "login");
+//
+//		final String par = Window.Location.getParameter("keyId");
+//		final long xxx = System.currentTimeMillis();
+//		if(par==null)
+//
+//			loginService.login("http://multiplayergameofchess.appspot.com/sanjana.html?keyId="+xxx,new AsyncCallback<LoginDetails>(){
+//
+//				public void onFailure(Throwable error) {
+//					//				Window.alert("Sign in Error!");
+//				}
+//
+//				public void onSuccess(final LoginDetails result) 
+//				{
+//					//				Window.alert("Successful Sign in.");
+//					userInfo = result;
+//					if (userInfo.isLoggedIn()) 
+//						loadchess(result);
+//
+//					else 
+//						userLogin();
+//				}
+//			});	
+//
+//		else
+//			loginService.login("http://multiplayergameofchess.appspot.com/sanjana.html?keyId="+par,new AsyncCallback<LoginDetails>(){
+//
+//				public void onFailure(Throwable error) {
+//					//				Window.alert("Sign in Error!");
+//				}
+//
+//				public void onSuccess(final LoginDetails result) 
+//				{
+//					//				Window.alert("Successful Sign in.");
+//					userInfo = result;
+//					if (userInfo.isLoggedIn()) 
+//						loadchess(result);
+//
+//					else 
+//						userLogin();
+//				}
+//			});	
+//	}
+//
+//	public void userLogin() 
+//	{
+//		signIn.setHref(userInfo.getLoginUrl());
+//		loginPanel.add(loginLabel);
+//		loginPanel.add(signIn);
+//		RootPanel.get().add(loginPanel);
+//	}
+//
+//	public void loadchess(LoginDetails result)
+//	{
+//		final Presenter presenter = new Presenter();
+//		final Graphics graphics = new Graphics(presenter);
+//		presenter.setView(graphics);
+//
+//		welcome = new Label(messages.hello() + "  "+userInfo.getNickname()+"  "+userInfo.getEmailAddress());
+//
+//		graphics.add(result);
+//		RootPanel.get().add(welcome);
+//		signOut.setHref(userInfo.getLogoutUrl());
+//		RootPanel.get().add(signOut);
+//		RootPanel.get().add(graphics);
+//		PopulateContacts p=new PopulateContacts(phoneGap);
+//		p.populateContacts();
+//		//		(new PopulateContacts(phoneGap)).populateContacts();
+//
+//		History.addValueChangeHandler(new ValueChangeHandler<String>(){
+//			@Override
+//			public void onValueChange(ValueChangeEvent<String> event) {
+//				String historyToken = event.getValue();
+//				if (!History.getToken().isEmpty())
+//					graphics.manageHistory(historyToken);						
+//			}
+//		});
+//	}
+//}
+

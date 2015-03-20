@@ -1,0 +1,5 @@
+package org.alishah.hw5;
+
+public interface AnimationCallback {
+	public void onComplete();
+}

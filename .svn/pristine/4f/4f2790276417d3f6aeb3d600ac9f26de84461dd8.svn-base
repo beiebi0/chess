@@ -1,0 +1,27 @@
+package org.alishah.hw3;
+
+
+
+import org.alishah.hw3.StateSerializer;
+import org.shared.chess.State;
+
+import org.junit.Before;
+import org.junit.Test;
+import static org.junit.Assert.assertEquals;
+
+public class StateSerializerImplTest {
+	protected State state;
+	
+	@Before
+	public void setup() {
+		state = new State();
+	}
+	
+	@Test
+	public void testSerializeDeserializeEqual() {
+		String a = StateSerializer.serialize(state);
+		State b = StateSerializer.deserialize(a);
+		assertEquals(state, b);
+	}
+
+}

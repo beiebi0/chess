@@ -1,0 +1,43 @@
+package org.sanjana.hw11;
+
+import com.google.gwt.user.client.ui.Label;
+import com.google.gwt.user.client.ui.MultiWordSuggestOracle;
+import com.google.gwt.user.client.ui.RootPanel;
+import com.google.gwt.user.client.ui.SuggestBox;
+import com.google.gwt.user.client.ui.VerticalPanel;
+
+public class SuggestionBox {
+
+	MultiWordSuggestOracle oracle;
+	SuggestBox suggestbox = new SuggestBox();
+
+	public MultiWordSuggestOracle add(){
+		MultiWordSuggestOracle oracle = new MultiWordSuggestOracle();
+//		this.oracle = new MultiWordSuggestOracle();
+		oracle.add("jassianand.786@gmail.com");
+		oracle.add("abc@gmail.com");
+		oracle.add("chess@gmail.com");
+		oracle.add("nyucourse2013@gmail.com");
+		oracle.add("coolbarbie2004@gmail.com"); 
+		return oracle;
+	}
+
+	public void demo()
+	{
+		VerticalPanel panel = new VerticalPanel();
+		panel.add(new Label("Enter Opponent Email"));
+		panel.add(suggestbox);
+		panel.addStyleName("demo-panel-padded");
+		RootPanel.get().add(panel);
+		oracle.add("coolbarbie2004@gmail.com");
+		oracle.add("jassianand.786@gmail.com");
+	}
+//
+//	public void add(String str){
+//		oracle.add(str);
+//	}
+//
+//	MultiWordSuggestOracle getAll(){
+//		return oracle;
+//	}
+}

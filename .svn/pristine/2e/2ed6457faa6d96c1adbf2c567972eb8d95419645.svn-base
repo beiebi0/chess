@@ -1,0 +1,130 @@
+package org.sanjana.hw3;
+
+import org.junit.Before;
+import org.junit.Test;
+import org.mockito.Mockito;
+import org.shared.chess.Color;
+
+import org.shared.chess.GameResult;
+import org.shared.chess.GameResultReason;
+import org.shared.chess.Piece;
+import org.shared.chess.PieceKind;
+import org.shared.chess.State;
+
+/**
+ * Tests for the Presenter class.
+ */
+public class PresenterTest {
+	Presenter presenter;
+	Presenter.View view;
+
+	@Before
+	public void setup() {
+		presenter = new Presenter();
+		view = Mockito.mock(Presenter.View.class); 
+		presenter.setView(view);
+	}
+
+	@Test
+	public void testSetState() {
+		Mockito.verify(view).setWhoseTurn(Color.WHITE);
+		Mockito.verify(view).setGameResult(null);
+		Mockito.verify(view).setPiece(7, 0,
+				new Piece(Color.WHITE, PieceKind.ROOK));
+		Mockito.verify(view).setPiece(4, 4, null);
+	}
+
+	@Test
+	public void testPawnHighlight(){
+		Mockito.verify(view).setWhoseTurn(Color.WHITE);
+		presenter.onClicked(1, 4);
+		Mockito.verify(view).setHighlighted(5, 4, true);
+		Mockito.verify(view).setHighlighted(4, 4, true);
+	}
+
+	@Test
+	public void testKnightHighlight() {
+		presenter.onClicked(0, 1);
+		Mockito.verify(view).setHighlighted(5, 0, true);
+		Mockito.verify(view).setHighlighted(5, 2, true);
+	}
+	
+	@Test
+	public void testRookHighlight() {
+		State state=new State();
+		state.setPiece(1, 0, null);
+		presenter.setState(state);
+		presenter.onClicked(0, 0);
+		Mockito.verify(view).setHighlighted(5, 0, true);
+		Mockito.verify(view).setHighlighted(4, 0, true);
+		Mockito.verify(view).setHighlighted(3, 0, true);
+		Mockito.verify(view).setHighlighted(2, 0, true);
+	}
+	
+	@Test
+	public void testBishopHighlight() {
+		State state=new State();
+		state.setPiece(1, 1, null);
+		presenter.setState(state);
+		presenter.onClicked(0, 2);
+		Mockito.verify(view).setHighlighted(5, 0, true);
+	}
+	
+	@Test
+	public void testQueenHighlight() {
+		State state=new State();
+		state.setPiece(1, 2, null);
+		state.setPiece(1, 3, null);
+		state.setPiece(1, 4, null);
+		presenter.setState(state);
+		presenter.onClicked(0, 3);
+
+		Mockito.verify(view).setHighlighted(5, 1, true);
+		Mockito.verify(view).setHighlighted(4, 0, true);
+		Mockito.verify(view).setHighlighted(5, 5, true);
+		Mockito.verify(view).setHighlighted(4, 6, true);
+		Mockito.verify(view).setHighlighted(3, 7, true);
+		Mockito.verify(view).setHighlighted(5, 3, true);
+		Mockito.verify(view).setHighlighted(4, 3, true);
+		Mockito.verify(view).setHighlighted(3, 3, true);
+		Mockito.verify(view).setHighlighted(2, 3, true);		
+	}
+	
+	@Test
+	public void testStart(){
+		Mockito.verify(view).setHighlighted(6, 0, true);
+		Mockito.verify(view).setHighlighted(6, 1, true);
+		Mockito.verify(view).setHighlighted(6, 2, true);
+		Mockito.verify(view).setHighlighted(6, 3, true);
+		Mockito.verify(view).setHighlighted(6, 4, true);
+		Mockito.verify(view).setHighlighted(6, 5, true);
+		Mockito.verify(view).setHighlighted(6, 6, true);
+		Mockito.verify(view).setHighlighted(6, 7, true);
+		Mockito.verify(view).setHighlighted(7, 1, true);
+		Mockito.verify(view).setHighlighted(7, 6, true);
+	}
+	
+	@Test
+	public void testCheckMate() {
+		State state = new State();
+		state.setGameResult(new GameResult(Color.WHITE, GameResultReason.CHECKMATE));
+		presenter.setState(state);
+		Mockito.verify(view).setGameResult(new GameResult(Color.WHITE, GameResultReason.CHECKMATE));
+	}
+	
+	@Test
+	public void testStaleMate() {
+		State state = new State();
+		state.setGameResult(new GameResult(Color.WHITE, GameResultReason.STALEMATE));
+		presenter.setState(state);
+		Mockito.verify(view).setGameResult(new GameResult(Color.WHITE, GameResultReason.STALEMATE));
+	}
+	
+	@Test
+	public void testTurn() {
+		State state = new State();
+		state.setTurn(Color.BLACK);
+		presenter.setState(state);
+		Mockito.verify(view).setWhoseTurn(Color.BLACK);
+	}
+}

@@ -1,0 +1,85 @@
+<!DOCTYPE ui:UiBinder SYSTEM "http://dl.google.com/gwt/DTD/xhtml.ent">
+<ui:UiBinder xmlns:ui="urn:ui:com.google.gwt.uibinder"
+  xmlns:g="urn:import:com.google.gwt.user.client.ui" xmlns:d="urn:import:com.google.gwt.dom.client">
+  <ui:style field="css" type="org.karthikmahadevan.hw3.GameCss">
+    .highlighted {
+      outline: green solid 4px;
+    }
+    .draggedOver {
+      outline: yellow solid 4px;
+    }
+    td img {
+      display: block
+    }
+    .blackBackground {
+      background-color: #000000;
+    }
+    .whiteBackground {
+      background-color: #FFFFFF;
+    }
+    .hide {
+	    visibility: hidden;
+	  }
+	  .anime {
+	    z-index: 5;
+	  }
+	  .bigtext {
+	       font-size: 18px;
+	       font-color: #00FF00;
+	  }
+  </ui:style>
+  <g:HTMLPanel>
+  <g:VerticalPanel ui:field="pnlLogin">
+  <g:Label ui:field="signInText"></g:Label>
+  <g:Anchor ui:field="signIn" text="Sign In"></g:Anchor>
+  </g:VerticalPanel>
+  <g:VerticalPanel ui:field="pnlChessGame">
+  <g:VerticalPanel ui:field="pnlBoard">
+  <g:HorizontalPanel> 
+  <g:Label ui:field="loggedInAsText"></g:Label>
+  <g:Label ui:field="loggedInAs" text=""></g:Label>
+  <g:Label ui:field="rating"></g:Label>
+  </g:HorizontalPanel>
+  <g:Anchor ui:field="signOut" text="Sign Out"></g:Anchor>
+  <g:HorizontalPanel styleName="hide">
+    <g:Button ui:field="saveGame" text="Save"></g:Button>
+    <g:Button ui:field="loadGame" text="Load"></g:Button>
+    <g:Button ui:field="restartGame" text="Restart"></g:Button>
+    </g:HorizontalPanel>
+    <g:HorizontalPanel>
+    <g:Label ui:field="gameStatusText" text="Status:"></g:Label>
+    <g:Label ui:field="gameStatus"/>
+    </g:HorizontalPanel>
+    <g:HorizontalPanel>
+    <g:Label ui:field="startDateText"></g:Label>
+    <g:Label ui:field="startDate"></g:Label>
+    </g:HorizontalPanel>
+    <g:HorizontalPanel>
+    <g:Label ui:field="opponentText"/>
+    <g:Label ui:field="opponent" text=""/>
+    </g:HorizontalPanel>
+    <g:HorizontalPanel>
+    <g:Label ui:field="yourColorText"/>
+    <g:Label ui:field="yourColor" text=""/>
+    </g:HorizontalPanel>
+    <g:HorizontalPanel>
+    <g:Label ui:field="turnText"/>
+    <g:Label ui:field="turn" text=""/>
+    </g:HorizontalPanel>
+      <g:Grid ui:field="gameGrid"/>
+      <g:Grid ui:field="promotionOptions" />
+      <g:HorizontalPanel>
+      <g:Button ui:field="autoMatch"></g:Button>
+      <g:TextBox ui:field="txtPlayWith"></g:TextBox>
+      <g:Button ui:field="btnPlayWith"></g:Button>
+      </g:HorizontalPanel>
+      <g:HorizontalPanel>
+      <g:ListBox ui:field="matches" multipleSelect="false"></g:ListBox>
+      <g:Button ui:field="loadMatch"></g:Button>
+      <g:Button ui:field="deleteGame"></g:Button>
+      </g:HorizontalPanel>
+              <g:Button ui:field="ai"></g:Button>
+      </g:VerticalPanel>
+      </g:VerticalPanel>
+  </g:HTMLPanel>
+</ui:UiBinder> 

@@ -1,0 +1,56 @@
+package org.karthikmahadevan.hw7;
+
+import java.util.Date;
+
+import org.karthikmahadevan.hw3.StateParser;
+import org.shared.chess.Color;
+import org.shared.chess.State;
+
+import com.google.gwt.i18n.shared.DateTimeFormat;
+import com.google.gwt.i18n.shared.DateTimeFormat.PredefinedFormat;
+
+public class MatchInfoParser {
+	private String matchInfo;
+	public MatchInfoParser(String matchInfo) {
+		this.matchInfo = matchInfo;
+	}
+	@SuppressWarnings("deprecation")
+	public MatchInfo getMatchInfo() {
+		String splitMatch[] = matchInfo.split("~");
+		
+		MatchInfo match = new MatchInfo();
+		match.setMatchID(splitMatch[0]);
+		
+		String strState = splitMatch[1];
+		if (!strState.equals("")) {
+			StateParser parser = new StateParser(strState);
+			match.setMatchState(parser.getState());
+		}
+		else {
+			match.setMatchState(new State());
+		}
+		
+		if (splitMatch[2].equals("W")) {
+			match.setMyColor(Color.WHITE);
+		}
+		else {
+			match.setMyColor(Color.BLACK);
+		}
+		
+		match.setOpponent(splitMatch[3]);
+		
+		int startMonth = Integer.parseInt(splitMatch[4]); 
+        int startDate = Integer.parseInt(splitMatch[5]);
+		int startYear = Integer.parseInt(splitMatch[6]);
+		
+		Date date = new Date();
+		date.setMonth(startMonth);
+		date.setDate(startDate);
+		date.setYear(startYear);
+		
+		match.setStartDate( 
+				DateTimeFormat.getFormat(PredefinedFormat.DATE_SHORT).format(date));
+	
+		return match;
+	}
+}

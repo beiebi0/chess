@@ -1,0 +1,100 @@
+package org.alishah.hw6.client;
+
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
+
+import com.googlecode.objectify.Key;
+import com.googlecode.objectify.annotation.Entity;
+import com.googlecode.objectify.annotation.Id;
+import com.googlecode.objectify.annotation.Index;
+import com.googlecode.objectify.condition.IfTrue;
+
+@Entity
+public class PlayerInformation {
+
+  @Id String emailAddress;
+  String playerName;
+  int ranking;
+
+  Set<Key<MatchInformation>> allMatches;
+  
+  Set<String> currentConnections;
+  
+  // Index if the player should be automatched.
+  @Index(IfTrue.class) boolean autoMatchable;
+	
+  public PlayerInformation() {
+  	this.emailAddress = "";
+  	this.playerName = "";
+  	this.ranking = 1500;
+  	
+  	this.currentConnections = new HashSet<String>();
+  	this.allMatches = new HashSet<Key<MatchInformation>>();
+  	
+  	autoMatchable = false;
+  }
+  
+  public PlayerInformation(String emailAddress, String playerName) {
+  	this();
+  	
+  	this.emailAddress = emailAddress;
+  	this.playerName = playerName;
+  }
+  
+  public String emailAddress() {
+  	return this.emailAddress;
+  }
+  
+  public String playerName() {
+  	return this.playerName;
+  }
+  
+  public int ranking() {
+  	return this.ranking;
+  }
+  
+  public void setRanking(int ranking) {
+  	this.ranking = ranking;
+  }
+  
+  public void setAutomatchable(boolean matchable) {
+  	this.autoMatchable = matchable;
+  }
+  
+  public int numberOfConns() {
+  	return currentConnections.size();
+  }
+  
+  public void addConn(String connectionId) {
+  	currentConnections.add(connectionId);
+  }
+  
+  public void removeConn(String connectionId) {
+  	currentConnections.remove(connectionId);
+  }
+  
+  public Set<String> currentConnections() {
+  	return Collections.unmodifiableSet(currentConnections);
+  }
+  
+  public int numberOfMatches() {
+  	return allMatches.size();
+  }
+  
+  public boolean isInMatch(Key<MatchInformation> match) {
+  	return allMatches.contains(match);
+  }
+  
+  public void addMatch(Key<MatchInformation> match) {
+  	allMatches.add(match);
+  }
+  
+  public void removeMatch(Key<MatchInformation> match) {
+  	allMatches.remove(match);
+  }
+  
+  public Set<Key<MatchInformation>> allMatches() {
+  	return Collections.unmodifiableSet(allMatches);
+  }
+}

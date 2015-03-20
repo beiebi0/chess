@@ -1,0 +1,11 @@
+package org.shitianren.hw6.client;
+
+import com.google.gwt.user.client.rpc.AsyncCallback;
+
+public interface ChessGameServiceAsync {
+	public void createChannel(AsyncCallback<String> callBack);
+
+	public void sendState(String state, AsyncCallback<String> callBack);
+	
+	public void getReady(AsyncCallback<String> callBack);
+}

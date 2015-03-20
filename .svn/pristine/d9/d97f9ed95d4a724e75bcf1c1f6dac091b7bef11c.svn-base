@@ -1,0 +1,79 @@
+<!DOCTYPE ui:UiBinder SYSTEM "http://dl.google.com/gwt/DTD/xhtml.ent">
+<ui:UiBinder xmlns:ui="urn:ui:com.google.gwt.uibinder"
+  xmlns:g="urn:import:com.google.gwt.user.client.ui">
+  
+  <ui:style field="css" type="org.bohuang.hw3.GameCss">
+    .highlighted {
+      outline: solid red 2px;      
+    }
+    .selected {
+	outline: solid yellow 2px;
+
+	}
+	
+
+    .grid{	
+   margin-top:50px;
+   margin-bottom:10px;
+	boarder:5px solid grey;
+  outline:black solid thick;  
+    }
+
+    .mid{	
+   margin-left:50px;
+  
+    }
+    
+
+    
+    td img {
+      display: block
+    }
+  </ui:style>
+  <g:HTMLPanel>
+      <!-- <div align="left">
+			<g:HorizontalPanel>
+				<g:Label ui:field="loginStatus" text="Not logged in. " />
+				<g:Label text="&nbsp;" />
+				<g:Button ui:field="loginButton" text="Log in" />				
+			</g:HorizontalPanel>
+			
+			<g:Label ui:field="opponentStatus" text="No opponent" />
+			<g:Button ui:field="matchButton" text="Find Opponent" />
+			
+			<g:VerticalPanel>				
+				<g:TextBox ui:field="textBox" />
+                <g:ListBox ui:field="listBox" />
+			</g:VerticalPanel>
+			
+			<g:HorizontalPanel>				
+				<g:Button ui:field="saveButton" />
+                <g:Button ui:field="loadButton" />
+				<g:Button ui:field="resetButton" />     
+			</g:HorizontalPanel>
+		</div> -->
+		<div align="left">
+		   
+		    <g:VerticalPanel ui:field="mid" styleName = "{css.mid}">
+		    <g:Label ui:field="StartDate" />  
+		    <g:Label ui:field="OpponentStatus" />      
+		    <g:Label ui:field="GameIdStatus" />      
+		    <g:Label ui:field="YourColorStatus"/>          
+			<g:Label ui:field="gameStatus" />
+			<g:Label ui:field="yourRankStatus" /> 
+			<g:HorizontalPanel>
+			<g:Button ui:field="PlayAgainsBot"/>
+			<g:Label ui:field="BotStatus"/>  
+			</g:HorizontalPanel>                 
+            <g:Grid ui:field="topGrid" />
+            
+            <g:Grid ui:field="gameGrid" styleName = "{css.grid}"/>
+            
+            <g:Grid ui:field="botGrid" />	
+            </g:VerticalPanel>		
+            
+		  
+		</div>
+		
+  </g:HTMLPanel>
+</ui:UiBinder> 

@@ -1,0 +1,858 @@
+package org.mengyanhuang.hw2;
+
+import java.util.HashSet;
+import java.util.Set;
+
+import org.shared.chess.Color;
+import org.shared.chess.GameResult;
+import org.shared.chess.GameResultReason;
+import org.shared.chess.IllegalMove;
+import org.shared.chess.Move;
+import org.shared.chess.Piece;
+import org.shared.chess.PieceKind;
+import org.shared.chess.Position;
+import org.shared.chess.State;
+import org.shared.chess.StateChanger;
+
+public class StateChangerImpl implements StateChanger {
+	public void makeMove(State state, Move move) throws IllegalMove {
+		if (state.getGameResult() != null) {
+			// Game already ended! Game already over!
+			throw new IllegalMove();
+		}
+		Position from = move.getFrom();
+		Position to = move.getTo();
+		Piece piece = state.getPiece(from);
+		// Piece to_piece = state.getPiece(to);
+		if (piece == null) {
+			// Nothing to move! Moves starts from an empty square!
+			throw new IllegalMove();
+		}
+		Color color = piece.getColor();
+		if (color != state.getTurn()) {
+			// Wrong player moves! The player with the wrong color did a move!
+			throw new IllegalMove();
+		}
+		// Capture its own color piece
+		if (state.getPiece(from) != null && state.getPiece(to) != null
+				&& state.getPiece(to).getColor() == color) {
+			throw new IllegalMove();
+		}
+		// from position==to position
+		if (from.equals(to)) {
+			throw new IllegalMove();
+		}
+		// from or to position is not on board
+		if (!isOnBoard(from) || !isOnBoard(to)) {
+			throw new IllegalMove();
+		}
+		//non-pawn piece tries to promote
+		if (move.getPromoteToPiece() != null
+				&& piece.getKind() != PieceKind.PAWN)
+			throw new IllegalMove();  
+
+		if(isLegalMove(state,move)) ExcuteMove(state, move);
+		else throw new IllegalMove();   
+		
+		if(isUnderAttack(state, getKingPosition(state, color),color)) throw new IllegalMove();
+		
+		if(state.getNumberOfMovesWithoutCaptureNorPawnMoved()==100){
+			state.setGameResult(new GameResult(null,GameResultReason.FIFTY_MOVE_RULE));
+		}
+		if(isStaleMate(state,state.getTurn())){
+			state.setGameResult(new GameResult(null,GameResultReason.STALEMATE));
+		}
+		if(isCheckMate(state,state.getTurn())){
+			state.setGameResult(new GameResult((state.getTurn()==Color.WHITE?Color.BLACK:Color.WHITE),GameResultReason.CHECKMATE));
+		}	
+	}
+	
+	public boolean isLegalMove(State state, Move move){
+		Position from = move.getFrom();
+		Piece piece = state.getPiece(from);
+		
+		switch(piece.getKind()){
+		case PAWN:
+			if(!isLegalPawnMove(state,move)) return false;
+			break;
+		case ROOK:
+			if(!isLegalRookMove(state,move)) return false;
+			break;
+		case BISHOP:
+			if(!isLegalBishopMove(state,move)) return false;
+			break;
+		case KNIGHT:
+			if(!isLegalKnightMove(state,move)) return false;
+			break;
+		case QUEEN:
+			if(!isLegalQueenMove(state,move)) return false;
+			break;
+		case KING:
+			if(!isLegalKingMove(state,move)) return false;
+			break;
+		}	
+		return true;
+	}
+	
+	public boolean isLegalPawnMove(State state, Move move){
+		Position from = move.getFrom();
+		Position to = move.getTo();
+		Piece piece = state.getPiece(from);
+		Color color = piece.getColor();
+		
+		//handle false promotion
+		if(color==Color.BLACK && move.getPromoteToPiece()!=null && to.getRow()!=0) return false;
+		if(color==Color.WHITE && move.getPromoteToPiece()!=null && to.getRow()!=7) return false;
+		if(color==Color.BLACK && (move.getPromoteToPiece()==null || move.getPromoteToPiece()==PieceKind.KING || move.getPromoteToPiece()==PieceKind.PAWN) && to.getRow()==0) return false;
+		if(color==Color.WHITE && (move.getPromoteToPiece()==null || move.getPromoteToPiece()==PieceKind.KING || move.getPromoteToPiece()==PieceKind.PAWN) && to.getRow()==7) return false;
+		
+		if(piece.getColor()==Color.WHITE){
+			if(state.getPiece(to)==null){
+				if(from.getRow()==1){
+					if(to.getRow()!=2 && to.getRow()!=3) return false;
+					else if((to.getRow()==2 || to.getRow()==3) && to.getCol()-from.getCol()!=0) return false;
+					else if(to.getRow()==3 && state.getPiece(2, from.getCol())!=null) return false;
+					else return true;
+				}
+				else if(from.getRow()==4){
+					if(to.getRow()!=5) return false;
+					else if(to.getCol()-from.getCol()!=0 && Math.abs(to.getCol()-from.getCol())!=1) return false;
+					else if(Math.abs(to.getCol()-from.getCol())==1 && !isLegalEnpassant(state,move)) return false;
+					else return true;
+				}
+				else{
+					if(to.getCol()-from.getCol()!=0 || to.getRow()-from.getRow()!=1) return false;
+					else return true;
+				}
+			}
+			else{
+				if(Math.abs(to.getCol()-from.getCol())==1 && to.getRow()-from.getRow()==1) return true;
+				else return false;
+			}
+		}
+		//color==black
+		else{
+			if(state.getPiece(to)==null){
+				if(from.getRow()==6){
+					if(to.getRow()!=5 && to.getRow()!=4) return false;
+					else if((to.getRow()==5 || to.getRow()==4) && to.getCol()-from.getCol()!=0) return false;
+					else if(to.getRow()==4 && state.getPiece(5, from.getCol())!=null) return false;
+					else return true;
+				}
+				else if(from.getRow()==3){
+					if(to.getRow()!=2) return false;
+					else if(to.getCol()-from.getCol()!=0 && Math.abs(to.getCol()-from.getCol())!=1) return false;
+					else if(Math.abs(to.getCol()-from.getCol())==1 && !isLegalEnpassant(state,move)) return false;
+					else return true;
+				}
+				else{
+					if(to.getCol()-from.getCol()!=0 || from.getRow()-to.getRow()!=1) return false;
+					else return true;
+				}
+			}
+			else{
+				if(Math.abs(to.getCol()-from.getCol())==1 && from.getRow()-to.getRow()==1) return true;
+				else return false;
+			}
+		}
+	}
+	
+	public boolean isLegalRookMove(State state, Move move){
+		Position from = move.getFrom();
+		Position to = move.getTo();
+		int col_range = Math.abs(to.getCol() - from.getCol());
+		int row_range = Math.abs(to.getRow() - from.getRow());
+		//rook moves up or down
+		if (col_range == 0 && row_range != 0) {
+			for (int i = 1; i < row_range; i++) {
+				if (from.getRow() < to.getRow()) {
+					// make sure that squares between "from" and "to" are all null
+					if (state.getPiece(from.getRow() + i, from.getCol()) != null) { return false; }
+				} else {
+					if (state.getPiece(from.getRow() - i, from.getCol()) != null) { return false; }
+				}
+			}
+			return true;
+		}
+		// rook moves left or right
+		else if (row_range == 0 && col_range != 0) {
+			for (int i = 1; i < col_range; i++) {
+				if (from.getCol() < to.getCol()) {
+					// make sure that squares between "from" and "to" are all null
+					if (state.getPiece(from.getRow(), from.getCol() + i) != null) { return false; }
+				} else {
+					if (state.getPiece(from.getRow(), from.getCol() - i) != null) { return false; }
+				}
+			}
+			return true;
+		} else return false;	
+	}
+	
+	public boolean isLegalBishopMove(State state, Move move){
+		Position from = move.getFrom();
+		Position to = move.getTo();
+		int col_range = Math.abs(to.getCol() - from.getCol());
+		int row_range = Math.abs(to.getRow() - from.getRow());
+		
+		if(row_range == col_range){
+			for(int x=1;x!=row_range;x++){
+				if(from.getCol()<to.getCol() && from.getRow()<to.getRow()){
+					if(state.getPiece(from.getRow()+x, from.getCol()+x)!=null) return false;}
+				if(from.getCol()>to.getCol() && from.getRow()>to.getRow()){
+					if(state.getPiece(from.getRow()-x, from.getCol()-x)!=null) return false;}
+				if(from.getCol()>to.getCol() && from.getRow()<to.getRow()){
+					if(state.getPiece(from.getRow()+x, from.getCol()-x)!=null) return false;}
+				if(from.getCol()<to.getCol() && from.getRow()>to.getRow()){
+					if(state.getPiece(from.getRow()-x, from.getCol()+x)!=null) return false;}
+			}
+			return true;
+		}
+		else return false;
+	}
+	
+	public boolean isLegalKnightMove(State state, Move move){
+		Position from = move.getFrom();
+		Position to = move.getTo();
+		int col_range = Math.abs(to.getCol() - from.getCol());
+		int row_range = Math.abs(to.getRow() - from.getRow());
+
+		if (row_range == 1 && col_range == 2) { return true; }
+		if (row_range == 2 && col_range == 1) { return true; }
+		else return false;
+	}
+	
+	public boolean isLegalQueenMove(State state, Move move){
+		Position from = move.getFrom();
+		Position to = move.getTo();
+		int col_range = Math.abs(to.getCol() - from.getCol());
+		int row_range = Math.abs(to.getRow() - from.getRow());
+		//queen moves up or down
+		if (col_range == 0 && row_range != 0) {
+			for (int i = 1; i < row_range; i++) {
+				if (from.getRow() < to.getRow()) {
+					// make sure that squares between "from" and "to" are all null
+					if (state.getPiece(from.getRow() + i, from.getCol()) != null) { return false; }
+				} else {
+					if (state.getPiece(from.getRow() - i, from.getCol()) != null) { return false; }
+				}
+			}
+			return true;
+		}
+		// queen moves left or right
+		else if (row_range == 0 && col_range != 0) {
+			for (int i = 1; i < col_range; i++) {
+				if (from.getCol() < to.getCol()) {
+					// make sure that squares between "from" and "to" are all null
+					if (state.getPiece(from.getRow(), from.getCol() + i) != null) { return false; }
+				} else {
+					if (state.getPiece(from.getRow(), from.getCol() - i) != null) { return false; }
+				}
+			}
+			return true;
+		} 	
+		else if(row_range == col_range && row_range!=0){
+			for(int x=1;x!=row_range;x++){
+				if(from.getCol()<to.getCol() && from.getRow()<to.getRow())
+					if(state.getPiece(from.getRow()+x, from.getCol()+x)!=null) return false;
+				if(from.getCol()>to.getCol() && from.getRow()>to.getRow())
+					if(state.getPiece(from.getRow()-x, from.getCol()-x)!=null) return false;
+				if(from.getCol()>to.getCol() && from.getRow()<to.getRow())
+					if(state.getPiece(from.getRow()+x, from.getCol()-x)!=null) return false;
+				if(from.getCol()<to.getCol() && from.getRow()>to.getRow())
+					if(state.getPiece(from.getRow()-x, from.getCol()+x)!=null) return false;
+			}
+			return true;
+		}
+		else return false;
+	}
+	
+	public boolean isLegalKingMove(State state, Move move){
+		Position from = move.getFrom();
+		Position to = move.getTo();
+		int col_range = Math.abs(to.getCol() - from.getCol());
+		int row_range = Math.abs(to.getRow() - from.getRow());
+		
+		if(state.isCanCastleKingSide(Color.WHITE) && from.getRow()==0 && from.getCol()==4 
+				&& to.getRow()==0 && to.getCol()==6){
+			if(state.getPiece(new Position(0,5))==null && state.getPiece(new Position(0,6))==null
+			    && !isUnderAttack(state,new Position(0,4),Color.WHITE) && !isUnderAttack(state,new Position(0,5),Color.WHITE)
+			    && !isUnderAttack(state,new Position(0,6),Color.WHITE))
+				return true;
+			else return false;
+		}
+		else if(state.isCanCastleQueenSide(Color.WHITE) && from.getRow()==0 && from.getCol()==4 
+				&& to.getRow()==0 && to.getCol()==2){
+			if(state.getPiece(new Position(0,2))==null && state.getPiece(new Position(0,3))==null
+			    && state.getPiece(new Position(0,1))==null && !isUnderAttack(state,new Position(0,2),Color.WHITE) 
+			    && !isUnderAttack(state,new Position(0,3),Color.WHITE) && !isUnderAttack(state,new Position(0,4),Color.WHITE))
+				return true;
+			else return false;
+		}
+		else if(state.isCanCastleKingSide(Color.BLACK) && from.getRow()==7 && from.getCol()==4 
+				&& to.getRow()==7 && to.getCol()==6){
+			if(state.getPiece(new Position(7,5))==null && state.getPiece(new Position(7,6))==null
+			    && !isUnderAttack(state,new Position(7,4),Color.BLACK) && !isUnderAttack(state,new Position(7,5),Color.BLACK)
+			    && !isUnderAttack(state,new Position(7,6),Color.BLACK))
+				return true;
+			else return false;
+		}
+		else if(state.isCanCastleQueenSide(Color.BLACK) && from.getRow()==7 && from.getCol()==4 
+				&& to.getRow()==7 && to.getCol()==2){
+			if(state.getPiece(new Position(7,2))==null && state.getPiece(new Position(7,3))==null
+			    && state.getPiece(new Position(7,1))==null && !isUnderAttack(state,new Position(7,2),Color.BLACK) 
+			    && !isUnderAttack(state,new Position(7,3),Color.BLACK) && !isUnderAttack(state,new Position(7,4),Color.BLACK))
+				return true;
+			else return false;
+		}
+		else if(col_range > 1 || row_range > 1) return false;
+		else return true;
+		
+	}
+	
+	public boolean isOnBoard(Position position){
+		int col = position.getCol(); int row = position.getRow();
+		if(col<0 ||col>7 || row<0 || row> 7) return false;
+		else return true;
+	}
+	
+	public boolean isLegalEnpassant(State state, Move move){
+		Position from = move.getFrom();
+		Position to = move.getTo();
+		Piece piece = state.getPiece(from);
+		Color color = piece.getColor();
+		
+		if(color == Color.WHITE){
+			if(state.getEnpassantPosition()!=null && from.getRow() == state.getEnpassantPosition().getRow()
+					&& to.getRow() == state.getEnpassantPosition().getRow() + 1 &&  to.getCol() == state.getEnpassantPosition().getCol())
+			   return true;
+			else return false;
+		}
+		else{
+			if(state.getEnpassantPosition()!=null && from.getRow() == state.getEnpassantPosition().getRow()
+					&& to.getRow() == state.getEnpassantPosition().getRow() - 1 &&  to.getCol() == state.getEnpassantPosition().getCol())
+			   return true;
+			else return false;
+		}
+		
+	}
+	
+	public void ExcuteMove(State state, Move move){
+		Position from = move.getFrom();
+		Position to = move.getTo();
+		Piece piece = state.getPiece(from);
+		Piece to_piece = state.getPiece(to);
+		Color color = piece.getColor();
+		
+		//set NumberOfMovesWithoutCaptureNorPawnMoved
+		if (to_piece != null || piece.getKind() == PieceKind.PAWN)
+			state.setNumberOfMovesWithoutCaptureNorPawnMoved(0);
+		else
+			state.setNumberOfMovesWithoutCaptureNorPawnMoved(state
+					.getNumberOfMovesWithoutCaptureNorPawnMoved() + 1);
+		
+		//set castling
+		if(from.equals(new Position(0, 4)) || to.equals(new Position(0, 4))){
+			state.setCanCastleKingSide(Color.WHITE, false);
+			state.setCanCastleQueenSide(Color.WHITE, false);   }
+		if(from.equals(new Position(7, 4)) || to.equals(new Position(7, 4))){
+			state.setCanCastleKingSide(Color.BLACK, false);
+			state.setCanCastleQueenSide(Color.BLACK, false);   }
+	    if(from.equals(new Position(0, 0)) || to.equals(new Position(0, 0))){
+	    		state.setCanCastleQueenSide(Color.WHITE, false);   }
+	    if(from.equals(new Position(0, 7)) || to.equals(new Position(0, 7))){
+	    		state.setCanCastleKingSide(Color.WHITE, false);    }
+	    if(from.equals(new Position(7, 0)) || to.equals(new Position(7, 0))){
+	    		state.setCanCastleQueenSide(Color.BLACK, false);   }
+	    if(from.equals(new Position(7, 7)) || to.equals(new Position(7, 7))){
+	    		state.setCanCastleKingSide(Color.BLACK, false);    }
+		
+		//set turn
+		if (color == Color.BLACK) { state.setTurn(Color.WHITE); } 
+		else { state.setTurn(Color.BLACK); }
+		
+		//set en passant position
+		if(piece.getKind() == PieceKind.PAWN && Math.abs(from.getCol() - to.getCol()) == 1 && to_piece == null){
+				state.setPiece(state.getEnpassantPosition(), null);
+		}
+		state.setEnpassantPosition(null);
+		if(piece.getKind() == PieceKind.PAWN){
+			if(color==Color.WHITE && from.getRow()==1 && to.getRow()==3){
+				state.setEnpassantPosition(to);
+			}
+			if(color==Color.BLACK && from.getRow()==6 && to.getRow()==4){
+				state.setEnpassantPosition(to);
+			}
+		}
+		
+		//set moved positions
+		state.setPiece(from, null);
+		if (move.getPromoteToPiece() != null)
+			state.setPiece(to, new Piece(color, move.getPromoteToPiece()));
+		else state.setPiece(to, piece);
+		
+		//set castling piece
+		if(piece.getKind()==PieceKind.KING && Math.abs(from.getCol() - to.getCol()) == 2){
+			if(color==Color.WHITE){
+				if(to.getCol()==2){
+					state.setPiece(0, 3, new Piece(color, PieceKind.ROOK));
+					state.setPiece(0, 0, null); }
+				if(to.getCol()==6){
+					state.setPiece(0, 5, new Piece(color, PieceKind.ROOK));
+					state.setPiece(0, 7, null); }
+			}
+			if(color==Color.BLACK){
+				if(to.getCol()==2){
+					state.setPiece(7, 3, new Piece(color, PieceKind.ROOK));
+					state.setPiece(7, 0, null); }
+				if(to.getCol()==6){
+					state.setPiece(7, 5, new Piece(color, PieceKind.ROOK));
+					state.setPiece(7, 7, null); }
+			}
+		}
+	}
+
+	public Set<Position> canReachPositions(State state, Position position){
+		 Set<Position> reach_pos = new HashSet<Position>();
+		 int row = position.getRow();
+		 int col = position.getCol();
+		 Piece piece = state.getPiece(position);
+		 Color color = piece.getColor();
+		 
+		 if(state.getPiece(position)==null) return null;
+		 
+		 if(piece.getKind()==PieceKind.PAWN){
+			 if(color == Color.WHITE){
+				 if(row==1){
+					 if(state.getPiece(2, col)==null) reach_pos.add(new Position(2,col));
+					 if(state.getPiece(2, col)==null && state.getPiece(3, col)==null) reach_pos.add(new Position(3,col));
+					 if(isOnBoard(new Position(2, col+1)) && state.getPiece(2, col+1)!=null && state.getPiece(2, col+1).getColor()!=color) reach_pos.add(new Position(2,col+1));
+					 if(isOnBoard(new Position(2, col-1)) && state.getPiece(2, col-1)!=null && state.getPiece(2, col-1).getColor()!=color) reach_pos.add(new Position(2,col-1));
+				 }
+				 else{
+					 if(isOnBoard(new Position(row+1,col+1)) && state.getPiece(row+1, col+1)!=null && state.getPiece(row+1, col+1).getColor()!=color) reach_pos.add(new Position(row+1,col+1));
+					 if(isOnBoard(new Position(row+1, col-1)) && state.getPiece(row+1, col-1)!=null && state.getPiece(row+1, col-1).getColor()!=color) reach_pos.add(new Position(row+1,col-1));
+					 if(isOnBoard(new Position(row+1, col)) && state.getPiece(row+1, col)==null) reach_pos.add(new Position(row+1,col));
+					 if(state.getEnpassantPosition()!=null){
+					 if(state.getEnpassantPosition().equals(new Position(row, col+1)) && isOnBoard(new Position(row+1,col+1))) reach_pos.add(new Position(row+1,col+1));
+					 if(isOnBoard(new Position(row+1, col-1)) && state.getEnpassantPosition().equals(new Position(row, col-1))) reach_pos.add(new Position(row+1, col-1));
+					 }
+			     }
+			 } else{
+				 if(row==6){
+					 if(state.getPiece(5, col)==null) reach_pos.add(new Position(5,col));
+					 if(state.getPiece(4, col)==null && state.getPiece(5, col)==null) reach_pos.add(new Position(4,col));
+					 if(isOnBoard(new Position(5, col+1)) && state.getPiece(5, col+1)!=null && state.getPiece(5, col+1).getColor()!=color) reach_pos.add(new Position(5,col+1));
+					 if(isOnBoard(new Position(5, col-1)) && state.getPiece(5, col-1)!=null && state.getPiece(5, col-1).getColor()!=color) reach_pos.add(new Position(5,col-1));
+				 }
+				 else{
+					 if(isOnBoard(new Position(row-1,col+1)) && state.getPiece(row-1, col+1)!=null && state.getPiece(row-1, col+1).getColor()!=color) reach_pos.add(new Position(row-1,col+1));
+					 if(isOnBoard(new Position(row-1, col-1)) && state.getPiece(row-1, col-1)!=null && state.getPiece(row-1, col-1).getColor()!=color) reach_pos.add(new Position(row-1,col-1));
+					 if(isOnBoard(new Position(row-1, col)) && state.getPiece(row-1, col)==null) reach_pos.add(new Position(row-1,col));
+					 if(state.getEnpassantPosition()!=null){
+					 if(isOnBoard(new Position(row-1,col+1)) && state.getEnpassantPosition().equals(new Position(row, col+1))) reach_pos.add(new Position(row-1,col+1));
+					 if(isOnBoard(new Position(row-1, col-1)) && state.getEnpassantPosition().equals(new Position(row, col-1))) reach_pos.add(new Position(row-1, col-1));
+					 }
+			     }
+			 }
+		 }else if(piece.getKind()==PieceKind.KING){
+			 if(state.isCanCastleKingSide(color) && (position.equals(new Position(0,4)) || position.equals(new Position(7,4)))){
+				 if(state.getPiece(row, 5)==null && state.getPiece(row, 6)==null
+						 && !isUnderAttack(state,new Position(row,4),color) && !isUnderAttack(state,new Position(row,5),color)
+ 					    && !isUnderAttack(state,new Position(row,6),color))
+					 reach_pos.add(new Position(row,6));
+    		 }
+    		 if(state.isCanCastleQueenSide(color) && (position.equals(new Position(0,4)) || position.equals(new Position(7,4)))){
+    			 if(state.getPiece(row, 3)==null && state.getPiece(row, 2)==null && state.getPiece(row, 1)==null
+    					 && !isUnderAttack(state,new Position(row,4),color) && !isUnderAttack(state,new Position(row,3),color)
+    					    && !isUnderAttack(state,new Position(row,2),color))
+    				 reach_pos.add(new Position(row,2));
+    		 }
+    		 reach_pos.addAll(canAttackPositions(state,position));
+		 }else{
+			 reach_pos=canAttackPositions(state,position);
+		 }
+		return reach_pos;
+	}
+	
+	public Set<Position> canAttackPositions(State state, Position position){
+		 Set<Position> pos = new HashSet<Position>();
+		 int row = position.getRow();
+		 int col = position.getCol();
+		 Piece piece = state.getPiece(position);
+		 Color color = piece.getColor();
+		 
+		 if(state.getPiece(position)==null) return null;
+		 
+		 if(piece.getKind()==PieceKind.PAWN){
+			 if(color == Color.WHITE){
+				 if(isOnBoard(new Position(row+1,col+1))) pos.add(new Position(row+1,col+1));
+				 if(isOnBoard(new Position(row+1,col-1))) pos.add(new Position(row+1,col-1)); 
+			 }else{
+				 if(isOnBoard(new Position(row-1,col+1))) pos.add(new Position(row-1,col+1));
+				 if(isOnBoard(new Position(row-1,col-1))) pos.add(new Position(row-1,col-1)); }
+		 }
+		 
+         if(piece.getKind()==PieceKind.ROOK){
+        	 for(int i = 1; i < 8; i++){
+ 				if(row+i > 7 || state.getPiece(row + i, col)!=null){
+ 					if(row + i <= 7 && state.getPiece(row + i, col).getColor()!=color){
+ 						pos.add(new Position(row + i, col));
+ 					}
+ 					break;
+ 				}else{
+ 					pos.add(new Position(row + i, col));
+ 				}
+ 			}
+ 			for(int i = 1; i < 8; i++){
+ 				if(row - i < 0 || state.getPiece(row - i, col)!=null){
+ 					if(row - i >= 0 && state.getPiece(row - i, col).getColor()!=color){
+ 						pos.add(new Position(row - i, col));
+ 					}
+ 					break;
+ 				}else{
+ 					pos.add(new Position(row - i, col));
+ 				}
+ 			}
+ 			for(int i = 1; i < 8; i++){
+ 				if(col + i > 7 || state.getPiece(row, col + i)!=null){
+ 					if(col + i <= 7 && state.getPiece(row, col + i).getColor()!=color){
+ 						pos.add(new Position(row, col + i));
+ 					}
+ 					break;
+ 				}else{
+ 					pos.add(new Position(row, col + i));
+ 				}
+ 			}
+ 			for(int i = 1; i < 8; i++){
+ 				if(col - i < 0 || state.getPiece(row, col - i)!=null){
+ 					if(col - i >= 0 && state.getPiece(row, col - i).getColor()!=color){
+ 						pos.add(new Position(row, col - i));
+ 					}
+ 					break;
+ 				}else{
+ 					pos.add(new Position(row, col - i));
+ 				}
+ 			}
+		 }
+         
+         if(piece.getKind()==PieceKind.KNIGHT){
+        	 if(isOnBoard(new Position(row + 1, col + 2))){
+        			 if(state.getPiece(new Position(row + 1, col + 2))==null) pos.add(new Position(row + 1, col + 2));
+        			 if(state.getPiece(new Position(row + 1, col + 2))!=null && state.getPiece(new Position(row + 1, col + 2)).getColor()!=color) pos.add(new Position(row + 1, col + 2));
+        	 }
+        	 if(isOnBoard(new Position(row + 1, col - 2))){
+    			 if(state.getPiece(new Position(row + 1, col - 2))==null) pos.add(new Position(row + 1, col - 2));
+    			 if(state.getPiece(new Position(row + 1, col - 2))!=null && state.getPiece(new Position(row + 1, col - 2)).getColor()!=color) pos.add(new Position(row + 1, col - 2));
+    	      }
+        	 if(isOnBoard(new Position(row + 2, col + 1))){
+    			 if(state.getPiece(new Position(row + 2, col + 1))==null) pos.add(new Position(row + 2, col + 1));
+    			 if(state.getPiece(new Position(row + 2, col + 1))!=null && state.getPiece(new Position(row + 2, col + 1)).getColor()!=color) pos.add(new Position(row + 2, col + 1));
+    	      } 
+        	 if(isOnBoard(new Position(row + 2, col - 1))){
+    			 if(state.getPiece(new Position(row + 2, col - 1))==null) pos.add(new Position(row + 2, col - 1));
+    			 if(state.getPiece(new Position(row + 2, col - 1))!=null && state.getPiece(new Position(row + 2, col - 1)).getColor()!=color) pos.add(new Position(row + 2, col - 1));
+    	      }  
+        	 if(isOnBoard(new Position(row - 1, col + 2))){
+    			 if(state.getPiece(new Position(row - 1, col + 2))==null) pos.add(new Position(row - 1, col + 2));
+    			 if(state.getPiece(new Position(row - 1, col + 2))!=null && state.getPiece(new Position(row - 1, col + 2)).getColor()!=color) pos.add(new Position(row - 1, col + 2));
+    	      } 
+        	 if(isOnBoard(new Position(row - 1, col - 2))){
+    			 if(state.getPiece(new Position(row - 1, col - 2))==null) pos.add(new Position(row - 1, col - 2));
+    			 if(state.getPiece(new Position(row - 1, col - 2))!=null && state.getPiece(new Position(row - 1, col - 2)).getColor()!=color) pos.add(new Position(row - 1, col - 2));
+    	      } 
+        	 if(isOnBoard(new Position(row - 2, col + 1))){
+    			 if(state.getPiece(new Position(row - 2, col + 1))==null) pos.add(new Position(row - 2, col + 1));
+    			 if(state.getPiece(new Position(row - 2, col + 1))!=null && state.getPiece(new Position(row - 2, col + 1)).getColor()!=color) pos.add(new Position(row - 2, col + 1));
+    	      }  
+        	 if(isOnBoard(new Position(row - 2, col - 1))){
+    			 if(state.getPiece(new Position(row - 2, col - 1))==null)  pos.add(new Position(row - 2, col - 1));
+    			 if(state.getPiece(new Position(row - 2, col - 1))!=null && state.getPiece(new Position(row - 2, col - 1)).getColor()!=color)  pos.add(new Position(row - 2, col - 1));
+    	      } 
+		 }
+         
+         if(piece.getKind()==PieceKind.BISHOP){
+        	int x = 1;
+ 			while (x < 8) {
+ 				if (row - x >= 0 && col - x >= 0
+ 						&& state.getPiece(row - x, col - x) == null) {
+ 					pos.add(new Position(row - x, col - x));
+ 				} else if (row - x >= 0 && col - x >= 0
+ 						&& state.getPiece(row - x, col - x) != null
+ 						&& state.getPiece(row - x, col - x).getColor() != color) {
+ 					pos.add(new Position(row - x, col - x));
+ 					break;
+ 				} else { break; }
+ 				x++;
+ 			}
+ 			x = 1;
+ 			while (x < 8) {
+ 				if (row - x >= 0 && col + x < 8
+ 						&& state.getPiece(row - x, col + x) == null) {
+ 					pos.add(new Position(row - x, col + x));
+ 				} else if (row - x >= 0 && col + x < 8
+ 						&& state.getPiece(row - x, col + x) != null
+ 						&& state.getPiece(row - x, col + x).getColor() != color) {
+ 					pos.add(new Position(row - x, col + x));
+ 					break;
+ 				} else { break; }
+ 				x++;
+ 			}
+ 			x = 1;
+ 			while (x < 8) {
+ 				if (row + x < 8 && col - x >= 0
+ 						&& state.getPiece(row + x, col - x) == null) {
+ 					pos.add(new Position(row + x, col - x));
+ 				} else if (row + x < 8 && col - x >= 0
+ 						&& state.getPiece(row + x, col - x) != null
+ 						&& state.getPiece(row + x, col - x).getColor() != color) {
+ 					pos.add(new Position(row + x, col - x));
+ 					break;
+ 				} else { break; }
+ 				x++;
+ 			}
+ 			x = 1;
+ 			while (x < 8) {
+ 				if (row + x < 8 && col + x < 8
+ 						&& state.getPiece(row + x, col + x) == null) {
+ 					pos.add(new Position(row + x, col + x));
+ 				} else if (row + x < 8 && col + x < 8
+ 						&& state.getPiece(row + x, col + x) != null
+ 						&& state.getPiece(row + x, col + x).getColor() != color) {
+ 					pos.add(new Position(row + x, col + x));
+ 					break;
+ 				} else { break; }
+ 				x++;
+ 			}
+
+		 }
+         if(piece.getKind()==PieceKind.QUEEN){
+        	 for(int i = 1; i < 8; i++){
+  				if(row+i > 7 || state.getPiece(row + i, col)!=null){
+  					if(row + i <= 7 && state.getPiece(row + i, col).getColor()!=color){
+  						pos.add(new Position(row + i, col));
+  					}
+  					break;
+  				}else{
+  					pos.add(new Position(row + i, col));
+  				}
+  			}
+  			for(int i = 1; i < 8; i++){
+  				if(row - i < 0 || state.getPiece(row - i, col)!=null){
+  					if(row - i >= 0 && state.getPiece(row - i, col).getColor()!=color){
+  						pos.add(new Position(row - i, col));
+  					}
+  					break;
+  				}else{
+  					pos.add(new Position(row - i, col));
+  				}
+  			}
+  			for(int i = 1; i < 8; i++){
+  				if(col + i > 7 || state.getPiece(row, col + i)!=null){
+  					if(col + i <= 7 && state.getPiece(row, col + i).getColor()!=color){
+  						pos.add(new Position(row, col + i));
+  					}
+  					break;
+  				}else{
+  					pos.add(new Position(row, col + i));
+  				}
+  			}
+  			for(int i = 1; i < 8; i++){
+  				if(col - i < 0 || state.getPiece(row, col - i)!=null){
+  					if(col - i >= 0 && state.getPiece(row, col - i).getColor()!=color){
+  						pos.add(new Position(row, col - i));
+  					}
+  					break;
+  				}else{
+  					pos.add(new Position(row, col - i));
+  				}
+  			}
+        	int x = 1;
+  			while (x < 8) {
+  				if (row - x >= 0 && col - x >= 0
+  						&& state.getPiece(row - x, col - x) == null) {
+  					pos.add(new Position(row - x, col - x));
+  				} else if (row - x >= 0 && col - x >= 0
+  						&& state.getPiece(row - x, col - x) != null
+  						&& state.getPiece(row - x, col - x).getColor() != color) {
+  					pos.add(new Position(row - x, col - x));
+  					break;
+  				} else { break; }
+  				x++;
+  			}
+  			x = 1;
+  			while (x < 8) {
+  				if (row - x >= 0 && col + x < 8
+  						&& state.getPiece(row - x, col + x) == null) {
+  					pos.add(new Position(row - x, col + x));
+  				} else if (row - x >= 0 && col + x < 8
+  						&& state.getPiece(row - x, col + x) != null
+  						&& state.getPiece(row - x, col + x).getColor() != color) {
+  					pos.add(new Position(row - x, col + x));
+  					break;
+  				} else { break; }
+  				x++;
+  			}
+  			x = 1;
+  			while (x < 8) {
+  				if (row + x < 8 && col - x >= 0
+  						&& state.getPiece(row + x, col - x) == null) {
+  					pos.add(new Position(row + x, col - x));
+  				} else if (row + x < 8 && col - x >= 0
+  						&& state.getPiece(row + x, col - x) != null
+  						&& state.getPiece(row + x, col - x).getColor() != color) {
+  					pos.add(new Position(row + x, col - x));
+  					break;
+  				} else { break; }
+  				x++;
+  			}
+  			x = 1;
+  			while (x < 8) {
+  				if (row + x < 8 && col + x < 8
+  						&& state.getPiece(row + x, col + x) == null) {
+  					pos.add(new Position(row + x, col + x));
+  				} else if (row + x < 8 && col + x < 8
+  						&& state.getPiece(row + x, col + x) != null
+  						&& state.getPiece(row + x, col + x).getColor() != color) {
+  					pos.add(new Position(row + x, col + x));
+  					break;
+  				} else { break; }
+  				x++;
+  			}
+		 }
+         
+         if(piece.getKind()==PieceKind.KING){
+        	 if(isOnBoard(new Position(row + 1, col + 1)) 
+        			 &&(state.getPiece(row + 1, col + 1)==null || state.getPiece(row + 1, col + 1).getColor()!=color)) 
+        		 pos.add(new Position(row + 1, col + 1));
+        	 if(isOnBoard(new Position(row + 1, col - 1))
+        			 &&(state.getPiece(row + 1, col - 1)==null || state.getPiece(row + 1, col - 1).getColor()!=color)) 
+        		 pos.add(new Position(row + 1, col - 1));
+        	 if(isOnBoard(new Position(row + 1, col))
+        			 &&(state.getPiece(row + 1, col)==null || state.getPiece(row + 1, col).getColor()!=color))     
+        		 pos.add(new Position(row + 1, col));
+        	 if(isOnBoard(new Position(row, col - 1))
+        			 &&(state.getPiece(row, col - 1)==null || state.getPiece(row, col - 1).getColor()!=color))     
+        		 pos.add(new Position(row, col - 1));
+        	 if(isOnBoard(new Position(row, col + 1))
+        			 &&(state.getPiece(row, col + 1)==null || state.getPiece(row, col + 1).getColor()!=color))    
+        		 pos.add(new Position(row, col + 1));
+        	 if(isOnBoard(new Position(row - 1, col))
+        			 &&(state.getPiece(row - 1, col)==null || state.getPiece(row - 1, col).getColor()!=color))     
+        		 pos.add(new Position(row - 1, col));
+        	 if(isOnBoard(new Position(row - 1, col + 1))
+        			 &&(state.getPiece(row - 1, col + 1)==null || state.getPiece(row - 1, col + 1).getColor()!=color)) 
+        		 pos.add(new Position(row - 1, col + 1));
+        	 if(isOnBoard(new Position(row - 1, col - 1))
+        			 &&(state.getPiece(row - 1, col - 1)==null || state.getPiece(row - 1, col - 1).getColor()!=color)) 
+        		 pos.add(new Position(row - 1, col - 1));
+         }
+         
+         return pos;
+	}
+	
+	public boolean isUnderAttack(State state, Position position, Color color){
+		//is the position under check? true : false
+		//Color color = state.getPiece(position).getColor();
+		Color enemy_color;
+		if (color == Color.WHITE) enemy_color = Color.BLACK;
+		else enemy_color = Color.WHITE;
+  
+		// Get all the enemy pieces on the board
+		Set<Position> getenemy_piece = new HashSet<Position>();
+		for (int x = 0; x <= 7; x++) {
+			for (int y = 0; y <= 7; y++) {
+				Piece pp = state.getPiece(x, y);
+				if (pp != null && pp.getColor() == enemy_color)
+				getenemy_piece.add(new Position(x, y));
+			}
+		}
+		// decide for each enemy piece, is king in its reachable position
+		for (Position ppp : getenemy_piece) {
+			Set<Position> attack_pos = canAttackPositions(state, ppp);
+			for (Position target : attack_pos) {
+			    if (position!=null && position.getCol() == target.getCol()
+						&& position.getRow() == target.getRow())
+					return true;
+				}
+		}
+		return false;
+
+	}
+
+    public Position getKingPosition(State state, Color color){
+    	//get king position
+    	Piece p;
+    	Position King_pos = null;
+    	
+    	for (int x = 0; x <= 7; x++) {
+    		for (int y = 0; y <= 7; y++) {
+    			p = state.getPiece(x, y);
+    			if (p != null && p.getKind() == PieceKind.KING && p.getColor() == color) {
+    				King_pos = new Position(x, y);
+    			}
+    		}
+    	}
+    	if(King_pos == null)  return null;/*throw new IllegalMove();*/
+    	return King_pos;
+    }
+
+    public boolean isStaleMate(State state, Color color){
+		if(isUnderAttack(state, getKingPosition(state,color), color)){
+			return false;
+		}
+		
+			Set<Position> getmy_piece = new HashSet<Position>();
+			for (int x = 0; x <= 7; x++) {
+				for (int y = 0; y <= 7; y++) {
+					Piece pp = state.getPiece(x, y);
+					if (pp != null && pp.getColor() == color)
+					     getmy_piece.add(new Position(x, y));
+				}
+			}
+
+			for (Position ppp : getmy_piece) {
+				Set<Position> reach_pos = canReachPositions(state, ppp);
+				for(Position p : reach_pos){
+				   State state_copy = state.copy();
+				   Piece piece = state.getPiece(ppp);
+				   state_copy.setPiece(p, piece);
+				   state_copy.setPiece(ppp, null);
+				   if(!isUnderAttack(state_copy, getKingPosition(state_copy,color),color)){
+					  return false;
+				   }
+				}
+			}
+		return true;
+    }
+    
+    public boolean isCheckMate(State state, Color color){
+    
+		if(!isUnderAttack(state, getKingPosition(state,color),color)){
+			return false;
+		}
+		
+			Set<Position> getmy_piece = new HashSet<Position>();
+			for (int x = 0; x <= 7; x++) {
+				for (int y = 0; y <= 7; y++) {
+					Piece pp = state.getPiece(x, y);
+					if (pp != null && pp.getColor() == color)
+					     getmy_piece.add(new Position(x, y));
+				}
+			}
+
+			for (Position ppp : getmy_piece) {
+				Set<Position> reach_pos = canReachPositions(state, ppp);
+				for(Position p : reach_pos){
+				   State state_copy = state.copy();
+				   Piece piece = state.getPiece(ppp);
+				   state_copy.setPiece(p, piece);
+				   //Piece x=state_copy.getPiece(p);
+				   state_copy.setPiece(ppp, null);
+				   if(!isUnderAttack(state_copy, getKingPosition(state_copy,color), color)){
+					   return false;
+				   }
+				}
+			}
+		return true;
+    }
+}

@@ -1,0 +1,1051 @@
+package org.sanjana.hw5;
+
+import static org.shared.chess.Color.BLACK;
+import static org.shared.chess.Color.WHITE;
+import static org.shared.chess.GameResultReason.CHECKMATE;
+import static org.shared.chess.GameResultReason.FIFTY_MOVE_RULE;
+import static org.shared.chess.GameResultReason.STALEMATE;
+import static org.shared.chess.GameResultReason.THREEFOLD_REPETITION_RULE;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.Set;
+
+import org.sanjana.hw11.PopulateContacts;
+import org.sanjana.hw2_5.StateExplorerImpl;
+import org.sanjana.hw5.Presenter.View;
+import org.sanjana.hw6.LoginDetails;
+import org.sanjana.hw7.MultiplayerChessService;
+import org.sanjana.hw7.MultiplayerChessServiceAsync;
+import org.sanjana.hw8.ChessMessages;
+import org.shared.chess.Color;
+import org.shared.chess.GameResult;
+import org.shared.chess.Move;
+import org.shared.chess.Piece;
+import org.shared.chess.State;
+
+import com.google.gwt.appengine.channel.client.Channel;
+import com.google.gwt.appengine.channel.client.ChannelError;
+import com.google.gwt.appengine.channel.client.ChannelFactoryImpl;
+import com.google.gwt.appengine.channel.client.SocketListener;
+import com.google.gwt.core.shared.GWT;
+import com.google.gwt.event.dom.client.ChangeEvent;
+import com.google.gwt.event.dom.client.ChangeHandler;
+import com.google.gwt.event.dom.client.ClickEvent;
+import com.google.gwt.event.dom.client.ClickHandler;
+import com.google.gwt.event.dom.client.DragOverEvent;
+import com.google.gwt.event.dom.client.DragOverHandler;
+import com.google.gwt.event.dom.client.DragStartEvent;
+import com.google.gwt.event.dom.client.DragStartHandler;
+import com.google.gwt.event.dom.client.DropEvent;
+import com.google.gwt.event.dom.client.DropHandler;
+import com.google.gwt.event.dom.client.HasClickHandlers;
+import com.google.gwt.event.logical.shared.ValueChangeEvent;
+import com.google.gwt.event.logical.shared.ValueChangeHandler;
+import com.google.gwt.i18n.shared.DateTimeFormat;
+import com.google.gwt.storage.client.Storage;
+import com.google.gwt.uibinder.client.UiBinder;
+import com.google.gwt.uibinder.client.UiField;
+import com.google.gwt.user.client.Element;
+import com.google.gwt.user.client.History;
+import com.google.gwt.user.client.Window;
+import com.google.gwt.user.client.rpc.AsyncCallback;
+import com.google.gwt.user.client.ui.Button;
+import com.google.gwt.user.client.ui.CheckBox;
+import com.google.gwt.user.client.ui.Composite;
+import com.google.gwt.user.client.ui.FlexTable;
+import com.google.gwt.user.client.ui.Grid;
+import com.google.gwt.user.client.ui.Image;
+import com.google.gwt.user.client.ui.Label;
+import com.google.gwt.user.client.ui.ListBox;
+import com.google.gwt.user.client.ui.TextBox;
+import com.google.gwt.user.client.ui.Widget;
+import com.googlecode.gwtphonegap.client.PhoneGap;
+
+@SuppressWarnings("deprecation")
+public class Graphics extends Composite implements View 
+{       
+	private static GameImages gameImages = GWT.create(GameImages.class);
+	private static GraphicsUiBinder uiBinder = GWT.create(GraphicsUiBinder.class);
+
+	interface GraphicsUiBinder extends UiBinder<Widget, Graphics> { }
+
+	@UiField GameCss css;
+	@UiField Label gameStatus;
+	@UiField Grid gameGrid;
+	@UiField Grid whitepromotionGrid;
+	@UiField Grid blackpromotionGrid;
+	@UiField Grid controlGrid;
+	@UiField Button LoadButton;
+	@UiField Button ClearButton;
+	@UiField Button SaveButton;
+	@UiField TextBox saveStatus;
+	@UiField FlexTable flexTable;
+	@UiField Label playerTurn;
+	@UiField Label opponentTurn;
+
+	//AI
+	@UiField Button AIWhiteGameButton;
+	//	@UiField Button AIBlackGameButton;
+	//	@UiField SuggestBox contacts;
+
+	public Presenter presenter;
+	int index=0;
+	State state;
+
+	//History
+	String historyToken;
+
+	LoginDetails player=null;
+	private Image[][] board = new Image[8][8];
+	private Image[] whitepromotionImages = new Image[4];
+	private Image[] blackpromotionImages = new Image[4];
+
+	//Mulitplayer Declarations
+	@UiField Label playerInfo;
+	@UiField Label opponentInfo;
+	@UiField TextBox emailBox;
+	@UiField Button playButton;
+	@UiField Button autoGameButton;
+	@UiField Button cancelGameButton;
+	@UiField ListBox listOfMatches;
+	@UiField Button deleteButton;
+	@UiField Label matchInfo;
+	private Color turn;
+
+	//      private String matchDate;
+	private static MultiplayerChessServiceAsync  chessService = GWT.create(MultiplayerChessService.class);
+	//	((ServiceDefTarget) chessService).setServiceEntryPoint("blabla.appspot.com/yourService");
+	private static ChessMessages messages = GWT.create(ChessMessages.class);
+	private static double userRating;
+	private static double userRD;
+	private static double opponentRating;
+	private static double opponentRD;
+	private static String winner=null;
+	private static Long matchId;
+	private static Color choice=WHITE;
+	private static boolean ai=false;
+
+//	PhoneGap phoneGap = GWT.create(PhoneGap.class);
+
+	public Graphics(final Presenter presenter) 
+	{
+		initWidget(uiBinder.createAndBindUi(this));
+		gameGrid.resize(8, 8);
+		gameGrid.setCellPadding(0);
+		gameGrid.setCellSpacing(0);
+		gameGrid.setBorderWidth(0);
+
+		for (int row = 0; row < 8; row++) 
+		{
+			for (int col = 0; col < 8; col++) 
+			{
+				final Image image = new Image();
+				board[row][col] = image;
+				image.setWidth("100%");
+				image.setResource(gameImages.emptyTile());
+				gameGrid.setWidget(row, col, image);
+			}
+		}
+
+		this.presenter = presenter;
+		whitepromotionGrid.resize(1, 4);
+		blackpromotionGrid.resize(1, 4);
+		controlGrid.resize(1, 3);
+		controlGrid.setCellPadding(0);
+		controlGrid.setCellSpacing(0);
+		controlGrid.setBorderWidth(0);
+		setwhitePromotionGrid();
+		setblackPromotionGrid();
+		init();
+	}
+
+	public void init()
+	{
+		initBoardHandlers();
+		initPromotionHandlers();
+		initStorageHandlers();
+		initControlHandler();
+		initMultiplayer();
+		initAIHandler();
+	}
+
+	public void initMultiplayer()
+	{
+		autoGameButton.setText(messages.autoGameButton());
+		autoGameButton.addClickHandler(new ClickHandler(){
+			@Override
+			public void onClick(ClickEvent event){
+				gameStatus.setText(messages.waitingForOpponent());
+				autoGameButton.setEnabled(false);
+				cancelGameButton.setEnabled(true);
+				opponentInfo.setText("");
+				presenter.disableBoard();
+				chessService.automatch(new AsyncCallback<String>(){
+					@Override
+					public void onFailure(Throwable caught) {
+						Window.alert(messages.failToJoin());
+					}
+					@Override
+					public void onSuccess(String result) {
+						autoGameButton.setEnabled(true);
+					}
+				});
+			}
+		});
+
+		cancelGameButton.setText(messages.cancelAutoButton());
+		cancelGameButton.addClickHandler(new ClickHandler(){
+			@Override
+			public void onClick(ClickEvent event){
+				autoGameButton.setEnabled(true);
+				cancelGameButton.setEnabled(false);
+				chessService.cancelAutoMatch(new AsyncCallback<Void>(){
+					@Override
+					public void onFailure(Throwable caught) {
+						// Do nothing
+					}
+					@Override
+					public void onSuccess(Void result) {
+						// Do nothing
+					}
+				});
+			}
+		});
+
+		cancelGameButton.setEnabled(false);
+
+		emailBox.setText(messages.enterID());
+		emailBox.setWidth("260px");
+
+		playButton.setText(messages.playMatch());
+		playButton.addClickHandler(new ClickHandler(){
+			@Override
+			public void onClick(ClickEvent event){
+				final String email = emailBox.getText();
+
+				if(email.matches("^[_A-Za-z0-9-\\+]+(\\.[_A-Za-z0-9-]+)*@"+ "[A-Za-z0-9-]+(\\.[A-Za-z0-9]+)*(\\.[A-Za-z]{2,})$"))
+				{
+					chessService.emailMatch(email, new AsyncCallback<Void>(){
+						@Override
+						public void onFailure(Throwable caught) {
+							Window.alert(messages.failToLoad());
+						}
+						@Override
+						public void onSuccess(Void result) {
+							Window.alert(messages.createMatchWith(email));
+						}
+					});
+				}
+				else
+					Window.alert(messages.invalidEmail());
+			}
+		});
+
+		listOfMatches.setTitle(messages.matchList());
+		listOfMatches.addChangeHandler(new ChangeHandler() {
+
+			@Override
+			public void onChange(ChangeEvent event) {
+				int index = listOfMatches.getSelectedIndex();
+				String changeId=listOfMatches.getValue(index);
+				if(changeId.equals(""))
+				{
+					presenter.setState(null);
+					playerTurn.setText(null);
+					opponentInfo.setText("");
+					gameStatus.setText("");
+				}
+				else
+				{
+					gameStatus.setText("");
+					String[] s=changeId.split("[*]");
+					chessService.getMatch(Long.valueOf(s[0]), new AsyncCallback<String>(){
+
+						@Override
+						public void onFailure(Throwable caught) {
+							Window.alert(messages.failToLoad());
+						}
+						@Override
+						public void onSuccess(String result) {
+							if(result!=null){
+
+								String[] tokens=result.split("[*]");
+								Long matchId=Long.valueOf(tokens[0]);
+								Color c= (tokens[1].equals("W") ? Color.WHITE : Color.BLACK);
+								setPlayerTurn(c);
+								setOpponentTurn(c.getOpposite());
+								String str=null;
+								Date d=new Date(Long.parseLong(tokens[5]));
+								String todayStr = DateTimeFormat.getFormat(DateTimeFormat.PredefinedFormat.DATE_SHORT)
+										.format(d);
+								matchInfo.setText(messages.matchInfo(matchId, tokens[2])+todayStr+" "
+										+d.getHours()+":"+d.getMinutes()+":"+d.getSeconds());
+
+
+								opponentRating = Double.valueOf(tokens[3]);
+								opponentRD = Double.valueOf(tokens[4]);
+								String rating = messages.rating(opponentRating-2*opponentRD, opponentRating+2*opponentRD);
+								opponentInfo.setText(tokens[2]+" "+rating);
+
+
+								if(tokens.length>6){
+									str=tokens[6];
+									State s=StateSerializer.deserialize(str);
+									presenter.setState(s);
+									turn=s.getTurn();
+									setWhoseTurn(turn);
+									if(c.equals(turn))
+										presenter.enableBoard();
+								}
+
+								if(tokens[2].equals("AI")){
+									ai=true;
+									opponentInfo.setText(messages.playWithAI());
+
+									if(tokens.length>6){
+										str=tokens[6];
+										State s=StateSerializer.deserialize(str);
+										presenter.setState(s);
+										turn=s.getTurn();
+										setWhoseTurn(turn);
+										if(WHITE.equals(c)){
+											presenter.AIMove();
+											presenter.disableBoard();
+										}
+										else
+											presenter.enableBoard();
+									}
+
+								}
+
+								else{
+									presenter.setState(new State());
+									if(c.equals(WHITE))
+										presenter.enableBoard();
+								}
+							}
+						}
+					});
+				}
+			}
+		});
+
+		deleteButton.setText(messages.delete());
+		deleteButton.addClickHandler(new ClickHandler(){
+			@Override
+			public void onClick(ClickEvent event){
+				String ma=listOfMatches.getValue(listOfMatches.getSelectedIndex());
+				for (int i = 0; i < listOfMatches.getItemCount(); ++i) {
+					if (listOfMatches.getValue(i).equals(ma)) {
+						listOfMatches.removeItem(i);
+						break;
+					}
+				}
+				chessService.removeMatch(Long.valueOf(ma),new AsyncCallback<Void>(){
+					@Override
+					public void onFailure(Throwable caught) {
+						Window.alert(messages.failToDelete());
+					}
+					@Override
+					public void onSuccess(Void result) {
+						presenter.setState(null);
+						playerTurn.setText(null);
+						opponentInfo.setText("");
+						gameStatus.setText("");
+
+						chessService.loadAllMatches(player,new AsyncCallback<ArrayList<String>> (){
+
+							@Override
+							public void onFailure(Throwable caught) {
+								Window.alert(messages.failToLoad());
+							}
+
+							@Override
+							public void onSuccess(ArrayList<String> result) {
+								listOfMatches.clear();
+								listOfMatches.addItem(messages.matchList());
+								for(String m : result)
+								{
+									if(m==null) continue;
+
+									String[] tokens=m.split("[*]");
+									//									Long matchId=Long.valueOf(tokens[0]);
+									Color c= (tokens[1].equals("W") ? Color.WHITE : Color.BLACK);
+									setPlayerTurn(c);
+									setOpponentTurn(c.getOpposite());
+
+									listOfMatches.addItem(m);
+								}
+							}  
+						});
+					}
+				});
+			}
+		});
+	}
+
+	public void initAIHandler()
+	{
+		AIWhiteGameButton.setText(messages.AIWhite());
+		AIWhiteGameButton.addClickHandler(new ClickHandler(){
+			@Override
+			public void onClick(ClickEvent event){
+				ai=true;
+				chessService.AIMatch(WHITE,new AsyncCallback<String>(){
+					@Override
+					public void onFailure(Throwable caught) {
+						Window.alert(messages.error());
+					}
+					@Override
+					public void onSuccess(String result) {
+						//						Window.alert(result);
+						presenter.setState(new State());
+						String[] tokens=result.split("[*]");
+
+						matchId = Long.valueOf(tokens[1]);
+						Date d=new Date(Long.parseLong(tokens[2]));
+						String todayStr = DateTimeFormat.getFormat(DateTimeFormat.PredefinedFormat.DATE_SHORT)
+								.format(d);
+						matchInfo.setText(messages.matchInfo(matchId, "AI")+todayStr+" "
+								+d.getHours()+":"+d.getMinutes()+":"+d.getSeconds());
+
+						Color c=choice==WHITE ? Color.WHITE : Color.BLACK;
+						setOpponentTurn(c);
+						setPlayerTurn(c.getOpposite());
+						opponentInfo.setText(messages.playWithAI());
+						playerInfo.setText(player.getEmailAddress()+" "+messages.rating(userRating,userRD));		
+						presenter.AIMove();
+					}
+				});
+			}
+		});
+	}
+
+	@Override
+	public void setPiece(int row, int col, Piece piece)
+	{
+		if (piece != null)
+		{       
+			switch(piece.getKind())
+			{
+			case PAWN:
+				if(piece.getColor()==WHITE)
+					board[row][col].setResource(gameImages.whitePawn());
+				else
+					board[row][col].setResource(gameImages.blackPawn());
+				break;
+
+			case BISHOP:
+				if(piece.getColor()==WHITE)
+					board[row][col].setResource(gameImages.whiteBishop());
+				else
+					board[row][col].setResource(gameImages.blackBishop());
+				break;
+
+			case ROOK:
+				if(piece.getColor()==WHITE)
+					board[row][col].setResource(gameImages.whiteRook());
+				else
+					board[row][col].setResource(gameImages.blackRook());
+				break;
+
+			case KNIGHT:
+				if(piece.getColor()==WHITE)
+					board[row][col].setResource(gameImages.whiteKnight());
+				else
+					board[row][col].setResource(gameImages.blackKnight());
+				break;
+
+			case KING:
+				if(piece.getColor()==WHITE)
+					board[row][col].setResource(gameImages.whiteKing());
+				else
+					board[row][col].setResource(gameImages.blackKing());
+				break;
+
+			case QUEEN:
+				if(piece.getColor()==WHITE)
+					board[row][col].setResource(gameImages.whiteQueen());
+				else
+					board[row][col].setResource(gameImages.blackQueen());
+				break;
+
+			default:
+				break;
+			}
+			gameGrid.setWidget(row, col, board[row][col]);
+		}
+
+		else{               
+			board[row][col].setResource(gameImages.emptyTile());
+			gameGrid.setWidget(row, col, board[row][col]);
+		}
+	}
+
+	@Override
+	public void setWhoseTurn(Color color) {
+		if(color==WHITE)
+			gameStatus.setText(messages.turn()+messages.white());
+		else if(color==BLACK)
+			gameStatus.setText(messages.turn()+messages.black());
+		else
+			gameStatus.setText("");
+	}
+
+	@Override
+	public void setPlayerTurn(Color color){
+		if(color==WHITE)
+			playerTurn.setText(messages.you()+messages.white());
+		else
+			playerTurn.setText(messages.you()+messages.black());
+	}
+
+	@Override
+	public void setPlayerInfo(String player){
+		this.playerInfo.setText(player);
+	}
+
+	@Override
+	public void setOpponentTurn(Color color){
+		if(color==WHITE)
+			opponentTurn.setText(messages.opponent()+messages.white());
+		else 
+			opponentTurn.setText(messages.opponent()+messages.black());
+	}
+
+	@Override
+	public void setOpponentInfo(String opponent){
+		this.opponentInfo.setText(opponent);
+	}
+
+	@Override 
+	public void setTurn(Color turn){
+		this.turn=turn;
+	}
+
+	@Override
+	public void setHighlighted(int row, int col, boolean highlighted) 
+	{
+		Element element = board[row][col].getElement();
+		if (highlighted) 
+			element.setClassName(css.highlighted());
+		else 
+			element.removeClassName(css.highlighted());
+	}
+
+	@Override
+	public void setGameResult(GameResult gameResult) 
+	{
+		if (gameResult == null)
+			return;
+		winner=(gameResult.getWinner().isWhite())?"WHITE":"BLACK";
+		if(gameResult.getGameResultReason()!=STALEMATE)
+		{
+			if(gameResult.getGameResultReason()==CHECKMATE)
+			{
+				gameStatus.setText(messages.gameresult(winner)+messages.checkmate());
+				//                              if(gameResult.getWinner()==BLACK)
+				//                                      gameStatus.setText("Black Wins, White is CheckMated!");
+				//                              else if(gameResult.getWinner()==WHITE)
+				//                                      gameStatus.setText("White Wins, Black is Checkmated!");
+			}
+
+			if(gameResult.getGameResultReason()==FIFTY_MOVE_RULE)
+			{
+				gameStatus.setText(messages.gameresult(winner)+messages.fiftymoverule());
+				//                              if(gameResult.getWinner()==BLACK)
+				//                                      gameStatus.setText("Black Wins, 50 MoveRule!");
+				//                              else if(gameResult.getWinner()==WHITE)
+				//                                      gameStatus.setText("White Wins, 50 MoveRule!");
+			}
+			if(gameResult.getGameResultReason()==THREEFOLD_REPETITION_RULE)
+				gameStatus.setText(messages.gameresult(winner)+messages.threefoldrepet());
+		}
+
+		else if(gameResult.getGameResultReason()==STALEMATE)
+			gameStatus.setText(messages.gamedraw()+messages.stalemate());
+	}
+
+	@Override
+	public void setPromotionGridVisible(Color c,boolean show) 
+	{
+		if(c==WHITE)
+			whitepromotionGrid.setVisible(show);
+		else
+			blackpromotionGrid.setVisible(show);
+	}
+
+	@Override
+	public void setwhitePromotionGrid() 
+	{
+		whitepromotionImages[0]=new Image(gameImages.whiteKnight());
+		whitepromotionImages[1]=new Image(gameImages.whiteBishop());
+		whitepromotionImages[2]=new Image(gameImages.whiteRook());
+		whitepromotionImages[3]=new Image(gameImages.whiteQueen());     
+		for(int i=0;i<4;i++)
+			whitepromotionGrid.setWidget(0, i, whitepromotionImages[i]);
+	}
+
+	@Override
+	public void setblackPromotionGrid() 
+	{
+		blackpromotionImages[0]=new Image(gameImages.blackKnight());
+		blackpromotionImages[1]=new Image(gameImages.blackBishop());
+		blackpromotionImages[2]=new Image(gameImages.blackRook());
+		blackpromotionImages[3]=new Image(gameImages.blackQueen());     
+		for(int i=0;i<4;i++)
+			blackpromotionGrid.setWidget(0, i, blackpromotionImages[i]);
+	}
+
+	@Override
+	public HasClickHandlers getImage(int row, int col) {
+		return board[row][col];
+	}
+
+	@Override
+	public Element getElement(int x, int y){
+		return board[x][y].getElement();
+	}
+
+	@Override
+	public void setDisableStorageButtons() 
+	{
+		SaveButton.setVisible(false);
+		LoadButton.setVisible(false);
+	}
+
+	@Override
+	public HasClickHandlers getPromotionImage(Color c,int index) 
+	{
+		if(c==WHITE)
+			return whitepromotionImages[index];
+		else
+			return blackpromotionImages[index];
+	}
+
+	@Override
+	public void initPromotionHandlers() 
+	{
+		for (int i = 0; i < 4; i++) 
+		{
+			final int index = i;
+			getPromotionImage(WHITE,i).addClickHandler(new ClickHandler(){
+				@Override
+				public void onClick(ClickEvent event){
+					presenter.setPromotion(index);
+				}
+			});
+
+			getPromotionImage(BLACK,i).addClickHandler(new ClickHandler(){
+				@Override
+				public void onClick(ClickEvent event){
+					presenter.setPromotion(index);
+				}
+			});
+		}
+		setPromotionGridVisible(WHITE,false);
+		setPromotionGridVisible(BLACK,false);
+	}
+
+	/**
+	 * Setting handlers for board
+	 */
+	@Override
+	public void initBoardHandlers() 
+	{               
+		for (int row = 0; row < 8; row++) 
+		{
+			for (int col = 0; col < 8; col++) 
+			{
+				final int r = 7 - row;
+				final int c = col;
+				getImage(row, col).addClickHandler(new ClickHandler(){
+					@Override
+					public void onClick(ClickEvent event)
+					{
+						if(!presenter.getsoundCheck())
+							presenter.Sounds.playClick();
+						presenter.onClicked(r,c,matchId);
+					}
+				});
+			}
+		}
+
+		History.addValueChangeHandler(new ValueChangeHandler<String>() {
+			@Override
+			public void onValueChange(ValueChangeEvent<String> event) {
+				String historyToken = event.getValue();
+				presenter.setHistory(historyToken);
+			}
+		});
+	}
+
+	public void manageHistory(String token) {
+		presenter.setHistory(token);
+	}
+
+	@Override
+	public void initStorageHandlers() 
+	{
+		flexTable.setWidget(0, 0, new Label(messages.saved()));
+		final Storage stockStore=Storage.getLocalStorageIfSupported();
+
+		if(stockStore==null){
+			setDisableStorageButtons();
+		}
+		stockStore.clear();
+
+		SaveButton.setText(messages.save());
+		SaveButton.addClickHandler(new ClickHandler() {
+			@Override
+			public void onClick(ClickEvent event) {
+				if(stockStore!=null)
+				{
+					if (stockStore.getItem(saveStatus.getText())==null)
+						flexTable.setWidget(flexTable.getRowCount(), 0, new Label(saveStatus.getText()));
+
+					String save=presenter.addStorage(saveStatus.getText());
+					stockStore.setItem(saveStatus.getText(), save);
+					LoadButton.setVisible(true);
+				}
+			}
+		});
+
+		LoadButton.setText(messages.load());
+		LoadButton.addClickHandler(new ClickHandler() {
+			@Override
+			public void onClick(ClickEvent event) {
+				if(stockStore!=null)
+				{
+					final String value = stockStore.getItem(saveStatus.getText());
+					if(value != null)
+						presenter.loadStorage(value);
+					else
+						presenter.showStartingPositions(state);
+				}
+			}
+		});
+
+		ClearButton.setText(messages.clearAll());
+		ClearButton.addClickHandler(new ClickHandler() {
+			@Override
+			public void onClick(ClickEvent event) {
+				if(stockStore!=null)
+				{
+					stockStore.clear();
+					flexTable.clear();
+					flexTable.setWidget(flexTable.getRowCount(), 0, new Label(messages.saved()));
+				}
+			}
+		});
+		LoadButton.setVisible(false);
+	}
+
+	@Override
+	public void initControlHandler()
+	{
+		CheckBox animationFlag = new CheckBox(messages.disableAnimation());
+		CheckBox soundFlag = new CheckBox(messages.disableSound());
+
+		Button restartButton=new Button();
+		restartButton.setText(messages.restart());
+		restartButton.addClickHandler(new ClickHandler() {
+			@Override
+			public void onClick(ClickEvent event) 
+			{
+				presenter.restartClicked();
+				initStorageHandlers();
+			}
+		});
+		controlGrid.setWidget(0, 0, restartButton);
+
+		animationFlag.addClickHandler(new ClickHandler(){
+			@Override
+			public void onClick(ClickEvent event)
+			{
+				boolean checked = ((CheckBox) event.getSource()).getValue();
+				presenter.animationDisable(checked);
+			}
+		});
+
+		controlGrid.setWidget(0, 1, animationFlag);
+		soundFlag.addClickHandler(new ClickHandler(){
+			@Override
+			public void onClick(ClickEvent event)
+			{
+				boolean checked =((CheckBox) event.getSource()).getValue();
+				presenter.soundDisable(checked);
+			}
+		});
+		controlGrid.setWidget(0,2, soundFlag);
+
+		if(!presenter.getanimationCheck())
+			initAnimationHandler();
+	}
+
+	@Override
+	public void initAnimationHandler()
+	{
+		for (int row = 0; row < 8; row++) 
+		{
+			for (int col = 0; col < 8; col++) 
+			{
+				final int r = 7 - row;
+				final int c = col;
+
+				final Image image = board[row][col];
+				image.getElement().setDraggable(Element.DRAGGABLE_TRUE);        
+				image.addDragStartHandler(new DragStartHandler(){
+					@Override
+					public void onDragStart(DragStartEvent event)
+					{
+						event.setData("text", "Hello World");
+						event.getDataTransfer().setDragImage(image.getElement(),0, 0);
+						presenter.onClicked(r,c,matchId);
+					}
+				});
+
+				image.addDragOverHandler(new DragOverHandler(){
+					@Override
+					public void onDragOver(DragOverEvent event) 
+					{
+						event.getDataTransfer().setDragImage(image.getElement(),
+								event.getNativeEvent().getClientX(),
+								event.getNativeEvent().getClientY());
+						image.getElement().getStyle().clearBackgroundColor();                                   
+					}
+				});
+
+				image.addDropHandler(new DropHandler(){
+					@Override
+					public void onDrop(DropEvent event) 
+					{
+						event.preventDefault();
+						presenter.onClicked(r,c,matchId);
+					}
+				});
+			}
+		}       
+	}
+
+	/*
+	 *  Channel Initialization after a player logs in.
+	 */
+	public void initStateWithChannel(String name,final LoginDetails player)
+	{       
+		this.player=player;
+
+		final String[] token=name.split("[*]");
+		userRating = Double.valueOf(token[1]);
+		userRD = Double.valueOf(token[2]);
+		playerInfo.setText(player.getEmailAddress()+" "+messages.rating(userRating,userRD));
+
+		//Channel
+		Channel channel = new ChannelFactoryImpl().createChannel(token[0]);
+		channel.open(new SocketListener() {
+
+			@Override
+			public void onOpen() {
+				Window.alert(messages.loggInAs(player.getNickname()));
+				presenter.disableBoard();
+				playerTurn.setText("");
+				chessService.addToken(token[0], new AsyncCallback<String>(){
+
+					@Override
+					public void onFailure(Throwable caught) {
+						//                						Window.alert("couldn't add token");
+					}
+
+					@Override
+					public void onSuccess(String result) {
+						//                						Window.alert("added token");
+					}
+				});	
+				chessService.loadAllMatches(player,new AsyncCallback<ArrayList<String>> (){
+
+					@Override
+					public void onFailure(Throwable caught) {
+						Window.alert(messages.failToLoad());
+					}
+
+					@Override
+					public void onSuccess(ArrayList<String> result) {
+						listOfMatches.clear();
+						listOfMatches.addItem(messages.matchList());
+						for(String m : result)
+						{
+							if(m==null) continue;
+
+							String[] tokens=m.split("[*]");
+							//							Long matchId=Long.valueOf(tokens[0]);
+							Color c= (tokens[1].equals("W") ? Color.WHITE : Color.BLACK);
+							setPlayerTurn(c);
+							setOpponentTurn(c.getOpposite());
+
+							listOfMatches.addItem(m);
+						}
+
+					}  
+				});
+			}
+
+			@Override
+			public void onMessage(String message) {
+
+				String[] tokens=message.split("[*]");
+				if (tokens[0].equals("newgame")){
+					matchId = Long.valueOf(tokens[1]);
+					opponentRating = Double.valueOf(tokens[4]);
+					opponentRD = Double.valueOf(tokens[5]);
+
+					Date d=new Date(Long.parseLong(tokens[6]));
+					String todayStr = DateTimeFormat.getFormat(DateTimeFormat.PredefinedFormat.DATE_SHORT)
+							.format(d);
+					matchInfo.setText(messages.matchInfo(matchId, tokens[3])+todayStr+" "
+							+d.getHours()+":"+d.getMinutes()+":"+d.getSeconds());
+
+					Color c=tokens[2].equals("W") ? Color.WHITE : Color.BLACK;
+					setPlayerTurn(c);
+					setOpponentTurn(c.getOpposite());
+
+					String rating = messages.rating(opponentRating-2*opponentRD, opponentRating+2*opponentRD);
+					opponentInfo.setText(tokens[3]+" "+rating);
+					State s=new State();
+					presenter.setState(s);
+					turn=s.getTurn();
+					if(c.equals(WHITE))
+						presenter.enableBoard();
+				}
+				else if (tokens[0].equals("move")) {
+					//                                      Window.alert("move received: "+tokens[2]);
+					String str=tokens[2];
+					State changed=StateSerializer.deserialize(str);
+					presenter.setState(changed);
+					presenter.enableBoard();
+				}
+
+				else if(tokens[0].equals("aimatch")){
+
+					matchId = Long.valueOf(tokens[1]);
+					Date d=new Date(Long.parseLong(tokens[2]));
+					String todayStr = DateTimeFormat.getFormat(DateTimeFormat.PredefinedFormat.DATE_SHORT)
+							.format(d);
+					matchInfo.setText(messages.matchInfo(matchId, "AI")+todayStr+" "
+							+d.getHours()+":"+d.getMinutes()+":"+d.getSeconds());
+
+					Color c=choice==WHITE ? Color.WHITE : Color.BLACK;
+					setOpponentTurn(c);
+					setPlayerTurn(c.getOpposite());
+					opponentInfo.setText(messages.playWithAI());
+					playerInfo.setText(player.getEmailAddress()+" "+messages.rating(userRating,userRD));
+					Window.alert(" ai move from channel ");
+					//					if(c.equals(WHITE))
+					presenter.AIMove();
+					//					else
+					//						presenter.enableBoard();
+				}
+			}
+
+			@Override
+			public void onError(ChannelError error) {
+				System.out.println("Channel error: " + error.getCode() + " : "
+						+ error.getDescription());
+			}
+
+			@Override
+			public void onClose() {
+				//                              System.out.println("Channel closed!");
+			}
+		});
+	}
+
+	public void add(final LoginDetails result)
+	{
+		if(chessService==null)
+			chessService = GWT.create(MultiplayerChessService.class);
+		chessService.match(new AsyncCallback<String>() {
+
+			@Override
+			public void onFailure(Throwable caught) {
+				Window.alert(messages.error());
+			}
+
+			@Override
+			public void onSuccess(String token) {
+				initStateWithChannel(token,result);
+			}
+
+		});
+	}
+
+	@Override
+	public void updateMove(final Long matchID,final State state)
+	{               
+		if(chessService==null)
+			chessService = GWT.create(MultiplayerChessService.class);
+
+		final String send=StateSerializer.serialize(state);
+		//		Window.alert("ai variable: "+ai);
+		if(ai){
+			chessService.makeAIMove(matchId,send, new AsyncCallback<String>(){
+
+				@Override
+				public void onFailure(Throwable caught) {
+					//					Window.alert("error in sending move to ai");
+				}
+
+				@Override
+				public void onSuccess(String result) {
+					//					presenter.clearHighlights();
+					presenter.showStartingPositions(state);
+					try{
+						presenter.AIMove();
+					}catch(Exception e){
+						Set<Move> moves=(new StateExplorerImpl().getPossibleMoves(state));
+						Move move=moves.iterator().next();
+						presenter.trymove(move);
+					}
+				}
+			}); 
+			return;
+		}
+
+		//		Window.alert("Sending in updatemove match id "+matchId+" State "+send);
+		chessService.sendMove(Long.valueOf(matchID),send, new AsyncCallback<String>(){
+
+			@Override
+			public void onFailure(Throwable caught) {
+				Window.alert("error in send move");
+			}
+
+			@Override
+			public void onSuccess(String result) {
+				//								Window.alert("sent move!");
+
+			}
+		}); 
+	}
+
+	@Override
+	public void updateAIMove(final Long matchID,State newState)
+	{               
+		if(chessService==null)
+			chessService = GWT.create(MultiplayerChessService.class);
+
+		final String send=StateSerializer.serialize(newState);
+		//		Window.alert("AI Sending State "+send);
+		chessService.makeAIMove(matchId,send, new AsyncCallback<String>(){
+
+			@Override
+			public void onFailure(Throwable caught) {
+				Window.alert("error in update ai move");
+			}
+
+			@Override
+			public void onSuccess(String result) {
+				presenter.clearHighlights();
+			}
+		}); 
+	}	 
+}

@@ -1,0 +1,560 @@
+package org.ashishmanral.hw7;
+
+import static org.shared.chess.PieceKind.BISHOP;
+import static org.shared.chess.PieceKind.KNIGHT;
+import static org.shared.chess.PieceKind.QUEEN;
+import static org.shared.chess.PieceKind.ROOK;
+
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Set;
+
+import org.ashishmanral.hw2.StateChangerImpl;
+import org.ashishmanral.hw2_5.StateExplorerImpl;
+import org.ashishmanral.hw9.AlphaBetaPruning;
+import org.ashishmanral.hw9.Timer;
+import org.shared.chess.Color;
+import org.shared.chess.GameResult;
+import org.shared.chess.GameResultReason;
+import org.shared.chess.Move;
+import org.shared.chess.Piece;
+import org.shared.chess.PieceKind;
+import org.shared.chess.Position;
+import org.shared.chess.State;
+
+import com.google.gwt.animation.client.Animation;
+import com.google.gwt.dom.client.AudioElement;
+import com.google.gwt.dom.client.MediaElement;
+import com.google.gwt.dom.client.Style;
+import com.google.gwt.media.client.Audio;
+import com.google.gwt.storage.client.Storage;
+import com.google.gwt.user.client.Element;
+import com.google.gwt.user.client.History;
+import com.google.gwt.user.client.Window;
+import com.google.gwt.user.client.ui.Label;
+import com.google.gwt.user.client.ui.RootPanel;
+
+/**
+ * Presenter Class
+ * @author Ashish Manral
+ *
+ */
+public class Presenter{
+  
+  /**
+   * Constructor that takes view and state as argument and sets them.
+   * @param view Object of Graphics
+   */
+  public Presenter(View view){
+    this.state=new State();
+	sei=new StateExplorerImpl();
+    sci=new StateChangerImpl();
+    storage=Storage.getLocalStorageIfSupported();
+    setView(view);
+    setState();
+    Set<Position> startPositions=sei.getPossibleStartPositions(this.state);
+    highlightStartPosition(startPositions);
+    setDraggable(true);
+    turn=this.state.getTurn();
+    view.setWhiteBlackLabel(turn);
+    alphaBetaPruning = new AlphaBetaPruning();
+    loadAudio();
+  }
+  
+  /**
+   * TransitionAnimation Class
+   * @author Ashish Manral
+   * Provides the animation during move.
+   */
+  public class TransitionAnimation extends Animation{
+    
+    private Element element;
+    private int fromX;
+    private int fromY;
+    private int toX;
+    private int toY;
+    
+    public TransitionAnimation(Element element,int fromX,int fromY,int toX,int toY)
+    {
+      this.element = element;
+      this.fromX = fromX;
+      this.fromY = fromY;
+      this.toX = toX;
+      this.toY = toY;
+    }
+ 
+    @Override
+    protected void onUpdate(double progress)
+    {
+      double currentX = fromX + (progress * (this.toX - fromX));
+      double currentY = fromY + (progress * (this.toY - fromY));
+      this.element.getStyle().setPosition(Style.Position.ABSOLUTE);
+      this.element.getStyle().setLeft(currentX, Style.Unit.PX);
+      this.element.getStyle().setTop(currentY, Style.Unit.PX);
+    }
+ 
+    @Override
+    protected void onComplete()
+    {
+      super.onComplete();
+      this.element.getStyle().setLeft(this.toX, Style.Unit.PX);
+      this.element.getStyle().setTop(this.toY, Style.Unit.PX);
+      element.getStyle().setPosition(com.google.gwt.dom.client.Style.Position.STATIC);
+      element.getParentElement().getStyle().setPosition(com.google.gwt.dom.client.Style.Position.STATIC);
+      setHistory(state);
+    }
+  }
+  
+  /**
+   * Interface View
+   * @author Ashish
+   *
+   */
+  public interface View {
+    /**
+     * Renders the piece at this position.
+     * If piece is null then the position is empty.
+     */
+    void setPiece(int row, int col, Piece piece);
+    /**
+     * Turns the highlighting on or off at this cell.
+     * Cells that can be clicked should be highlighted.
+     */
+    void setHighlighted(int row, int col, boolean highlighted);
+    /**
+     * Indicate whose turn it is.
+     */
+    void displayTurn(boolean yourTurn);
+    /**
+     * 
+     */
+    //void setTurn(Color turn);
+    /**
+     * Indicate whether the game is in progress or over.
+     */
+    void setGameResult(GameResult gameResult);
+    /**
+     * Testing purposes.
+     */
+    void print(String str);
+    /**
+     * Sets the promotion grid visibility.
+     */
+    void setPromoteDisplay(Color color,boolean value);
+    /**
+     * Adds label in the load listBox.
+     */
+    //void addLabelInListBox(String savedGames);
+    /**
+     * Hides the load options listBox.
+     */
+    //void hideLoadOptions();
+    /**
+     * Sets the draggable property for a cell.
+     */
+    void setDrag(int row,int col,boolean value);
+    /**
+     * Perform animation.
+     */
+    void animateMove(int fromRow,int fromCol,int toRow,int toCol);
+    /**
+     * Highlights a selected piece. 
+     */
+    void highlightSelectedPiece(int row,int col,boolean highlighted);
+    /**
+     * Informs the server about a change of state so it can 
+     * communicate the new state to the other player
+     * @param stateStr String representation of the state to render
+     */
+    void sendMoveToServer(String stateString);
+    void setCurrentState(String currentState);
+    void setWhiteBlackLabel(Color turn);
+    void saveAIGameState(String stateString);
+    boolean isAIGame();
+    boolean getSaveAIignore();
+    void setSaveAIignore(boolean ignore);
+  }
+
+  private View view;
+  public State state;
+  public Storage storage;
+  public Audio moveAudio;
+  public Audio promotionAudio;
+  public Audio victoryAudio;
+  private Color turn=Color.WHITE;
+  public Set<Position> possibleEndHighlightedPositions=new HashSet<Position>();
+  public Set<Position> possibleStartHighlightedPositions=new HashSet<Position>();
+  public Position selectedPos;
+  public Position promotionPos;
+  private StateExplorerImpl sei;
+  private StateChangerImpl sci;
+  public boolean toPromoteFlag=false;
+  private String historyState="";
+  private int savedGames=0;
+  public ArrayList<String> backupStorage=new ArrayList<String>();
+  public AlphaBetaPruning alphaBetaPruning;
+  
+  /**
+   * Setter method for View.
+   * @param view Graphics object
+   */
+  public void setView(View view) {
+    this.view = view;
+  }
+  
+  /**
+   * This method adds a save game to local storage if the browser supports it.
+   * If not, then add it to an ArrayList.
+   */
+  public void saveGame(){ 
+    String saveGameState=History.getToken();
+    String currentIndex=Integer.toString(++savedGames);
+    if(storage!=null){
+      storage.setItem(currentIndex,saveGameState);
+    }
+    else{
+      //Old browser compatibility. If browser dose'nt support storage,
+      //then add the save game to an arraylist.
+      backupStorage.add(saveGameState);
+    }
+    //view.addLabelInListBox(currentIndex);
+  }
+  
+  /**
+   * This method loads a game either from the local storage(if the browser allows it)
+   * or from an ArrayList in case the browser is old.
+   * @param index Index of the game to be loaded.
+   */
+  public void loadGame(int index){
+    if(storage!=null){
+      String loadState=storage.getItem(Integer.toString(++index));
+      History.newItem(loadState);
+    }
+    else{
+      //Old browser compatibility. Loading from an ArrayList.
+      String loadState=backupStorage.get(index);
+      History.newItem(loadState);
+    }
+    //view.hideLoadOptions();
+  }
+  
+  /**
+   * This method pre-loads Audio.
+   */
+  public void loadAudio(){
+	moveAudio=Audio.createIfSupported();
+	promotionAudio=Audio.createIfSupported();
+	victoryAudio=Audio.createIfSupported();
+	if(moveAudio==null){
+	  RootPanel.get().add(new Label("Audio not supported. Download latest browser for aduio!!"));	
+	  return;
+	}
+	if(MediaElement.CAN_PLAY_PROBABLY.equals(moveAudio.canPlayType(AudioElement.TYPE_OGG))){
+      moveAudio.setSrc("ashishAudio/move.ogg");
+      promotionAudio.setSrc("ashishAudio/promotion.ogg");
+      victoryAudio.setSrc("ashishAudio/victory.ogg");
+	}
+	else if(MediaElement.CAN_PLAY_PROBABLY.equals(moveAudio.canPlayType(AudioElement.TYPE_MP3))){
+	  moveAudio.setSrc("ashishAudio/move.mp3");
+	  promotionAudio.setSrc("ashishAudio/promotion.mp3");
+	  victoryAudio.setSrc("ashishAudio/victory.mp3");
+	}
+	else if(MediaElement.CAN_PLAY_PROBABLY.equals(moveAudio.canPlayType(AudioElement.TYPE_WAV))){
+	  moveAudio.setSrc("ashishAudio/move.wav");
+	  promotionAudio.setSrc("ashishAudio/promotion.wav");
+	  victoryAudio.setSrc("ashishAudio/victory.wav");
+	}
+	else if(MediaElement.CAN_PLAY_MAYBE.equals(moveAudio.canPlayType(AudioElement.TYPE_OGG))){
+	  moveAudio.setSrc("ashishAudio/move.ogg");
+	  promotionAudio.setSrc("ashishAudio/promotion.ogg");
+	  victoryAudio.setSrc("ashishAudio/victory.ogg");
+	}
+	else if(MediaElement.CAN_PLAY_MAYBE.equals(moveAudio.canPlayType(AudioElement.TYPE_MP3))){
+	  moveAudio.setSrc("ashishAudio/move.mp3");
+	  promotionAudio.setSrc("ashishAudio/promotion.mp3");
+	  victoryAudio.setSrc("ashishAudio/victory.mp3");
+	}
+	else if(MediaElement.CAN_PLAY_MAYBE.equals(moveAudio.canPlayType(AudioElement.TYPE_WAV))){
+	  moveAudio.setSrc("ashishAudio/move.wav");
+	  promotionAudio.setSrc("ashishAudio/promotion.wav");
+	  victoryAudio.setSrc("ashishAudio/vicotry.wav");
+	}
+	moveAudio.load();
+	promotionAudio.load();
+	victoryAudio.load();
+  }
+  
+  /**
+   * Sets the history token for the current state. Takes argument current state.
+   * @param state The State that needs to be set.
+   */
+  public void setHistory(State state) {
+	for (int r = 0; r < 8; r++) {
+      for (int c = 0; c < 8; c++) {
+        setHistory(state.getPiece(r, c));
+      }
+    }
+    historyState+=(turn==Color.WHITE)?"B$":"W$";
+    if(state.isCanCastleKingSide(Color.WHITE)) historyState+="T$";
+    else historyState+="F$";
+    if(state.isCanCastleKingSide(Color.BLACK)) historyState+="T$";
+    else historyState+="F$";
+    if(state.isCanCastleQueenSide(Color.WHITE)) historyState+="T$";
+    else historyState+="F$";
+    if(state.isCanCastleQueenSide(Color.BLACK)) historyState+="T$";
+    else historyState+="F$";
+    historyState+=Integer.toString(state.getNumberOfMovesWithoutCaptureNorPawnMoved());
+    if(state.getEnpassantPosition()!=null) historyState+="$" + state.getEnpassantPosition().getRow() + state.getEnpassantPosition().getCol();
+    else                                   historyState+="$88";
+    if(state.getGameResult()!=null){
+      if(state.getGameResult().getWinner()==null && state.getGameResult().getGameResultReason()==GameResultReason.FIFTY_MOVE_RULE) historyState+="$D1";
+      else if(state.getGameResult().getWinner()==null && state.getGameResult().getGameResultReason()==GameResultReason.STALEMATE) historyState+="$D2";
+      else if(state.getGameResult().getWinner()==null && state.getGameResult().getGameResultReason()==GameResultReason.THREEFOLD_REPETITION_RULE) historyState+="$D3";
+      else historyState+=state.getGameResult().getWinner()==Color.WHITE?"$W":"$B";
+    }
+    else{
+      historyState+="$N";
+    }
+    History.newItem(historyState);
+    view.setCurrentState(historyState);
+    if(!view.isAIGame()) view.sendMoveToServer(historyState);
+    historyState="";
+  }
+  
+  /**
+   * Overloaded method. Helps to set the history of current state. Takes Piece as an argument.
+   * @param currentPiece Current piece being set in the history.
+   */
+  public void setHistory(Piece currentPiece){
+  if(currentPiece==null){
+	  historyState+="N$";
+	  return;
+	}
+	Color currentColor=currentPiece.getColor();
+	String color=(currentColor==Color.WHITE)?"W":"B";
+	switch(currentPiece.getKind()){
+	case PAWN:historyState+=color+"P$";
+	break;
+	case ROOK:historyState+=color+"R$";
+	break;
+	case KNIGHT:historyState+=color+"G$";
+	break;
+	case BISHOP:historyState+=color+"B$";
+	break;
+	case QUEEN:historyState+=color+"Q$";
+	break;
+	case KING:historyState+=color+"K$";
+	break;
+	}
+  }
+  
+  /**
+   * Used to set the state and display it in the grid.
+   */
+  public void setState(){
+    view.setGameResult(state.getGameResult());
+    for (int r = 0; r < 8; r++) {
+      for (int c = 0; c < 8; c++) {
+        view.setPiece(7-r, c, state.getPiece(r, c));
+      }
+    }
+  }
+  
+  /**
+   * Handles whenever user clicks on a cell/block. It decides whether the click is to move a piece or just a selection.
+   * @param row Row clicked
+   * @param col Col cliked
+   * @param promoteToPieceKind Piece to be promoted to.
+   * @param dragDrop A boolean indicator if it's a normal move(in which case an animation happens) or
+   *                 drag and drop move(in which case no animation happens).
+   */
+  public void clickedOn(int row,int col,PieceKind promoteToPieceKind,boolean dragDrop){
+	int rowForModel=7-row;
+	boolean promotionSound=false;
+	//Checks if a promotion is required but the user has not selected a piece from promotion grid.
+	if(toPromoteFlag==true && promoteToPieceKind==null){
+      return;
+	}
+	//Checks if the cell is clicked after selecting a piece.
+	if(possibleEndHighlightedPositions.contains(new Position(row,col))){
+	  //A white promotion move.
+	  if(promoteToPieceKind==null && turn==Color.WHITE && state.getPiece(selectedPos).getKind()==PieceKind.PAWN && row==0 ){
+		toPromoteFlag=true;
+		promotionPos=new Position(row,col);
+		view.setPromoteDisplay(turn,true);
+		return;
+	  }
+	  //A black promotion move.
+	  else if(promoteToPieceKind==null && turn==Color.BLACK && state.getPiece(selectedPos).getKind()==PieceKind.PAWN && row==7){
+		toPromoteFlag=true;
+		promotionPos=new Position(row,col);
+		view.setPromoteDisplay(turn,true);
+		return;
+	  }
+	  //A proper promotion move after promotion piece is selected.
+	  else if(promoteToPieceKind!=null){
+		toPromoteFlag=false;
+		view.setPromoteDisplay(turn,false);
+		promotionSound=true;
+	  }
+	  if(promotionSound && promotionAudio!=null) promotionAudio.play();
+	  else if(moveAudio!=null) moveAudio.play();
+	  sci.makeMove(state,new Move(selectedPos,new Position(rowForModel,col),promoteToPieceKind));
+	  //view.setTurn(state.getTurn());
+      //If user has not dragged a piece, then perform animation. 
+	  if(!dragDrop){
+	    view.animateMove(7-selectedPos.getRow(),selectedPos.getCol(),row,col);
+	  }
+	  else{
+	    if(state.getGameResult()!=null && victoryAudio!=null) victoryAudio.play();
+	    setHistory(state);
+	  }
+	}
+	//Checks if a piece is selected.
+	else if(possibleStartHighlightedPositions.contains(new Position(row,col))){
+	  clearHighlight(possibleStartHighlightedPositions);
+	  possibleStartHighlightedPositions=new HashSet<Position>();
+	  Set<Move> possibleMovesFromPos=sei.getPossibleMovesFromPosition(state, new Position(rowForModel,col));
+	  highlightPossibleMovePositions(possibleMovesFromPos);
+	  selectedPos=new Position(rowForModel,col);
+	  view.highlightSelectedPiece(row,col,true);
+	}
+	else{
+	  return;
+	}
+  }
+  
+  /**
+   * This method sets a cell in the grid as draggable or not draggable.
+   * @param value Value to be set for draggable.
+   */
+  public void setDraggable(boolean value){
+    for(Position pos:possibleStartHighlightedPositions){
+      view.setDrag(pos.getRow(),pos.getCol(),value);
+    }
+  }
+  
+  /**
+   * It highlights all the moves that are possible from a position.
+   */
+  public void highlightPossibleMovePositions(Set<Move> possibleMovesFromPos){
+	for(Move move:possibleMovesFromPos){
+      view.setHighlighted(7-move.getTo().getRow(),move.getTo().getCol(),true);
+      possibleEndHighlightedPositions.add(new Position(7-move.getTo().getRow(),move.getTo().getCol()));
+    }
+  }
+  
+  /**
+   * It highlights all the positions that can be moved.
+   */
+  public void highlightStartPosition(Set<Position> startPositions){
+    for(Position p:startPositions){
+      view.setHighlighted(7-p.getRow(), p.getCol(), true);
+      possibleStartHighlightedPositions.add(new Position(7-p.getRow(),p.getCol()));
+    }
+  }
+  
+  /**
+   * It clears all the highlighted cells/blocks.
+   */
+  public void clearHighlight(Set<Position> highlightedPositions){
+    for(Position p:highlightedPositions){
+      view.setHighlighted(p.getRow(),p.getCol(),false); 	
+    }
+  }
+  
+  /**
+   * Restore the state using string. Used to provide History support.
+   * @param historyToken The token returned from History which contains the state to be restored.
+   */
+  public void restoreState(String historyToken){
+    String[] stateSplit=historyToken.split("\\$");
+    int counter=0;
+    for(int i=0;i<8;i++){
+      for(int j=0;j<8;j++){
+        Color currentColor=(stateSplit[counter].charAt(0)=='W')?Color.WHITE:(stateSplit[counter].charAt(0)=='B')?Color.BLACK:null;
+        PieceKind currentPieceKind=null;
+        if(currentColor!=null){
+        switch(stateSplit[counter].charAt(1)){
+          case 'P':currentPieceKind=PieceKind.PAWN;
+                   break;
+          case 'R':currentPieceKind=PieceKind.ROOK;
+          		   break;
+          case 'G':currentPieceKind=PieceKind.KNIGHT;
+          		   break;
+          case 'B':currentPieceKind=PieceKind.BISHOP;
+          		   break;
+          case 'Q':currentPieceKind=PieceKind.QUEEN;
+         		   break;
+          case 'K':currentPieceKind=PieceKind.KING;
+         		   break;
+        }
+        state.setPiece(i,j,new Piece(currentColor,currentPieceKind));}
+        else{
+          state.setPiece(i,j,null);
+        }
+        ++counter;
+      }
+    }
+    state.setTurn(stateSplit[counter++].charAt(0)=='W'?Color.WHITE:Color.BLACK);
+    state.setCanCastleKingSide(Color.WHITE, stateSplit[counter++].charAt(0)=='T'?true:false);
+    state.setCanCastleKingSide(Color.BLACK, stateSplit[counter++].charAt(0)=='T'?true:false);
+    state.setCanCastleQueenSide(Color.WHITE, stateSplit[counter++].charAt(0)=='T'?true:false);
+    state.setCanCastleQueenSide(Color.BLACK, stateSplit[counter++].charAt(0)=='T'?true:false);
+    state.setNumberOfMovesWithoutCaptureNorPawnMoved(Integer.parseInt(stateSplit[counter++]));
+    if(Integer.parseInt(stateSplit[counter])!=88){
+      int enpassantPos=Integer.parseInt(stateSplit[counter]);
+      state.setEnpassantPosition(new Position(enpassantPos/10,enpassantPos%10));
+    }
+    if(stateSplit[++counter].charAt(0)!='N'){
+      if(stateSplit[counter].charAt(0)=='D'){
+        switch(stateSplit[counter].charAt(1)){
+          case '1':state.setGameResult(new GameResult(null, GameResultReason.FIFTY_MOVE_RULE));
+            	   break;
+          case '2':state.setGameResult(new GameResult(null, GameResultReason.STALEMATE));
+           		   break;
+          case '3':state.setGameResult(new GameResult(null, GameResultReason.THREEFOLD_REPETITION_RULE));
+         		   break;
+        }
+      }
+      else{
+        state.setGameResult(new GameResult(stateSplit[counter].charAt(0)=='W'?Color.WHITE: Color.BLACK,GameResultReason.CHECKMATE));
+      }
+    }
+    else{
+      state.setGameResult(null);
+    }
+    turn=state.getTurn();
+    if (selectedPos!=null) view.highlightSelectedPiece(7-selectedPos.getRow(),selectedPos.getCol(),false);
+    setState();
+    clearHighlight(possibleStartHighlightedPositions);
+    clearHighlight(possibleEndHighlightedPositions);
+    possibleEndHighlightedPositions=new HashSet<Position>();
+    selectedPos=null;
+    Set<Position> startPositions=sei.getPossibleStartPositions(state);
+    highlightStartPosition(startPositions);
+    setDraggable(true);
+    if(view.isAIGame()) {
+    	if(!view.getSaveAIignore()) view.saveAIGameState(historyToken);
+    	else view.setSaveAIignore(false);
+    }
+  }
+  
+  public void startAI(){
+    Move computerMove = alphaBetaPruning.findBestMove(state, 4, new Timer(5000));
+    sci.makeMove(state, computerMove);
+    aiAudio(state, computerMove);
+    view.animateMove(7-computerMove.getFrom().getRow(), computerMove.getFrom().getCol(), 7-computerMove.getTo().getRow(), computerMove.getTo().getCol());
+  }
+  
+  public void aiAudio(State stateAfterComputerMove, Move computerMove){
+	  if(state.getGameResult()!=null){
+		  if(state.getGameResult().getWinner().equals(Color.BLACK) && victoryAudio!=null) victoryAudio.play();
+	  }
+	  else if(computerMove.getPromoteToPiece()!=null && promotionAudio!=null) promotionAudio.play();
+	  else if(moveAudio!=null) moveAudio.play(); 
+  }
+  
+}
+
+	

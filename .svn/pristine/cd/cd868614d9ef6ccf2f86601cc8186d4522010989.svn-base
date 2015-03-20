@@ -1,0 +1,72 @@
+package org.wenjiechen.hw5;
+
+import org.shared.chess.Move;
+import org.shared.chess.StateChanger;
+import org.wenjiechen.hw3.GameImages;
+import org.wenjiechen.hw3.HistoryCoder;
+import org.wenjiechen.hw3.Presenter;
+
+import com.google.gwt.animation.client.Animation;
+import com.google.gwt.core.client.GWT;
+import com.google.gwt.dom.client.Style.Position;
+import com.google.gwt.dom.client.Style.Unit;
+import com.google.gwt.event.dom.client.ClickEvent;
+import com.google.gwt.event.dom.client.ClickHandler;
+import com.google.gwt.user.client.ui.Grid;
+import com.google.gwt.user.client.ui.Image;
+import com.google.gwt.user.client.ui.Widget;
+
+public class SlowMoveAnimation  extends Animation{
+	
+	private Image image;
+	private int dRow;
+	private int dCol;
+	
+	public SlowMoveAnimation(Image[][] board, Move move){
+		this.image = board[move.getFrom().getRow()][move.getFrom().getCol()];
+		this.dRow = move.getFrom().getRow() - move.getTo().getRow();
+		this.dCol = move.getFrom().getCol() - move.getTo().getCol();	
+	}
+	
+	@Override
+	protected void onUpdate(double progress) {
+		slowMoving(progress);
+	}
+
+	@Override
+	protected void onStart(){
+		image.getElement().getStyle().setPosition(Position.RELATIVE);
+		System.out.println("*******slowMoving():"+"dRow = "+ (-1)*dRow + "dCol = "+dCol);
+	}
+	
+	/**
+	 * need to remove the image from Grid, otherwise it will be covered by other image after update
+	 * the gameGrid.
+	 */
+	@Override
+	protected void onComplete(){
+//		moveWidgetBackToGrid();
+//		kill.setResource(gameImages.blackQueen());
+//		final int r = move.getFrom().getRow();
+//		final int c = move.getFrom().getCol();
+//		kill.addClickHandler(new ClickHandler() {
+//			@Override
+//			public void onClick(ClickEvent event) {
+//				presenter.dealWithClick(r,c);
+//			}
+//		});
+//		gameGrid.setWidget(move.getFrom().getRow(), move.getFrom().getCol(), kill);
+	}
+	
+	private void slowMoving(double progress){
+		image.getElement().getStyle().setRight(progress *(dCol) * 50, Unit.PX);
+		image.getElement().getStyle().setTop(progress * (-1 * dRow ) * 50, Unit.PX);
+	}
+	
+	public void moveWidgetBackToGrid(){
+		image.getElement().getStyle().setRight((-1) *(dCol) * 50, Unit.PX);
+		image.getElement().getStyle().setTop((-1) * (-1 * dRow ) * 50, Unit.PX);
+		System.out.println("*******moveWidgetBackToGrid():"+"dRow = "+ (-1)*(-1)*dRow + "dCol = "+(-1)*dCol);
+	}
+
+}

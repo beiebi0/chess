@@ -1,0 +1,98 @@
+package org.karthikmahadevan.hw7;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+
+import com.googlecode.objectify.annotation.Entity;
+import com.googlecode.objectify.annotation.Id;
+import com.googlecode.objectify.annotation.Index;
+
+@Entity
+public class Player {
+	@Id
+	@Index
+	String email;
+	String name;
+	@Index
+	boolean availablityForAutoMatch;
+	private List<String> tokens;
+	private List<Long> matches;
+	private int ratings_deviation;
+	private int ratings;
+	private Date lastLogin;
+
+	public Player() {
+	}
+
+	public Player(String email, String name, Date lastLogin) {
+		this.email = email;
+		this.name = name;
+		this.ratings_deviation = 350;
+		this.ratings = 1500;
+		this.lastLogin = lastLogin;
+		availablityForAutoMatch = false;
+		tokens = new ArrayList<String>();
+		matches = new ArrayList<Long>();
+	}
+
+	public String getEmail() {
+		return email;
+	}
+
+	public String getName() {
+		return name;
+	}
+
+	public void setName(String name) {
+		this.name = name;
+	}
+
+	public boolean isAvailablityForAutoMatch() {
+		return availablityForAutoMatch;
+	}
+
+	public void setAvailablityForAutoMatch(boolean availablityForAutoMatch) {
+		this.availablityForAutoMatch = availablityForAutoMatch;
+	}
+
+	public List<Long> getMatches() {
+		return matches;
+	}
+
+	public void setMatches(List<Long> matches) {
+		this.matches = matches;
+	}
+
+	public List<String> getTokens() {
+		return tokens;
+	}
+
+	public void setTokens(List<String> tokens) {
+		this.tokens = tokens;
+	}
+
+	public int getRatings_deviation() {
+		return ratings_deviation;
+	}
+
+	public void setRatings_deviation(int ratings_deviation) {
+		this.ratings_deviation = ratings_deviation;
+	}
+
+	public int getRatings() {
+		return ratings;
+	}
+
+	public void setRatings(int ratings) {
+		this.ratings = ratings;
+	}
+
+	public Date getLastLogin() {
+		return lastLogin;
+	}
+
+	public void setLastLogin(Date lastLogin) {
+		this.lastLogin = lastLogin;
+	}
+}

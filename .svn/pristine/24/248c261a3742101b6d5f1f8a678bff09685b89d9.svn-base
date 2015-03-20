@@ -1,0 +1,467 @@
+package org.ashishmanral.hw5;
+
+import org.shared.chess.Color;
+import org.shared.chess.GameResult;
+import org.shared.chess.Piece;
+import org.shared.chess.PieceKind;
+import org.ashishmanral.hw5.Presenter.View;
+import org.ashishmanral.hw6.client.UpdateStateService;
+import org.ashishmanral.hw6.client.UpdateStateServiceAsync;
+import org.ashishmanral.hw6.client.UpdateState;
+import org.ashishmanral.hw6.client.UserDetails;
+
+import com.google.gwt.appengine.channel.client.Channel;
+import com.google.gwt.appengine.channel.client.ChannelError;
+import com.google.gwt.appengine.channel.client.ChannelFactoryImpl;
+import com.google.gwt.appengine.channel.client.SocketListener;
+import com.google.gwt.core.client.GWT;
+import com.google.gwt.event.dom.client.ClickEvent;
+import com.google.gwt.event.dom.client.ClickHandler;
+import com.google.gwt.event.dom.client.DragOverEvent;
+import com.google.gwt.event.dom.client.DragOverHandler;
+import com.google.gwt.event.dom.client.DragStartEvent;
+import com.google.gwt.event.dom.client.DragStartHandler;
+import com.google.gwt.event.dom.client.DropEvent;
+import com.google.gwt.event.dom.client.DropHandler;
+import com.google.gwt.uibinder.client.UiBinder;
+import com.google.gwt.uibinder.client.UiField;
+import com.google.gwt.user.client.Element;
+import com.google.gwt.user.client.History;
+import com.google.gwt.user.client.Window;
+import com.google.gwt.user.client.rpc.AsyncCallback;
+import com.google.gwt.user.client.ui.Button;
+import com.google.gwt.user.client.ui.Composite;
+import com.google.gwt.user.client.ui.Grid;
+import com.google.gwt.user.client.ui.Image;
+import com.google.gwt.user.client.ui.Label;
+import com.google.gwt.user.client.ui.ListBox;
+import com.google.gwt.user.client.ui.Widget;
+
+/**
+ * Graphics Class
+ * @author Ashish Manral
+ *
+ */
+public class Graphics extends Composite implements View {
+  private static GameImages gameImages = GWT.create(GameImages.class);
+  private static GraphicsUiBinder uiBinder = GWT.create(GraphicsUiBinder.class);
+
+  interface GraphicsUiBinder extends UiBinder<Widget, Graphics> {
+  }
+
+  @UiField GameCss css;
+  @UiField Label gameStatus;
+  @UiField Grid gameGrid;
+  @UiField Grid whitePromotionGrid;
+  @UiField Grid blackPromotionGrid;
+  @UiField Button newGameButton;
+  @UiField Button saveButton;
+  @UiField Button loadButton;
+  @UiField ListBox loadOptions;
+  @UiField Label playerColor;
+  private Image[][] board = new Image[8][8];
+  private UserDetails details;
+  private Color turn;
+  public Presenter presenter;
+  public boolean clickEnabled = true;
+
+  /**
+   * This method is used to initialize the promotion grid for white pieces.
+   */
+  public void initializeWhiteGrid(){
+	whitePromotionGrid.setBorderWidth(1);
+	whitePromotionGrid.resize(1,4);
+    Image[] imageArr={new Image(gameImages.whiteRook()),
+    				  new Image(gameImages.whiteKnight()),
+    				  new Image(gameImages.whiteBishop()),
+    				  new Image(gameImages.whiteQueen())};
+    final PieceKind[] pieceKind={PieceKind.ROOK,PieceKind.KNIGHT,PieceKind.BISHOP,PieceKind.QUEEN};
+    for(int i=0;i<4;i++){
+      final int j=i;
+      whitePromotionGrid.setWidget(0,i,imageArr[i]);
+      //Adding click handler.
+      imageArr[i].addClickHandler(new ClickHandler() {
+        @Override
+        public void onClick(ClickEvent event) {
+          if(clickEnabled) presenter.clickedOn(presenter.promotionPos.getRow(),presenter.promotionPos.getCol(),pieceKind[j],false);
+        }
+      });
+      //Adding drag handler.
+      imageArr[i].getElement().setDraggable(Element.DRAGGABLE_TRUE);
+      imageArr[i].addDragStartHandler(new DragStartHandler() {
+        @Override
+        public void onDragStart(DragStartEvent event) {
+          event.setData("text",Integer.toString(j));
+        }
+      });
+    }
+    whitePromotionGrid.setVisible(false);
+  }
+  
+  /**
+   * This method is used to initialize the promotion grid for black pieces.
+   */
+  public void initializeBlackGrid(){
+	blackPromotionGrid.setBorderWidth(1);
+    blackPromotionGrid.resize(1,4);
+    Image[] imageArr={new Image(gameImages.blackRook()),
+    				  new Image(gameImages.blackKnight()),
+    				  new Image(gameImages.blackBishop()),
+    				  new Image(gameImages.blackQueen())};
+    final PieceKind[] pieceKind={PieceKind.ROOK,PieceKind.KNIGHT,PieceKind.BISHOP,PieceKind.QUEEN};
+    for(int i=0;i<4;i++){
+      final int j=i;
+      blackPromotionGrid.setWidget(0,i,imageArr[i]);
+      //Adding click handler
+      imageArr[i].addClickHandler(new ClickHandler() {
+        @Override
+        public void onClick(ClickEvent event) {
+          if(clickEnabled) presenter.clickedOn(presenter.promotionPos.getRow(),presenter.promotionPos.getCol(),pieceKind[j],false);
+        }
+      });
+      //Adding drag handler.
+      imageArr[i].getElement().setDraggable(Element.DRAGGABLE_TRUE);
+      imageArr[i].addDragStartHandler(new DragStartHandler() {
+        @Override
+        public void onDragStart(DragStartEvent event) {
+          event.setData("text","Hello World");
+        }
+      });
+    }
+    blackPromotionGrid.setVisible(false);
+  }
+  
+  /**
+   * Graphics constructor that takes state as argument and passes that to Presenter.
+   */
+  public Graphics(final UserDetails details){
+	this.details = details;
+    initWidget(uiBinder.createAndBindUi(this));
+    gameGrid.resize(8, 8);
+    gameGrid.setCellPadding(0);
+    gameGrid.setCellSpacing(0);
+    gameGrid.setBorderWidth(10);
+    for (int row = 0; row < 8; row++) {
+      for (int col = 0; col < 8; col++) {
+        final Image image = new Image();
+        board[row][col] = image;
+        image.setWidth("100%");
+        final int rowId=row;
+        final int colId=col;
+        image.addClickHandler(new ClickHandler() {
+          @Override
+          public void onClick(ClickEvent event) {
+        	hideLoadOptions();
+        	if(clickEnabled) presenter.clickedOn(rowId, colId, null,false);
+          }
+        });
+        gameGrid.setWidget(row, col, image);
+      }
+    }
+    initializeWhiteGrid();
+    initializeBlackGrid();
+    loadOptions.setVisibleItemCount(1);
+    loadOptions.setVisible(false);
+    presenter = new Presenter(this);
+    /*This condition checks if there was a page refresh. If there was, it will add the storage 
+    items back into listBox for load options.  */
+    if(presenter.storage!=null && presenter.storage.getLength()>0){
+      for(int i=1;i<=presenter.storage.getLength();i++){
+        addLabelInListBox(Integer.toString(i));        
+      }
+    }
+    else if(presenter.storage==null && presenter.backupStorage.size()>0){
+      for(int i=1;i<=presenter.backupStorage.size();i++){
+        addLabelInListBox(Integer.toString(i));        
+      }
+    }
+    //Adding click handler for new button.
+    newGameButton.addClickHandler(new ClickHandler() {
+      @Override
+	  public void onClick(ClickEvent event) {
+    	hideLoadOptions();
+		History.newItem("WR$WG$WB$WQ$WK$WB$WG$WR$WP$WP$WP$WP$WP$WP$WP$WP$N$N$N$N$N$N$N$N$N$N$N$N$N$N$N$N$N$N$N$N$N$N$N$N$N$N$N$N$N$N$N$N$BP$BP$BP$BP$BP$BP$BP$BP$BR$BG$BB$BQ$BK$BB$BG$BR$W$T$T$T$T$0$88$N");
+      }
+	});
+    //Adding click handler for save button.
+    saveButton.addClickHandler(new ClickHandler() {
+      @Override
+  	  public void onClick(ClickEvent event) {
+    	hideLoadOptions();
+        presenter.saveGame();  
+      }
+  	});
+    //Adding click handler for load options listBox.
+    loadOptions.addClickHandler(new ClickHandler(){
+      boolean ignore=true;
+      @Override
+      public void onClick(ClickEvent event){
+        if(!ignore && loadOptions.getSelectedIndex()!=-1){
+          presenter.loadGame(loadOptions.getSelectedIndex());
+        }
+        ignore=!ignore;
+      }
+    });
+    //Adding click handler for load button.
+    loadButton.addClickHandler(new ClickHandler() {
+      @Override
+	  public void onClick(ClickEvent event) {
+        loadOptions.setVisible(true);
+      }
+	});
+    Channel channel = new ChannelFactoryImpl().createChannel(details.getToken());
+    channel.open(new SocketListener() {
+
+      @Override
+      public void onOpen() {
+        if (details.getPlayerColor() == Color.WHITE) {
+          gameStatus.setText("Waiting for other player to Join...");
+          playerColor.setText("You are " + details.getEmailId() + " playing as WHITE");
+          clickEnabled = false;
+        }
+        else {
+          playerColor.setText("You are " + details.getEmailId() + " playing as BLACK");
+          clickEnabled = false;
+        }
+      }
+  
+      @Override
+      public void onMessage(String historyState) {
+        if (historyState.equals("start")) {
+          Window.alert("Another player has joined...Starting the game!!");
+          displayTurn(true);
+          clickEnabled = true;
+        } 
+        else {  
+          displayTurn(true);
+          clickEnabled = true;
+          presenter.restoreState(historyState);
+        }
+      }
+  
+      @Override
+      public void onError(ChannelError error) {
+      }
+
+      @Override
+      public void onClose() {
+      }
+    });
+  }
+  
+  /**
+   * Restore the state using string. Used to provide History support.
+   * @param historyState This is the state that needs to be restored.
+   */
+  public void restoreState(String historyState){
+    presenter.restoreState(historyState);
+  }
+ 
+  /**
+   * This method is in View interface contract. It sets the grid as the game state changes.
+   */
+  @Override
+  public void setPiece(final int row, final int col, Piece piece) {
+    if(piece==null){
+      if(row % 2 == 0 && col % 2 == 1 || row % 2 == 1 && col % 2 == 0) board[row][col].setResource(gameImages.blackTile());
+      else 													           board[row][col].setResource(gameImages.whiteTile());
+    }
+    else{
+    Color pieceColor=piece.getColor();
+    switch(piece.getKind()){
+      case PAWN    : if(pieceColor==Color.WHITE) board[row][col].setResource(gameImages.whitePawn());   	
+                     else 						 board[row][col].setResource(gameImages.blackPawn());
+      				 break;
+      case ROOK    : if(pieceColor==Color.WHITE) board[row][col].setResource(gameImages.whiteRook());   	
+      				 else 						 board[row][col].setResource(gameImages.blackRook());
+		 			 break;
+      case KNIGHT  : if(pieceColor==Color.WHITE) board[row][col].setResource(gameImages.whiteKnight());   	
+      				 else 						 board[row][col].setResource(gameImages.blackKnight());
+		 			 break;
+      case BISHOP  : if(pieceColor==Color.WHITE) board[row][col].setResource(gameImages.whiteBishop());   	
+		 			 else 						 board[row][col].setResource(gameImages.blackBishop());
+		 			 break;
+      case QUEEN   : if(pieceColor==Color.WHITE) board[row][col].setResource(gameImages.whiteQueen());   	
+		 			 else 						 board[row][col].setResource(gameImages.blackQueen());
+		 			 break;
+      case KING    : if(pieceColor==Color.WHITE) board[row][col].setResource(gameImages.whiteKing());   	
+		 			 else 						 board[row][col].setResource(gameImages.blackKing());
+		 			 break;	 			 
+    }}
+    //Adding drag over handler.
+    board[row][col].addDragOverHandler(new DragOverHandler() {
+      @Override
+      public void onDragOver(DragOverEvent event) {
+      }
+    });
+    //Adding drop handler.
+    board[row][col].addDropHandler(new DropHandler(){
+      @Override
+      public void onDrop(DropEvent event){
+        event.preventDefault();
+        String data=event.getData("text");
+        if(data.equals("normal")){
+          if(clickEnabled) presenter.clickedOn(row,col,null,true);
+        }
+        else{
+          PieceKind[] pieceKind={PieceKind.ROOK,PieceKind.KNIGHT,PieceKind.BISHOP,PieceKind.QUEEN};
+          if(clickEnabled) presenter.clickedOn(row, col, pieceKind[Integer.parseInt(data)],true);
+        }
+      }
+    });
+    //Adding drag start handler.
+    board[row][col].addDragStartHandler(new DragStartHandler() {
+      @Override
+      public void onDragStart(DragStartEvent event) {
+        event.setData("text","normal");
+        if(clickEnabled) presenter.clickedOn(row,col,null,false);
+      }
+    });
+  }
+
+  /**
+   * This method is in View interface contract. It highlights a particular cell/block..
+   */
+  @Override
+  public void setHighlighted(int row, int col, boolean highlighted) {
+    Element element = board[row][col].getElement();
+    if (highlighted) {
+      element.setClassName(css.highlighted());
+    } else {
+      element.removeClassName(css.highlighted());
+    }
+  }
+
+  /**
+   * This method is used to highlight the selected piece.
+   */
+  @Override
+  public void highlightSelectedPiece(int row,int col,boolean highlighted){
+	  Element element = board[row][col].getElement();
+	    if (highlighted) {
+	      element.setClassName(css.highlightSelected());
+	    } else {
+	      element.removeClassName(css.highlightSelected());
+	    }
+  }
+  
+  /**
+   * This method is in View interface contract. It sets the gameStatus to display whose turn it is.
+   */
+  @Override
+  public void displayTurn(boolean yourTurn) {
+    if (yourTurn == true) {
+	  gameStatus.setText("Your Turn");
+    }else{
+      gameStatus.setText("Opponent's Turn");
+	}
+  }
+
+  /**
+   * This method is in View interface contract. It sets gameStatus to display if the game result if it has ended.
+   */
+  @Override
+  public void setGameResult(GameResult gameResult) {
+    if(gameResult==null) return;
+	if (gameResult.getWinner() == null) gameStatus.setText("Game has drawn because of " + gameResult.getGameResultReason());
+	else{
+	  if(gameResult.getWinner()==Color.BLACK) gameStatus.setText("BLACK has won because of " + gameResult.getGameResultReason());
+	  else                                    gameStatus.setText("WHITE has won because of " + gameResult.getGameResultReason());
+	}
+  }
+  
+  /**
+   * This mehod is in View contract. It sets the promotion grid visibility.
+   * @param color Color of the promotion grid.
+   * @param value Indicates the visibility of grid.
+   */
+  @Override
+  public void setPromoteDisplay(Color color,boolean value){
+    if(color==Color.WHITE) whitePromotionGrid.setVisible(value);
+    else                   blackPromotionGrid.setVisible(value);
+  }
+  
+  /**
+   * @param savedGames Add the label for the saved game.
+   */
+  @Override
+  public void addLabelInListBox(String savedGames){
+    loadOptions.addItem("Saved Game " + savedGames);	  
+  }
+  
+  /**
+   * Used to hide the load options listBox.
+   */
+  @Override
+  public void hideLoadOptions(){
+    loadOptions.setVisible(false);
+  }
+  
+  /**
+   * Used to set the draggable property for a cell in the grid.
+   * @param row Row of the cell in the grid.
+   * @param col Col of the cell in the grid.
+   * @param value Value of the draggable property.
+   */
+  @Override
+  public void setDrag(int row,int col,boolean value){
+    board[row][col].getElement().setDraggable((value==true)?Element.DRAGGABLE_TRUE:Element.DRAGGABLE_FALSE);
+  }
+  
+  /**
+   * This method is used for animation.
+   * @param fromRow 
+   * @param fromCol 
+   * @param toRow 
+   * @param toCol
+   */
+  @Override
+  public void animateMove(int fromRow,int fromCol,int toRow,int toCol){
+	int fromAbsoluteLeft=board[fromRow][fromCol].getElement().getAbsoluteLeft();
+	int fromAbsoluteTop=board[fromRow][fromCol].getElement().getAbsoluteTop();
+	int toAbsoluteLeft=board[toRow][toCol].getElement().getAbsoluteLeft();
+	int toAbsoluteTop=board[toRow][toCol].getElement().getAbsoluteTop();
+	Presenter.TransitionAnimation animation=presenter.new TransitionAnimation(board[fromRow][fromCol].getElement(),fromAbsoluteLeft,fromAbsoluteTop,toAbsoluteLeft,toAbsoluteTop);
+    animation.run(500);
+  }
+  
+  /**
+   * This method updates other player about the move.
+   */
+  @Override
+  public void updateStateToServer(String historyState){
+    UpdateState update = new UpdateState();
+    update.setState(historyState);
+    update.setBoardId(details.getBoardId());
+    update.setTurn(turn);
+    displayTurn(false);
+    clickEnabled = false;
+    UpdateStateServiceAsync messageService = GWT.create(UpdateStateService.class);
+    messageService.getUpdate(update, new AsyncCallback<Integer>() {
+
+      @Override
+      public void onFailure(Throwable error) {
+      }
+
+      @Override
+      public void onSuccess(Integer replyFromServer) {
+        if(replyFromServer==0) Window.alert("Some exception occured while updating other player"); 
+      }
+      
+    });
+  }  
+
+  @Override
+  public void setTurn(Color turn){
+    this.turn = turn;	  
+  }
+  
+  /**
+   * This method is in View interface contract. This method is for testing purposes.
+   */
+  @Override
+  public void print(String str){
+	gameStatus.setText(str);
+  }
+}
+

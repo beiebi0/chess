@@ -1,0 +1,50 @@
+<!DOCTYPE ui:UiBinder SYSTEM "http://dl.google.com/gwt/DTD/xhtml.ent">
+<ui:UiBinder xmlns:ui="urn:ui:com.google.gwt.uibinder"
+	xmlns:g="urn:import:com.google.gwt.user.client.ui"
+  xmlns:mgwt="urn:import:com.googlecode.mgwt.ui.client.widget">
+  
+	<ui:image field="background" src="background.png" />
+	<ui:style field="css" type="org.simongellis.hw3.GameCss">
+		.highlighted {
+			outline: dotted yellow 2px;
+		}
+		
+		@sprite .board {
+			gwt-image: 'background';
+		}
+		
+		td img {
+			display: block;
+		}    
+	</ui:style>
+	
+	<g:HTMLPanel>
+		<g:Label ui:field="loginStatus">
+        Not Logged In.
+    </g:Label>
+		<g:Label ui:field="opponentStatus">
+		  No opponent
+		</g:Label>
+    <g:HTML ui:field="loginLink">
+      Log in
+    </g:HTML>
+		<div align="center">
+		  <g:Label ui:field="currentMatch">No match</g:Label>
+			<g:Label ui:field="gameStatus" text="" />
+			<div class="{css.board}">
+				<g:AbsolutePanel width="400px" height="450px" ui:field="gameBoard" />
+			</div>
+			<br />
+			<g:ListBox ui:field="listOfMatches">
+        <mgwt:item>
+          No match
+        </mgwt:item>
+      </g:ListBox>
+			<br />
+			<br />
+			<g:Button ui:field="optionsButton">
+			  Options
+			</g:Button>
+		</div>
+	</g:HTMLPanel>
+</ui:UiBinder>

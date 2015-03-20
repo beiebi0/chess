@@ -1,0 +1,51 @@
+package org.yuehlinchung.hw6.client;
+
+import com.allen_sauer.gwt.dnd.client.DragEndEvent;
+import com.allen_sauer.gwt.dnd.client.DragHandler;
+import com.allen_sauer.gwt.dnd.client.DragStartEvent;
+import com.allen_sauer.gwt.dnd.client.VetoDragException;
+
+/**
+ * Shared drag handler which display events as they are received by the various drag controllers.
+ */
+public final class MyDragHandler implements DragHandler {
+  private Presenter presenter;
+  private int oX = 246;
+  private int oY = 287;
+
+  MyDragHandler(Presenter presenter) {
+    this.presenter = presenter;
+  }
+
+  @Override
+  public void onDragEnd(DragEndEvent event) {
+	int x = event.getContext().draggable.getAbsoluteLeft();
+	int y = event.getContext().draggable.getAbsoluteTop();
+	int col = (x - oX) / 56;
+	int row = (y - oY) / 56;
+	presenter.clickedOn(row, col);
+    //log("onDragEnd: " + event, RED);
+  }
+
+  @Override
+  public void onDragStart(DragStartEvent event) {
+	int x = event.getContext().draggable.getAbsoluteLeft();
+	int y = event.getContext().draggable.getAbsoluteTop();
+	int col = (x - oX) / 56;
+	int row = (y - oY) / 56;
+    //log("onDragStart: " + event, GREEN);
+	presenter.currentMove = 0;
+	presenter.dragTag = 1;
+	presenter.clickedOn(row, col);
+  }
+
+  @Override
+  public void onPreviewDragEnd(DragEndEvent event) throws VetoDragException {
+    //log("<br>onPreviewDragEnd: " + event, BLUE);
+  }
+
+  @Override
+  public void onPreviewDragStart(DragStartEvent event) throws VetoDragException {
+    //log("onPreviewDragStart: " + event, BLUE);
+  }
+}

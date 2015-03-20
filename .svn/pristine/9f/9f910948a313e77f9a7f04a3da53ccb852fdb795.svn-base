@@ -1,0 +1,111 @@
+package org.yuehlinchung.hw6.shared;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import com.google.gwt.user.client.rpc.IsSerializable;
+import com.googlecode.objectify.annotation.Entity;
+import com.googlecode.objectify.annotation.Id;
+import com.googlecode.objectify.annotation.Serialize;
+
+@Entity
+public class LoginInfo implements IsSerializable {
+
+	@Id String emailAddress;
+	private boolean loggedIn = false;
+	private String loginUrl;
+	private String logoutUrl;
+	private String nickname;
+	private String channelId;
+	private boolean online = false;
+	private double rank = 1500;
+	@Serialize private List<Long> matchList = new ArrayList<Long>();
+	
+	public LoginInfo() {}
+		
+	public boolean isLoggedIn() {
+		return loggedIn;
+	}
+
+	public void setLoggedIn(boolean loggedIn) {
+		this.loggedIn = loggedIn;
+	}
+	
+	public boolean isOnline() {
+		return online;
+	}
+
+	public void setOnline(boolean online) {
+		this.online = online;
+	}
+
+	public String getLoginUrl() {
+		return loginUrl;
+	}
+
+	public void setLoginUrl(String loginUrl) {
+		this.loginUrl = loginUrl;
+	}
+
+	public String getLogoutUrl() {
+		return logoutUrl;
+	}
+
+	public void setLogoutUrl(String logoutUrl) {
+		this.logoutUrl = logoutUrl;
+	}
+
+	public String getEmailAddress() {
+		return emailAddress;
+	}
+
+	public void setEmailAddress(String emailAddress) {
+		this.emailAddress = emailAddress;
+	}
+
+	public String getNickname() {
+		return nickname;
+	}
+
+	public void setNickname(String nickname) {
+		this.nickname = nickname;
+	}
+	
+	public String getChannelId() {
+		return channelId;
+	}
+
+	public void setChannelId(String channelId) {
+		this.channelId = channelId;
+	}
+	
+	public void removeMatch(Long id) {
+		matchList.remove(id);
+	}
+	
+	public void addMatch(Long id) {
+		matchList.add(id);
+	}
+	
+	public List<Long> getMatch() {
+		return matchList;
+	}
+	
+	public void copyMatch(List<Long> list) {
+		this.matchList.clear();
+		this.matchList.addAll(list);
+	}
+	
+	public void updateRank(double Qa, double Qb, double Sa) {
+		double Ea = Qa / (Qa + Qb);
+		rank += 15 * (Sa - Ea);
+	}
+	
+	public void setRank(double rank) {
+		this.rank = rank;
+	}
+	
+	public double getRank() {
+		return rank;
+	}
+}

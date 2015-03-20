@@ -1,0 +1,224 @@
+package org.karthikmahadevan.hw2_5;
+
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
+import org.shared.chess.Color;
+import org.shared.chess.Move;
+import org.shared.chess.Piece;
+import org.shared.chess.PieceKind;
+import org.shared.chess.Position;
+import org.shared.chess.State;
+import org.shared.chess.StateExplorer;
+import org.karthikmahadevan.hw2.StateChangerImpl;
+
+public class StateExplorerImpl implements StateExplorer {
+	@Override
+	public Set<Move> getPossibleMoves(State state) {
+		Set<Move> possibleMoves = new HashSet<Move>();
+		if (state.getGameResult() != null) {
+			return possibleMoves;
+		}
+		for (int row = 0; row < 8; ++row) {
+			for (int col = 0; col < 8; ++col) {
+				Set<Move> possibleMovesFromPosition = 
+						getPossibleMovesFromPosition(state, new Position(row, col));
+				possibleMoves.addAll(possibleMovesFromPosition);
+			}
+		}
+		return possibleMoves;
+	}
+
+	@Override
+	public Set<Move> getPossibleMovesFromPosition(State state, Position start) {
+		Set<Move> possibleMoves = new HashSet<Move>();
+		if (state.getGameResult() != null) {
+			return possibleMoves;
+		}
+		Piece piece = state.getPiece(start);
+		Color color = state.getTurn();
+		if (piece != null && piece.getColor() == color) {
+			List<Position> positions = new ArrayList<Position>();
+			StateChangerImpl objStateChanger = new StateChangerImpl();
+			Integer[][] directions;
+			Position kingPosition = objStateChanger.positionOfKing(state, color);
+			boolean valid;
+			switch (piece.getKind()) {
+			case KNIGHT:
+				positions = objStateChanger.positionsReachableByKnightFromPosition(state, start);
+				for (int i = 0; i < positions.size(); ++i) {
+					Position knightPosition = positions.get(i);
+					Piece occupiedBy = state.getPiece(knightPosition);
+					if (occupiedBy != null && occupiedBy.getColor() == color) {
+						continue;
+					}
+					State backupState = state.copy();
+					backupState.setPiece(start, null);
+					backupState.setPiece(positions.get(i), piece);
+					if (objStateChanger.positionUnderAttack(backupState, kingPosition, color) == null) {
+						possibleMoves.add(new Move(start, positions.get(i), null));
+					}
+				}
+				break;
+			case KING:
+				directions = objStateChanger.getDirections();
+				List<Position> kingPositions = new ArrayList<Position>();
+				for (int i = 0; i < 8; ++i) {
+					positions = objStateChanger.tracePath(state, kingPosition, null, directions[i]);
+					if (positions.size() > 0) {
+						kingPositions.add(positions.get(0));
+					}
+				}
+				int legalCastleRow = (color == Color.WHITE ? 0 : 7);
+				if (start.equals(new Position(legalCastleRow, 4))) {
+					kingPositions.add(new Position(start.getRow(),start.getCol() - 2));
+					kingPositions.add(new Position(start.getRow(),start.getCol() + 2));
+				}
+				for (int i = 0; i < kingPositions.size(); ++i) {
+					valid = true;
+					Position newPosition = kingPositions.get(i);
+					Move move = new Move(start, newPosition, null);
+					try {
+						objStateChanger.makeMove(state.copy(), move);
+					}
+					catch (Exception e) {
+						valid = false;
+					}
+					if (valid) {
+						possibleMoves.add(new Move(start, newPosition, null));
+					}
+				}
+				break;
+			case PAWN:
+				int row = start.getRow();
+				int col = start.getCol();
+				int incr = (color == Color.WHITE ? 1 : -1);
+				Integer[][] pawnDestinations = {{row + incr,col - 1},{row + incr,col + 1},{row + incr,col},
+						{row + 2*incr,col}};
+				for (int i = 0; i < 4; ++i) {
+					valid = true;
+					Position newPosition = new Position(pawnDestinations[i][0],pawnDestinations[i][1]);
+					Move move = new Move(start, newPosition, null);
+					try {
+						objStateChanger.makeMove(state.copy(), move);
+					}
+					catch (Exception e) {
+						valid = false;
+					}
+					if (valid) {
+						int lastRow = (color == Color.WHITE ? 7 : 0);
+						if (newPosition.getRow() == lastRow) {
+							possibleMoves.add(new Move(start,newPosition,PieceKind.BISHOP));
+							possibleMoves.add(new Move(start,newPosition,PieceKind.QUEEN));
+							possibleMoves.add(new Move(start,newPosition,PieceKind.ROOK));
+							possibleMoves.add(new Move(start,newPosition,PieceKind.KNIGHT));
+						}
+						else {
+							possibleMoves.add(move);
+						}
+					}
+				}
+				break;
+			default:
+				if (piece.getKind() == PieceKind.BISHOP) {
+					directions = objStateChanger.getBishopDirections();
+				}
+				else if (piece.getKind() == PieceKind.QUEEN) {
+					directions = objStateChanger.getDirections();
+				}
+				else {
+					directions = objStateChanger.getRookDirections();
+				}
+				for (int i = 0; i < directions.length; ++i) {
+					positions = objStateChanger.tracePath(state, start, null, directions[i]);
+					for (int j = 0; j < positions.size(); ++j) {
+						State backupState = state.copy();
+						backupState.setPiece(start, null);
+						backupState.setPiece(positions.get(j), piece);
+						if (objStateChanger.positionUnderAttack(backupState, kingPosition, color) == null) {
+							possibleMoves.add(new Move(start, positions.get(j), null));
+						}
+					}
+				}
+			}
+		}
+		return possibleMoves;
+	}
+
+	@Override
+	public Set<Position> getPossibleStartPositions(State state) {
+		Set<Position> startingPositions = new HashSet<Position>();
+		if (state.getGameResult() != null) {
+			return startingPositions;
+		}
+		Color color = state.getTurn();
+		StateChangerImpl objStateChanger = new StateChangerImpl();
+		for (int row = 0; row < 8; ++row) {
+			for (int col = 0; col < 8; ++col) {
+				Position kingPosition = objStateChanger.positionOfKing(state, color);
+				Position from = new Position(row, col);
+				Piece piece = state.getPiece(from);
+				if (piece != null && piece.getColor() == color) {
+					switch (piece.getKind()) {
+					case PAWN:
+						boolean valid;
+						int incr = (color == Color.WHITE ? 1 : -1);
+						Integer[][] pawnDestinations = {{row + incr,col - 1},{row + incr,col + 1},{row + incr,col},
+								{row + 2*incr,col}};
+						for (int i = 0; i < 4; ++i) {
+							valid = true;
+							Position newPosition = new Position(pawnDestinations[i][0],pawnDestinations[i][1]);
+							Move move = new Move(from, newPosition, null);
+							try {
+								objStateChanger.makeMove(state.copy(), move);
+							}
+							catch (Exception e) {
+								valid = false;
+							}
+							if (valid) {
+								startingPositions.add(from);
+								break;
+							}
+						}
+						break;
+					case KNIGHT:
+						if (objStateChanger.islegalKnightMovePossible(state, from, kingPosition)) {
+							startingPositions.add(from);
+						}
+						break;
+					case KING:
+						List<Position> positions;
+						Integer[][] directions;
+						directions = objStateChanger.getDirections();
+						for (int i = 0; i < 8; ++i) {
+							valid = true;
+							positions = objStateChanger.tracePath(state, kingPosition, null, directions[i]);
+							if (positions.size() > 0) {
+								Position newPosition = positions.get(0);
+								Move move = new Move(from, newPosition, null);
+								try {
+									objStateChanger.makeMove(state.copy(), move);
+								}
+								catch (Exception e) {
+									valid = false;
+								}
+								if (valid) {
+									startingPositions.add(from);
+									break;
+								}
+							}
+						}
+						break;
+					default:
+						if (objStateChanger.isLegalQueenBishopRookMovePossible(state.copy(), from, kingPosition)) {
+							startingPositions.add(from);
+						}
+					}
+				}
+			}
+		}
+		return startingPositions;
+	}
+}

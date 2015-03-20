@@ -1,0 +1,285 @@
+package org.ashishmanral.hw2_5;
+
+import java.util.HashSet;
+import java.util.Set;
+
+import org.ashishmanral.hw2.StateChangerImpl;
+import org.shared.chess.Color;
+import org.shared.chess.IllegalMove;
+import org.shared.chess.Move;
+import org.shared.chess.Piece;
+import org.shared.chess.PieceKind;
+import org.shared.chess.Position;
+import org.shared.chess.State;
+import org.shared.chess.StateExplorer;
+
+public class StateExplorerImpl implements StateExplorer {
+  private StateChangerImpl stateChanger=new StateChangerImpl();
+  @Override
+  public Set<Move> getPossibleMoves(State state) {
+    Set<Position> startPosition=getPossibleStartPositions(state);
+    Set<Move> possibleMoves=new HashSet<Move>();
+    if(startPosition.size()!=0){
+      for(Position currentPosition:startPosition){
+        possibleMoves.addAll(getPossibleMovesFromPosition(state,currentPosition));  
+      }
+    }
+    return possibleMoves;
+  }
+
+  @Override
+  public Set<Move> getPossibleMovesFromPosition(State state, Position start) {
+    int startRow=start.getRow();
+    int startCol=start.getCol();
+	Piece currentPiece=state.getPiece(start);
+    Set<Move> possibleMove=new HashSet<Move>();
+    if(currentPiece==null) return possibleMove;
+    Move move;
+    switch(currentPiece.getKind()){
+      case PAWN:   int[][] positionIncrementPawn={{2,0},{1,0},{1,1},{1,-1}};
+      			   PieceKind[] pieceKindIncreament={null,PieceKind.ROOK,PieceKind.KNIGHT,PieceKind.BISHOP,PieceKind.QUEEN};
+    	  		   int colorCode=(currentPiece.getColor()==Color.WHITE)?1:-1;
+      			   for(int i=0;i<5;i++){
+    	  		     for(int j=0;j<4;j++){
+    	  		    	move=new Move(start,new Position(startRow+(positionIncrementPawn[j][0]*colorCode),startCol+positionIncrementPawn[j][1]),pieceKindIncreament[i]);
+       	  		        getPossibleMovesUsingStateChanger(state, possibleMove,move);
+    	  		     }
+    	  		   }
+      			   break;
+      case ROOK:   getRookPossibleMoves(state,start,possibleMove);
+      			   break;
+      case KNIGHT: int[][] positionIncrementKnight={{2,1},{2,-1},{1,2},{1,-2},{-1,+2},{-1,-2},{-2,+1},{-2,-1}};
+				   for(int i=0;i<8;i++){
+				     move=new Move(start,new Position(startRow+(positionIncrementKnight[i][0]),startCol+positionIncrementKnight[i][1]),null);
+				     getPossibleMovesUsingStateChanger(state, possibleMove,move);
+				   }
+				   break;
+      case BISHOP: getBishopPossibleMoves(state,start,possibleMove);
+		   		   break;
+      case QUEEN:  getRookPossibleMoves(state,start,possibleMove);
+      			   getBishopPossibleMoves(state,start,possibleMove);
+      			   break;
+      case KING:   int[][] positionIncrementKing={{1,-1},{1,0},{1,1},{0,-1},{0,1},{-1,-1},{-1,0},{-1,1},{0,-2},{0,2}};
+				   for(int i=0;i<10;i++){
+				     move=new Move(start,new Position(startRow+(positionIncrementKing[i][0]),startCol+positionIncrementKing[i][1]),null);
+					 getPossibleMovesUsingStateChanger(state, possibleMove,move);
+				   }
+                   break;
+    }
+    return possibleMove;
+  }
+
+  @Override
+  public Set<Position> getPossibleStartPositions(State state) {
+    Color turn=(state.getTurn()==Color.WHITE)?Color.WHITE:Color.BLACK;
+    Set<Position> startPosition=new HashSet<Position>(); 
+    for(int i=0;i<8;i++){
+      for(int j=0;j<8;j++){
+        Piece currentPiece=state.getPiece(i,j);
+        if(currentPiece!=null && currentPiece.getColor()==turn){
+          Position start=new Position(i,j);
+          int startRow=i;
+          int startCol=j;
+          switch(currentPiece.getKind()){
+            case PAWN: int[][] positionIncrementPawn={{2,0},{1,0},{1,1},{1,-1}};
+					   PieceKind[] pieceKindIncreament={null,PieceKind.ROOK,PieceKind.KNIGHT,PieceKind.BISHOP,PieceKind.QUEEN};
+			  		   int colorCode=(currentPiece.getColor()==Color.WHITE)?1:-1;
+					   OUTER:
+			  		   for(int r=0;r<5;r++){
+			  		     for(int c=0;c<4;c++){
+			  		       if(!canNotMove(state,new Move(start,new Position(startRow+(positionIncrementPawn[c][0]*colorCode),startCol+positionIncrementPawn[c][1]),pieceKindIncreament[r]))){
+			  		    	 startPosition.add(start);
+			  		    	 break OUTER;
+			  		       }
+			  		     }
+			  		   }
+					   break; 
+            case ROOK: if(checkIfRookCanMove(state, start)){
+            			 startPosition.add(start);
+            		   }
+                       break;
+          case KNIGHT: int[][] positionIncrementKnight={{2,1},{2,-1},{1,2},{1,-2},{-1,-2},{-1,2},{-2,-1},{-2,1}};
+			  		   for(int r=0;r<8;r++){
+			  		     if(!canNotMove(state,new Move(start,new Position(startRow+positionIncrementKnight[r][0],startCol+positionIncrementKnight[r][1]),null))){
+			  		       startPosition.add(start);
+			  		       break;
+			  		     }
+			  		   }
+					   break;
+          case BISHOP: if(checkIfBishopCanMove(state, start)){
+		                 startPosition.add(start); 	 
+				       }
+		               break;
+		   case QUEEN: if(checkIfRookCanMove(state, start) || checkIfBishopCanMove(state, start)){
+		                 startPosition.add(start); 	 
+				       }
+		               break;
+		  	case KING: int[][] positionIncrementKing={{1,-1},{1,0},{1,1},{0,-1},{0,1},{-1,-1},{-1,0},{-1,1},{0,-2},{0,2}};
+			  		   for(int r=0;r<10;r++){
+			  		     if(!canNotMove(state,new Move(start,new Position(startRow+positionIncrementKing[r][0],startCol+positionIncrementKing[r][1]),null))){
+			  		       startPosition.add(start);
+			  		       break;
+			  		     }
+				  	   }
+					   break;
+          } 
+        }
+      }
+    }
+    return startPosition;
+  }
+  
+  private boolean checkIfRookCanMove(State state,Position start){
+    int startRow=start.getRow();
+    int startCol=start.getCol();
+    for(int i=startCol;i<=7;i++){
+      if(!canNotMove(state,new Move(start,new Position(startRow,i),null))){
+        return true;
+      }
+    }
+    for(int i=startCol;i>=0;i--){
+      if(!canNotMove(state,new Move(start,new Position(startRow,i),null))){
+        return true;
+      }
+    }
+    for(int i=startRow;i<=7;i++){
+      if(!canNotMove(state,new Move(start,new Position(i,startCol),null))){
+        return true;
+      }
+    }
+    for(int i=startRow;i>=0;i--){
+      if(!canNotMove(state,new Move(start,new Position(i,startCol),null))){
+        return true;
+      }
+    }
+    return false;
+  }
+  
+  private boolean checkIfBishopCanMove(State state,Position start){
+    int startRow=start.getRow();
+    int startCol=start.getCol();
+    for(int i=startRow,j=startCol;i<=7;i++,j++){
+      if(!canNotMove(state,new Move(start,new Position(i,j),null))){
+        return true;
+      }
+    }
+    for(int i=startRow,j=startCol;i<=7;i++,j--){
+      if(!canNotMove(state,new Move(start,new Position(i,j),null))){
+        return true;
+      }
+    }
+    for(int i=startRow,j=startCol;i>=0;i--,j++){
+      if(!canNotMove(state,new Move(start,new Position(i,j),null))){
+        return true;
+      }
+    }
+    for(int i=startRow,j=startCol;i>=0;i--,j--){
+      if(!canNotMove(state,new Move(start,new Position(i,j),null))){
+        return true;
+      }
+    }
+    return false;
+  }
+  
+  private boolean canNotMove(State state, Move move){
+    State tempState=state.copy();
+    try{
+      stateChanger.makeMove(tempState, move);
+    }
+    catch(IllegalMove e){
+      return true;
+    }
+    return false;
+  }
+  
+  private void getPossibleMovesUsingStateChanger(State state, Set<Move> possibleMove,Move move){
+	boolean add=true;
+	State tempState=state.copy();
+	try{
+      stateChanger.makeMove(tempState, move);
+    }
+    catch(IllegalMove e){
+      add=false;	   
+    }
+    if(add==true){
+	  possibleMove.add(move);
+    }
+  }
+  
+  private void getRookPossibleMoves(State state,Position start,Set<Move> possibleMove){
+    int startRow=start.getRow();
+    int startCol=start.getCol();
+	for(int i=0;i<8;i++){
+	  State tempState=state.copy();
+      Move move=new Move(start,new Position(startRow,i),null);
+	  try{
+	    stateChanger.makeMove(tempState, move);	   
+	  }
+	  catch(IllegalMove e){
+	    continue;
+	  }
+	  possibleMove.add(move);
+	}
+	for(int i=0;i<8;i++){
+	  State tempState=state.copy();
+      Move move=new Move(start,new Position(i,startCol),null);
+      try{
+        stateChanger.makeMove(tempState, move);	   
+      }
+      catch(IllegalMove e){
+        continue;
+      }
+      possibleMove.add(move);
+	}
+  }
+  
+  private void getBishopPossibleMoves(State state,Position start,Set<Move> possibleMove){
+    int startRow=start.getRow();
+    int startCol=start.getCol();
+	for(int i=startRow,j=startCol;i>=0 && j>=0;i--,j--){
+      State tempState=state.copy();
+      Move move=new Move(start,new Position(i,j),null);
+      try{
+        stateChanger.makeMove(tempState, move);	   
+      }
+      catch(IllegalMove e){
+        continue;
+      }
+      possibleMove.add(move);
+	}
+	for(int i=startRow,j=startCol;i>=0 && j<8;i--,j++){
+	  State tempState=state.copy();
+      Move move=new Move(start,new Position(i,j),null);
+      try{
+        stateChanger.makeMove(tempState, move);	   
+      }
+      catch(IllegalMove e){
+        continue;
+      }
+      possibleMove.add(move);
+    }
+	for(int i=startRow,j=startCol;i<8 && j>=0;i++,j--){
+	  State tempState=state.copy();
+	  Move move=new Move(start,new Position(i,j),null);
+	  try{
+	    stateChanger.makeMove(tempState, move);	   
+	  }
+	  catch(IllegalMove e){
+	    continue;
+	  }
+	  possibleMove.add(move);
+	}	
+	for(int i=startRow,j=startCol;i<8 && j<8;i++,j++){
+	  State tempState=state.copy();
+	  Move move=new Move(start,new Position(i,j),null);
+	  try{
+	    stateChanger.makeMove(tempState, move);	   
+	  }
+	  catch(IllegalMove e){
+	    continue;
+	  }
+	  possibleMove.add(move);
+	}
+  }
+}
+

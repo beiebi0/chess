@@ -1,0 +1,421 @@
+package org.kuangchelee.hw5;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Set;
+
+import org.kuangchelee.hw6.ChessService;
+import org.kuangchelee.hw6.ChessServiceAsync;
+import org.kuangchelee.hw6.UserInfo;
+import org.kuangchelee.hw7.MatchInfo;
+import org.kuangchelee.hw8.ChessConstants;
+import org.kuangchelee.hw8.ChessMessages;
+import org.shared.chess.State;
+
+import com.google.gwt.appengine.channel.client.Channel;
+import com.google.gwt.appengine.channel.client.ChannelError;
+import com.google.gwt.appengine.channel.client.ChannelFactoryImpl;
+import com.google.gwt.appengine.channel.client.Socket;
+import com.google.gwt.appengine.channel.client.SocketListener;
+import com.google.gwt.cell.client.TextCell;
+import com.google.gwt.core.client.EntryPoint;
+import com.google.gwt.core.client.GWT;
+import com.google.gwt.event.dom.client.ClickEvent;
+import com.google.gwt.event.dom.client.ClickHandler;
+import com.google.gwt.i18n.client.DateTimeFormat;
+import com.google.gwt.storage.client.Storage;
+import com.google.gwt.user.cellview.client.CellList;
+import com.google.gwt.user.cellview.client.HasKeyboardSelectionPolicy.KeyboardSelectionPolicy;
+import com.google.gwt.user.client.rpc.AsyncCallback;
+import com.google.gwt.user.client.ui.Anchor;
+import com.google.gwt.user.client.ui.Button;
+import com.google.gwt.user.client.ui.HorizontalPanel;
+import com.google.gwt.user.client.ui.Label;
+import com.google.gwt.user.client.ui.MultiWordSuggestOracle;
+import com.google.gwt.user.client.ui.RootPanel;
+import com.google.gwt.user.client.ui.TextBox;
+import com.google.gwt.user.client.ui.VerticalPanel;
+import com.google.gwt.user.client.Timer;
+import com.google.gwt.user.client.Window;
+import com.google.gwt.view.client.SelectionChangeEvent;
+import com.google.gwt.view.client.SingleSelectionModel;
+import com.googlecode.mgwt.ui.client.MGWT;
+import com.googlecode.mgwt.ui.client.MGWTSettings;
+
+public class ChessEntryPoint implements EntryPoint {
+	ChessServiceAsync chessService;
+	UserInfo userInfo;
+	Presenter presenter = new Presenter();
+	Graphics graphics = new Graphics(presenter);
+	ChessMessages messages = (ChessMessages)GWT.create(ChessMessages.class);
+	ChessConstants constants = (ChessConstants)GWT.create(ChessConstants.class);
+	VerticalPanel mainVP = new VerticalPanel();
+	VerticalPanel leftVP = new VerticalPanel();
+	VerticalPanel rightVP = new VerticalPanel();
+	VerticalPanel signVP = new VerticalPanel();
+	VerticalPanel joinVP = new VerticalPanel();
+	HorizontalPanel titleHP = new HorizontalPanel();
+	HorizontalPanel mainHP = new HorizontalPanel();
+	HorizontalPanel upHP = new HorizontalPanel();
+	HorizontalPanel downHP = new HorizontalPanel();
+	//DockPanel main = new DockPanel();
+	Label Welcome = new Label(constants.chess());
+	Label MatchUpLabel = new Label(constants.pleaseWaitForAutoMatch());
+	Label joinGameIntro = new Label(constants.enterID());
+	Label matchListLabel = new Label(constants.matchList());
+	Label startDate = new Label("");
+	TextBox OpponentName = new TextBox();
+	MultiWordSuggestOracle oracle = new MultiWordSuggestOracle();
+	Button joinGame = new Button(constants.playMatch());
+	Button playAI = new Button(constants.playWithAI());
+	Button deleteGame = new Button(constants.delete());
+	TextCell textcell = new TextCell();
+	CellList<String> cellList = new CellList<String>(textcell);
+	Channel channel;
+	Socket socket;
+	String selectedMID;
+	Storage storage = Storage.getLocalStorageIfSupported();
+	Timer uploadTimer = new Timer(){
+		@Override
+		public void run(){
+			String key = null;
+			String item = null;
+			if(storage.getLength() > 0){
+				for(int i = 0; i < storage.getLength(); i++){
+					if(storage.key(i).charAt(0) == 'S'){
+						key = storage.key(i);
+						break;
+					}
+				}
+				if(key != null){
+					final String fkey = key;
+					item = storage.getItem(key);
+					String[] strs = item.split("_");
+					final Long MID = Long.valueOf(strs[0]);
+					int winner = Integer.valueOf(strs[1]);
+					final String state = strs[2];
+					final String opponentID = strs[3];
+					chessService.saveState(MID, state, winner, new AsyncCallback<String>(){
+						@SuppressWarnings("rawtypes")
+						public void onSuccess(String result){
+							Window.alert("Saving state on server from local storage");
+							chessService.sendState("_" + MID + "_" + state, opponentID, new AsyncCallback(){
+								public void onSuccess(Object result){
+									//Window.alert("Sending to " + opponentID);
+								}
+								public void onFailure(Throwable error){
+									Window.alert("Send: Server connection from local storage failed.");
+								}
+							});
+							storage.removeItem(fkey);
+						}
+						public void onFailure(Throwable error){
+							Window.alert("Save: From local storage failed.");
+						}
+					});
+				}
+			}
+		}
+	};
+	public StateEncoder stateEncoder = new StateEncoder();
+	@Override
+	public void onModuleLoad() {
+		MGWT.applySettings(MGWTSettings.getAppSetting()); 
+		//main.setBorderWidth(4);
+		initPanels();
+		chessService = (ChessServiceAsync)GWT.create(ChessService.class);
+		chessService.logIn(GWT.getHostPageBaseURL(), new AsyncCallback<UserInfo>(){
+			public void onSuccess(UserInfo userinfo){
+				if(userinfo.getUser() == null){
+					//Window.alert("user null");
+					Label signInLabel = new Label(constants.needSingIn());
+					Anchor signInAnchor = new Anchor(constants.signIn());
+					signInAnchor.setHref(userinfo.getURL());
+					signVP.add(signInLabel);
+					signVP.add(signInAnchor);
+					upHP.setVisible(false);
+					downHP.setVisible(false);
+				}
+				else{
+					//Window.alert("user : " + userinfo.getUser() + "!!!");
+					userInfo = userinfo.copy();
+					openChannel(userinfo.getChID());
+					updateMatchList(userinfo);
+					uploadTimer.scheduleRepeating(10000);
+					final UserInfo UI = userinfo.copy();
+					joinGame.addClickHandler(new ClickHandler() {
+						@Override
+						public void onClick(ClickEvent event) {
+							//main.remove(joinGame);
+							//main.add(MatchUpLabel, DockPanel.NORTH);
+							State state = new State();
+							StateEncoder SE = new StateEncoder();
+							String newState = SE.Encode(state); 
+							chessService.join(UI, OpponentName.getText(), newState, new AsyncCallback<String>(){
+								public void onSuccess(String reply){
+									if(reply.charAt(0) == '0'){
+										Window.alert(constants.pleaseWaitForAutoMatch());
+									}
+									else if(reply.charAt(0) == '1'){
+										Window.alert(constants.invalidUserName());
+									}
+									else if(reply.charAt(0) == '2'){
+										String str = reply.substring(2);
+										Window.alert(messages.createMatchWith(str));
+									}
+									updateMatchList(UI);
+								}
+								public void onFailure(Throwable error){
+									Window.alert(constants.failToJoin());
+								}
+							});
+						}
+					});
+					Label ACLabel = new Label(messages.loggInAs(userinfo.getUser()));
+					Label rating = new Label(messages.rating((int)userinfo.getRating(), (int)userinfo.getRD()));
+					Anchor signOutAnchor = new Anchor(constants.signOut());
+					signOutAnchor.setHref(userinfo.getURL());
+					signVP.add(ACLabel);
+					signVP.add(rating);
+					signVP.add(signOutAnchor);
+					upHP.setVisible(true);
+					downHP.setVisible(true);
+				}
+			}
+			public void onFailure(Throwable error){
+				Window.alert("Fail to connect to server");
+			}
+		});
+	}
+	public void initPanels(){
+		RootPanel.get().add(mainVP);
+		mainVP.setSpacing(5);
+		mainVP.add(titleHP);
+		mainVP.add(upHP);
+		mainVP.add(downHP);
+		titleHP.setSpacing(10);
+		titleHP.setBorderWidth(2);
+		titleHP.add(Welcome);
+		titleHP.add(signVP);
+		upHP.setSpacing(10);
+		upHP.add(joinVP);
+		downHP.setSpacing(10);
+		downHP.add(leftVP);
+		downHP.add(rightVP);
+		graphics.setVisible(false);
+		joinVP.add(joinGameIntro);
+		joinVP.add(OpponentName);
+		joinVP.add(joinGame);
+		playAI.addClickHandler(new ClickHandler() {
+			@Override
+			public void onClick(ClickEvent event) {
+				loadChessAI();
+			}
+		});
+		joinVP.add(playAI);
+		leftVP.add(matchListLabel);
+		leftVP.add(cellList);
+		leftVP.add(deleteGame);
+		rightVP.add(graphics);
+		rightVP.add(startDate);
+	}
+	public void openChannel(String token){
+		channel = new ChannelFactoryImpl().createChannel(token);
+		//Window.alert(token);
+		socket = channel.open(new SocketListener() {
+		//channel.open(new SocketListener() {
+			@Override
+			public void onOpen() {
+				//Window.alert("Channel opened!");
+			}
+			@Override
+			public void onMessage(String message) {
+				//Window.alert(message.charAt(0)+"");
+				if(message.charAt(0) == '_'){
+					//Window.alert(message.substring(6));
+					String[] strs = message.substring(1).split("_");
+					//Window.alert(strs[0] + " + " + strs[1]);
+					if(selectedMID.equals(strs[0])){
+						presenter.setState(stateEncoder.Decode(strs[1]));
+					}
+				}
+				else{
+					updateMatchList(userInfo);
+				}
+			}
+			@Override
+			public void onError(ChannelError error) {
+				Window.alert("Channel error: " + error.getCode() + " : " + error.getDescription());
+			}
+			@Override
+			public void onClose() {
+				//Window.alert("Channel closed!");
+			}
+		});
+		//socket.close();
+	}
+	public void updateMatchList(UserInfo User){
+		final UserInfo finalUser = User.copy();
+		chessService.updateMatchList(finalUser, new AsyncCallback<HashMap<Long, String>>(){
+			public void onSuccess(HashMap<Long, String> matchMap){
+				//Window.alert("Success updated match list");
+				final HashMap<Long, String> MM = matchMap;
+				for(Long tmp : matchMap.keySet()){
+					final Long tmpMID = tmp;
+					chessService.loadState(tmp, new AsyncCallback<MatchInfo>(){
+						public void onSuccess(MatchInfo mi){
+							String item = mi.getWhiteUID() + "/" + 
+										  mi.getBlackUID() + "/" +
+										  mi.getWhiteChID() + "/" +
+										  mi.getBlackChID() + "/" + 
+										  mi.getState() + "/" +
+										  mi.isDelete();
+							storage.setItem("M" + Long.toString(tmpMID) + "/" + MM.get(tmpMID), item);
+						}
+						public void onFailure(Throwable error){
+							Window.alert("Update state fail");
+						}
+					});
+				}
+				loadMatchList(finalUser, matchMap);
+				
+				
+			}
+			public void onFailure(Throwable error){
+				Window.alert(constants.failToUpdate() + ", loading from local instead.");
+				HashMap<Long, String> matchMap = new HashMap<Long, String>();
+				for(int i = 0; i < storage.getLength(); i++){
+					if(storage.key(i).charAt(0) == 'M'){
+						String[] strs = storage.key(i).substring(1).split("/");
+						matchMap.put(Long.valueOf(strs[0]), strs[1]);
+					}
+				}
+				loadMatchList(finalUser, matchMap);
+			}
+		});
+	}
+	public void loadMatchList(UserInfo user, HashMap<Long, String> matchMap){
+		if(matchMap.size() > 0){
+			//Window.alert(matchMap.size() + "");
+			deleteGame.setVisible(true);
+			Set<Long> keySet = matchMap.keySet();
+			List<String> opponents = new ArrayList<String>();
+			for(Long tmp : keySet){
+				opponents.add(tmp + "/" + matchMap.get(tmp));
+			}
+
+			cellList.setKeyboardSelectionPolicy(KeyboardSelectionPolicy.ENABLED);
+		    // Add a selection model to handle user selection.
+		    final SingleSelectionModel<String> selectionModel = new SingleSelectionModel<String>();
+		    cellList.setSelectionModel(selectionModel);
+		    selectionModel.addSelectionChangeHandler(new SelectionChangeEvent.Handler() {
+		      public void onSelectionChange(SelectionChangeEvent event) {
+		        String selected = selectionModel.getSelectedObject();
+		        if (selected != null) {
+		        	//Window.alert("You selected: " + selected);
+		        	final String[] str = selected.split("/");
+		        	selectedMID = str[0];
+		        	chessService.loadState(Long.valueOf(str[0]).longValue(), new AsyncCallback<MatchInfo>(){
+		        		public void onSuccess(MatchInfo mi){
+		        			//Window.alert("" + mi.getMatchID());
+		        			loadChess(mi, str[1]);
+
+		        		}
+		        		public void onFailure(Throwable error){
+		        			String key  = "M" + Long.valueOf(str[0]) + "/" + str[1];
+		        			String[] items = storage.getItem(key).split("/");
+		        			MatchInfo mi = new MatchInfo(Long.valueOf(str[0]), items[0], items[1], items[2], items[3], items[4], (items[5] == "true"));
+		        			loadChess(mi, str[1]);
+		        			Window.alert(constants.failToLoad() + ", loading from local instead.");
+		        		}
+		        	});
+		        }
+		      }
+		    });
+			cellList.setRowCount(opponents.size(), true);
+			cellList.setRowData(0, opponents);
+			
+			final UserInfo UI = user.copy();
+			deleteGame.addClickHandler(new ClickHandler() {
+				@Override
+				public void onClick(ClickEvent event) {
+					if(selectionModel.getSelectedObject() != null){
+						String[] select = selectionModel.getSelectedObject().split("/");
+						final Long MID = Long.valueOf(select[0]).longValue();
+						final String Opp = select[1];
+						chessService.deleteMatch(UI.getUser(), MID, new AsyncCallback<String>(){
+							public void onSuccess(String reply){
+								if(reply.charAt(0) == '0')
+									Window.alert(constants.delete());
+								else
+									Window.alert(constants.pendingDelete());
+								updateMatchList(UI);
+								graphics.setVisible(false);
+								String key = "M" + MID + "/" + Opp;
+								storage.removeItem(key);
+							}
+							public void onFailure(Throwable error){
+								Window.alert(constants.failToDelete());
+							}
+						});
+					}
+				}
+			});
+		}
+		else{
+			deleteGame.setVisible(false);
+		}
+	}
+	@SuppressWarnings("deprecation")
+	public void loadChess(MatchInfo mi, String oppID){
+		presenter.setAI(false);
+		char Turn = mi.isWhite(oppID) ? 'B' : 'W';
+		if(mi.isDelete()){
+			Window.alert(constants.hasBeenDeleted());
+		}
+		startDate.setText(messages.startDate(DateTimeFormat.getShortDateFormat().format(mi.getDate())));
+		presenter.setView(graphics);
+		graphics.setVisible(true);
+		presenter.setMatchID(mi.getMatchID());
+		presenter.setSide(Turn);
+		presenter.setDeleteFlag(mi.isDelete());
+		/*
+		State state = new State();
+		if(!History.getToken().isEmpty()){
+			String stateInfo = History.getToken().substring(5, History.getToken().length());
+			state = presenter.stateEncoder.Decode(stateInfo);
+			presenter.setState(state);
+		}
+		else{
+			presenter.initState();
+		}*/
+		State state = presenter.stateEncoder.Decode(mi.getState());
+		presenter.setState(state);
+		presenter.registerDragcontroller(RootPanel.get());
+		presenter.setup();
+		presenter.setServiceAsync(chessService);
+		presenter.setOpponentID(oppID);
+	}
+	public void loadChessAI(){
+		presenter.setAI(true);
+		presenter.setSide('W');
+		presenter.setView(graphics);
+		graphics.setVisible(true);
+		//presenter.setSide(Color.white);
+		/*
+		State state = new State();
+		if(!History.getToken().isEmpty()){
+			String stateInfo = History.getToken().substring(5, History.getToken().length());
+			state = presenter.stateEncoder.Decode(stateInfo);
+			presenter.setState(state);
+		}
+		else{
+			presenter.initState();
+		}*/
+		State state = new State();
+		presenter.setState(state);
+		presenter.registerDragcontroller(RootPanel.get());
+		presenter.setup();
+	}
+}

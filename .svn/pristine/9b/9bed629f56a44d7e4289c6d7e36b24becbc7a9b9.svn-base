@@ -1,0 +1,43 @@
+package org.vorasahil.hw6.client;
+
+import java.io.Serializable;
+/**
+ * Message Object, used to register to a game.
+ * @author Sahil Vora
+ *
+ */
+public class Message implements Serializable {
+
+	private static final long serialVersionUID = 42L;
+	private String token;
+	private int gameId;
+	private int playerId;
+	
+	
+	public Message() {
+	}
+
+	public void setToken(String token) {
+		this.token = token;
+	}
+
+	public String getToken() {
+		return token;
+	}
+
+	public int getPlayerId() {
+		return playerId;
+	}
+
+	public void setPlayerId(int playerId) {
+		this.playerId = playerId;
+	}
+
+	public int getGameId() {
+		return gameId;
+	}
+
+	public void setGameId(int gameId) {
+		this.gameId = gameId;
+	}
+}

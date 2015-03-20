@@ -1,0 +1,749 @@
+package org.yuanjia.hw3;
+
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.List;
+
+import org.shared.chess.Color;
+import org.shared.chess.GameResult;
+import org.shared.chess.Move;
+import org.shared.chess.Piece;
+import org.shared.chess.PieceKind;
+import org.shared.chess.Position;
+import org.shared.chess.State;
+import org.yuanjia.hw11.MyContact;
+import org.yuanjia.hw3.Presenter.View;
+import org.yuanjia.hw5.MoveAnimation;
+import org.yuanjia.hw6.client.ChessServices;
+import org.yuanjia.hw6.client.ChessServicesAsync;
+import org.yuanjia.hw7.Match;
+import org.yuanjia.hw7.Player;
+import org.yuanjia.hw8.ChessConstants;
+import org.yuanjia.hw8.ChessMessages;
+
+import com.google.gwt.core.client.GWT;
+import com.google.gwt.dom.client.AudioElement;
+import com.google.gwt.dom.client.Style;
+import com.google.gwt.dom.client.Style.Unit;
+import com.google.gwt.media.client.Audio;
+import com.google.gwt.uibinder.client.UiBinder;
+import com.google.gwt.uibinder.client.UiField;
+import com.google.gwt.user.client.Element;
+import com.google.gwt.user.client.History;
+import com.google.gwt.user.client.Window;
+import com.google.gwt.user.client.rpc.AsyncCallback;
+import com.google.gwt.user.client.rpc.ServiceDefTarget;
+import com.google.gwt.user.client.ui.Anchor;
+import com.google.gwt.user.client.ui.Button;
+import com.google.gwt.user.client.ui.Composite;
+import com.google.gwt.user.client.ui.FlowPanel;
+import com.google.gwt.user.client.ui.Grid;
+import com.google.gwt.user.client.ui.Image;
+import com.google.gwt.user.client.ui.Label;
+import com.google.gwt.user.client.ui.ListBox;
+import com.google.gwt.user.client.ui.SuggestBox;
+import com.google.gwt.user.client.ui.SuggestOracle;
+import com.google.gwt.user.client.ui.TextBox;
+import com.google.gwt.user.client.ui.VerticalPanel;
+import com.google.gwt.user.client.ui.MultiWordSuggestOracle;
+import com.google.gwt.user.client.ui.Widget;
+
+import com.google.gwt.event.dom.client.ClickEvent;
+import com.google.gwt.event.dom.client.ClickHandler;
+import com.google.gwt.event.dom.client.DragEndEvent;
+import com.google.gwt.event.dom.client.DragEndHandler;
+import com.google.gwt.event.dom.client.DragEnterEvent;
+import com.google.gwt.event.dom.client.DragEnterHandler;
+import com.google.gwt.event.dom.client.DragLeaveEvent;
+import com.google.gwt.event.dom.client.DragLeaveHandler;
+import com.google.gwt.event.dom.client.DragOverEvent;
+import com.google.gwt.event.dom.client.DragOverHandler;
+import com.google.gwt.event.dom.client.DragStartEvent;
+import com.google.gwt.event.dom.client.DragStartHandler;
+import com.google.gwt.event.dom.client.DropEvent;
+import com.google.gwt.event.dom.client.DropHandler;
+import com.google.gwt.event.logical.shared.ValueChangeEvent;
+import com.google.gwt.event.logical.shared.ValueChangeHandler;
+import com.googlecode.gwtphonegap.client.PhoneGap;
+import com.googlecode.gwtphonegap.client.PhoneGapAvailableEvent;
+import com.googlecode.gwtphonegap.client.PhoneGapAvailableHandler;
+import com.googlecode.gwtphonegap.client.PhoneGapTimeoutEvent;
+import com.googlecode.gwtphonegap.client.PhoneGapTimeoutHandler;
+import com.googlecode.gwtphonegap.client.contacts.Contact;
+import com.googlecode.gwtphonegap.client.contacts.ContactError;
+import com.googlecode.gwtphonegap.client.contacts.ContactFindCallback;
+import com.googlecode.gwtphonegap.client.contacts.ContactFindOptions;
+import com.googlecode.gwtphonegap.collection.shared.CollectionFactory;
+import com.googlecode.gwtphonegap.collection.shared.LightArray;
+
+public class Graphics extends Composite implements View {
+
+	private final int MOVETIME = 300;
+
+	private static GameImages gameImages = GWT.create(GameImages.class);
+	private static GraphicsUiBinder uiBinder = GWT
+			.create(GraphicsUiBinder.class);
+	private ChessConstants constants = GWT.create(ChessConstants.class);
+	private ChessMessages messages = GWT.create(ChessMessages.class);
+	private Presenter presenter;
+	private Image[][] board = new Image[8][8];
+	private ChessServicesAsync chessServices = GWT.create(ChessServices.class);
+
+	interface GraphicsUiBinder extends UiBinder<Widget, Graphics> {
+	}
+
+	@UiField
+	GameCss css;
+	@UiField
+	Label gameStatus;
+	@UiField
+	Label gameInfo;
+	@UiField
+	static public Grid gameGrid;
+	@UiField
+	Image QueenButton;
+	@UiField
+	Image RookButton;
+	@UiField
+	Image KnightButton;
+	@UiField
+	Image BishopButton;
+	@UiField
+	Image QueenButton1;
+	@UiField
+	Image RookButton1;
+	@UiField
+	Image KnightButton1;
+	@UiField
+	Image BishopButton1;
+	@UiField
+	FlowPanel WhiteButtons;
+	@UiField
+	FlowPanel BlackButtons;
+	@UiField
+	VerticalPanel StorageButtons;
+	@UiField
+	Button LoadButton;
+	@UiField
+	Button DeleteButton;
+	@UiField
+	Button AutoMatchButton;
+	@UiField
+	Button InviteButton;
+	@UiField
+	FlowPanel OpEmailPanel;
+	@UiField
+	ListBox MatchList;
+	@UiField
+	Label userName;
+	@UiField
+	Anchor signoutAnchor;
+	@UiField
+	Label gameStartTime;
+	@UiField
+	Button AIButton;
+
+	
+	public Graphics(State in_state) {
+		((ServiceDefTarget) chessServices).setServiceEntryPoint("http://yuanjiachess10.appspot.com/yuanjia/service");
+		initWidget(uiBinder.createAndBindUi(this));
+		Window.setTitle(constants.windowtitle());
+
+		gameGrid.resize(8, 8);
+		gameGrid.setCellPadding(0);
+		gameGrid.setCellSpacing(0);
+		gameGrid.setBorderWidth(0);
+
+		for (int i = 0; i < 8; i++) {
+			for (int j = 0; j < 8; j++) {
+				final Image image = new Image();
+				final int row = i;
+				final int col = j;
+				board[row][col] = image;
+				image.setWidth("100%");
+				image.addClickHandler(new ClickHandler() {
+					@Override
+					public void onClick(ClickEvent event) {
+						presenter.selectCell(row, col, "Click");
+					}
+				});
+				gameGrid.setWidget(7 - i, j, image);
+			}
+		}
+		// User Info
+		userName.setText(constants.player() + ": "
+				+ ChessEntryPoint.loginInfo.getEmailAddress());
+		signoutAnchor.setText(constants.logout());
+		signoutAnchor.setHref(ChessEntryPoint.loginInfo.getLogoutUrl());
+		signoutAnchor.getElement().getStyle().setMarginLeft(180, Unit.PX);
+
+		//phoneGap initial
+		
+		final PhoneGap phoneGap = GWT.create(PhoneGap.class);
+
+		phoneGap.addHandler(new PhoneGapAvailableHandler() {
+
+		        @Override
+		        public void onPhoneGapAvailable(PhoneGapAvailableEvent event) {
+		        	
+		        	LightArray<String> fields = CollectionFactory.<String> constructArray();
+		        	fields.push("emails"); //search in email 
+		        	ContactFindOptions findOptions = new ContactFindOptions("gmail.com", true);
+
+		        	phoneGap.getContacts().find(fields, new ContactFindCallback() {
+
+		        	        @Override
+		        	        public void onSuccess(LightArray<Contact> contacts) {
+		        	        	int length = contacts.length();
+		        	            for(int i = 0; i < length; i++){   
+		        	            	MyContact.addToOracale(contacts.shift().toString());
+		        	            }
+		        	        }
+
+		        	        @Override
+		        	        public void onFailure(ContactError error) {
+		        	                //something went wrong, doh!
+
+		        	        }
+
+		        	}, findOptions);
+
+		        }
+		});
+
+		phoneGap.addHandler(new PhoneGapTimeoutHandler() {
+
+		        @Override
+		        public void onPhoneGapTimeout(PhoneGapTimeoutEvent event) {
+		                //can not start phonegap - something is for with your setup
+		        	Window.alert("phoneGap timeout.");
+
+		        }
+		});
+
+		phoneGap.initializePhoneGap();
+		
+		
+		// ControlButtons
+		final SuggestBox OpEmail = new SuggestBox(MyContact.contactOracle());
+		OpEmail.setSize("300px", "2em");
+		OpEmail.setText(constants.inputEmail());
+		OpEmailPanel.add(OpEmail);
+		
+		AIButton.setText("Play with computer");
+		AIButton.addClickHandler(new ClickHandler() {
+			@Override
+			public void onClick(ClickEvent event) {
+				Presenter.matchId = "AI_GAME";
+				Presenter.myTurn = Color.WHITE;
+				gameInfo.setText(messages.gameinfo("AI", Presenter.matchId,
+						"white"));
+				gameGrid.setVisible(true);
+				presenter.setState(new State());
+			}
+		});
+
+		LoadButton.setText(constants.loadButton());
+		LoadButton.addClickHandler(new ClickHandler() {
+			@Override
+			public void onClick(ClickEvent event) {
+
+				AsyncCallback<Void> callback = new AsyncCallback<Void>() {
+					public void onFailure(Throwable caught) {
+					}
+
+					public void onSuccess(Void result) {
+					}
+				};
+				int index = MatchList.getSelectedIndex();
+				chessServices.loadMatch(Presenter.matchIdList.get(index),
+						ChessEntryPoint.loginInfo.getClientId(), callback);
+
+			}
+		});
+
+		DeleteButton.setText(constants.deleteButton());
+		DeleteButton.addClickHandler(new ClickHandler() {
+			@Override
+			public void onClick(ClickEvent event) {
+				AsyncCallback<Void> callback = new AsyncCallback<Void>() {
+					public void onFailure(Throwable caught) {
+						// Window.alert("Delete failed.");
+					}
+
+					public void onSuccess(Void result) {
+						Window.alert(messages.deletesucc(Presenter.matchId));
+					}
+				};
+
+				gameGrid.setVisible(false);
+				Presenter.matchIdList.remove(Presenter.matchId);
+				int index = 0;
+				while (!MatchList.getItemText(index)
+						.contains(Presenter.matchId)) {
+					index++;
+				}
+				MatchList.removeItem(index);
+
+				chessServices.removeMatch(ChessEntryPoint.loginInfo.getEmailAddress(),Presenter.matchId, callback);
+
+			}
+		});
+
+		AutoMatchButton.setText(constants.autoButton());
+		AutoMatchButton.addClickHandler(new ClickHandler() {
+			@Override
+			public void onClick(ClickEvent event) {
+				gameGrid.setVisible(false);
+				AsyncCallback<Boolean> callback = new AsyncCallback<Boolean>() {
+					public void onFailure(Throwable caught) {
+					}
+
+					public void onSuccess(Boolean result) {
+						if (result) {
+							Window.alert(constants.autosucc());
+						} else {
+							Window.alert(constants.autofail());
+						}
+					}
+				};
+				chessServices.autoMatch(ChessEntryPoint.loginInfo.getEmailAddress(),callback);
+			}
+		});
+
+		InviteButton.setText(constants.inviteButton());
+		InviteButton.addClickHandler(new ClickHandler() {
+			@Override
+			public void onClick(ClickEvent event) {
+				AsyncCallback<String> callback = new AsyncCallback<String>() {
+					public void onFailure(Throwable caught) {
+					}
+
+					public void onSuccess(String result) {
+						if (result.equals("0")) {
+							Window.alert(constants.invitefail());
+						} else if (result.equals("1")) {
+							Window.alert(constants.inviteself());
+						} else if (result.equals("2")) {
+							Window.alert(constants.invitesucc());
+						}
+
+					}
+				};
+				chessServices.invite(ChessEntryPoint.loginInfo.getEmailAddress(),OpEmail.getText(), callback);
+
+			}
+		});
+
+		QueenButton.addClickHandler(new ClickHandler() {
+			@Override
+			public void onClick(ClickEvent event) {
+				presenter.setPromote(PieceKind.QUEEN);
+			}
+		});
+		QueenButton1.addClickHandler(new ClickHandler() {
+			@Override
+			public void onClick(ClickEvent event) {
+				presenter.setPromote(PieceKind.QUEEN);
+			}
+		});
+		KnightButton.addClickHandler(new ClickHandler() {
+			@Override
+			public void onClick(ClickEvent event) {
+				presenter.setPromote(PieceKind.KNIGHT);
+			}
+		});
+		KnightButton1.addClickHandler(new ClickHandler() {
+			@Override
+			public void onClick(ClickEvent event) {
+				presenter.setPromote(PieceKind.KNIGHT);
+			}
+		});
+		RookButton.addClickHandler(new ClickHandler() {
+			@Override
+			public void onClick(ClickEvent event) {
+				presenter.setPromote(PieceKind.ROOK);
+			}
+		});
+		RookButton1.addClickHandler(new ClickHandler() {
+			@Override
+			public void onClick(ClickEvent event) {
+				presenter.setPromote(PieceKind.ROOK);
+			}
+		});
+		BishopButton.addClickHandler(new ClickHandler() {
+			@Override
+			public void onClick(ClickEvent event) {
+				presenter.setPromote(PieceKind.BISHOP);
+			}
+		});
+		BishopButton1.addClickHandler(new ClickHandler() {
+			@Override
+			public void onClick(ClickEvent event) {
+				presenter.setPromote(PieceKind.BISHOP);
+			}
+		});
+
+		WhiteButtons.setVisible(false);
+		BlackButtons.setVisible(false);
+		gameGrid.setVisible(false);
+
+		// initialize presenter
+		presenter = new Presenter(this, in_state);
+
+
+	}
+
+
+	public Audio createAudio(String audioName) {
+		Audio audio = Audio.createIfSupported();
+		if (audio == null) {
+			return audio;
+		}
+
+		audio.addSource("yuanjia_audio/" + audioName + ".mp3",
+				AudioElement.TYPE_MP3);
+		audio.addSource("yuanjia_audio/" + audioName + ".wav",
+				AudioElement.TYPE_WAV);
+		// Show audio controls.
+		audio.setControls(true);
+		audio.load();
+		return audio;
+	}
+
+	public void setPiece(final int row, final int col, Piece piece) {
+		// TODO
+
+		if (piece == null) {
+			board[row][col].setResource(gameImages.empty());
+		} else {
+
+			switch (piece.getKind()) {
+			case PAWN:
+				if (piece.getColor().isWhite()) {
+					board[row][col].setResource(gameImages.whitePawn());
+				} else {
+					board[row][col].setResource(gameImages.blackPawn());
+				}
+				break;
+			case BISHOP:
+				if (piece.getColor().isWhite()) {
+					board[row][col].setResource(gameImages.whiteBishop());
+				} else {
+					board[row][col].setResource(gameImages.blackBishop());
+				}
+				break;
+			case KNIGHT:
+				if (piece.getColor().isWhite()) {
+					board[row][col].setResource(gameImages.whiteKnight());
+				} else {
+					board[row][col].setResource(gameImages.blackKnight());
+				}
+				break;
+			case ROOK:
+				if (piece.getColor().isWhite()) {
+					board[row][col].setResource(gameImages.whiteRook());
+				} else {
+					board[row][col].setResource(gameImages.blackRook());
+				}
+				break;
+			case QUEEN:
+				if (piece.getColor().isWhite()) {
+					board[row][col].setResource(gameImages.whiteQueen());
+				} else {
+					board[row][col].setResource(gameImages.blackQueen());
+				}
+				break;
+			case KING:
+				if (piece.getColor().isWhite()) {
+					board[row][col].setResource(gameImages.whiteKing());
+				} else {
+					board[row][col].setResource(gameImages.blackKing());
+				}
+				break;
+			default:
+				break;
+			}
+		}
+		board[row][col].getElement().setDraggable(Element.DRAGGABLE_TRUE);
+
+		board[row][col].addDragStartHandler(new DragStartHandler() {
+			public void onDragStart(DragStartEvent event) {
+				// Required: set data for the event.
+				event.setData("text", "Hello World");
+
+				presenter.selectCell(row, col, "DnD");
+				Image temp = board[row][col];
+				// Optional: show a copy of the widget under cursor.
+				event.getDataTransfer().setDragImage(temp.getElement(), 10, 10);
+			}
+		});
+
+		board[row][col].addDragEnterHandler(new DragEnterHandler() {
+			public void onDragEnter(DragEnterEvent event) {
+				if (board[row][col].getElement().getClassName()
+						.equals(css.greendot())) {
+					return;
+				} else {
+					board[row][col].getElement().setClassName(css.reddot());
+					return;
+				}
+			}
+		});
+
+		board[row][col].addDragLeaveHandler(new DragLeaveHandler() {
+			public void onDragLeave(DragLeaveEvent event) {
+				if (board[row][col].getElement().getClassName()
+						.equals(css.greendot())) {
+					return;
+				} else if (board[row][col].getElement().getClassName()
+						.equals(css.reddot())) {
+					board[row][col].getElement().removeClassName(css.reddot());
+					return;
+				}
+			}
+		});
+
+		board[row][col].addDragEndHandler(new DragEndHandler() {
+			public void onDragEnd(DragEndEvent event) {
+				for (int i = 0; i < 8; i++) {
+					for (int j = 0; j < 8; j++) {
+						if (board[i][j].getElement().getClassName()
+								.equals(css.reddot())) {
+							board[i][j].getElement().removeClassName(
+									css.reddot());
+						}
+					}
+				}
+
+			}
+		});
+
+		board[row][col].addDragOverHandler(new DragOverHandler() {
+			public void onDragOver(DragOverEvent event) {
+				// board[row][col].getElement().setClassName(css.dothighlighted());
+			}
+		});
+
+		board[row][col].addDropHandler(new DropHandler() {
+			public void onDrop(DropEvent event) {
+				presenter.selectCell(row, col, "DnD");
+			}
+		});
+
+		board[row][col].setPixelSize(50, 50);
+	}
+
+	@Override
+	public void setDotHighlighted(int row, int col, boolean highlighted) {
+		Element element = board[row][col].getElement();
+		if (highlighted) {
+			element.setClassName(css.greendot());
+		} else {
+			element.removeClassName(css.greendot());
+		}
+	}
+
+	@Override
+	public void setWhoseTurn(Color color) {
+		// TODO
+		if (color.equals(Color.WHITE)) {
+			gameStatus.setText(constants.turn() + ": white");
+		} else {
+			gameStatus.setText(constants.turn() + ": black");
+		}
+	}
+
+	@Override
+	public void setGameResult(GameResult gameResult) {
+
+		AsyncCallback<String> callback = new AsyncCallback<String>() {
+			public void onFailure(Throwable caught) {
+				Window.alert("setGameResult failed.");
+			}
+
+			public void onSuccess(String result) {
+				Window.alert(result);
+			}
+		};
+
+		// TODO
+		if (gameResult == null)
+			return;
+		if (gameResult.getWinner() == null) {
+			gameStatus.setText(messages.gamedraw(gameResult
+					.getGameResultReason().toString()));
+			// set draw game point
+			if (!Presenter.matchId.equals("AI_GAME"))
+				chessServices.setGameResult(ChessEntryPoint.loginInfo.getEmailAddress(), Presenter.matchId, null, callback);
+			return;
+		}
+		// set win and lost point to two players
+		if (!Presenter.matchId.equals("AI_GAME")) {
+			chessServices.setGameResult(ChessEntryPoint.loginInfo.getEmailAddress(), Presenter.matchId, gameResult
+					.getWinner().toString(), callback);
+		}
+		gameStatus.setText(messages.gameresult(gameResult.getWinner()
+				.toString(), gameResult.getGameResultReason().toString()));
+	}
+
+	@SuppressWarnings("deprecation")
+	public void setGameInfo(String Op, String matchId, String myTurn) {
+		Date date = getMatch(matchId).getStartDate();
+		gameInfo.setText(messages.gameinfo(Op, matchId, myTurn));
+		gameStartTime.setText(messages.gameStartTime(date.getYear() + 1900,
+				date.getMonth() + 1, date.getDate(), date.getHours(),
+				date.getMinutes(), date.getSeconds()));
+
+	}
+
+	@Override
+	public void setButtonsVisible(boolean B, Color color) {
+		if (color == null && B == false) {
+			BlackButtons.setVisible(B);
+			WhiteButtons.setVisible(B);
+		} else if (B == true && color.equals(Color.BLACK)) {
+			BlackButtons.setVisible(B);
+		} else if (B == true && color.equals(Color.WHITE)) {
+			WhiteButtons.setVisible(B);
+		}
+	}
+
+	@Override
+	public void setStorageButtonsVisible(boolean B) {
+		StorageButtons.setVisible(B);
+	}
+
+	@Override
+	public void setNewHistory(State state) {
+		History.newItem(StateSerializer.serialize(state));
+	}
+
+	public void makeAnimation(int fromRow, int fromCol, int toRow, int toCol,
+			PieceKind kind) {
+
+		Move move = new Move(new Position(fromRow, fromCol), new Position(
+				toRow, toCol), kind);
+		final Image movingimage = new Image();
+		setImage(movingimage, presenter.getState().getPiece(toRow, toCol));
+		MoveAnimation moveAnimation = new MoveAnimation(presenter.getState(),
+				movingimage, fromRow, fromCol, toRow, toCol, move);
+		moveAnimation.run(MOVETIME);
+
+	}
+
+	public void setImage(Image image, Piece piece) {
+		switch (piece.getKind()) {
+		case PAWN:
+			if (piece.getColor().isWhite()) {
+				image.setResource(gameImages.whitePawn());
+			} else {
+				image.setResource(gameImages.blackPawn());
+			}
+			break;
+		case BISHOP:
+			if (piece.getColor().isWhite()) {
+				image.setResource(gameImages.whiteBishop());
+			} else {
+				image.setResource(gameImages.blackBishop());
+			}
+			break;
+		case KNIGHT:
+			if (piece.getColor().isWhite()) {
+				image.setResource(gameImages.whiteKnight());
+			} else {
+				image.setResource(gameImages.blackKnight());
+			}
+			break;
+		case ROOK:
+			if (piece.getColor().isWhite()) {
+				image.setResource(gameImages.whiteRook());
+			} else {
+				image.setResource(gameImages.blackRook());
+			}
+			break;
+		case QUEEN:
+			if (piece.getColor().isWhite()) {
+				image.setResource(gameImages.whiteQueen());
+			} else {
+				image.setResource(gameImages.blackQueen());
+			}
+			break;
+		case KING:
+			if (piece.getColor().isWhite()) {
+				image.setResource(gameImages.whiteKing());
+			} else {
+				image.setResource(gameImages.blackKing());
+			}
+			break;
+		default:
+			break;
+		}
+	}
+
+	public void addMatchList(String string) {
+		MatchList.addItem(string);
+	}
+
+	Match res = new Match();
+	public Match getMatch(String MatchId) {
+		AsyncCallback<Match> callback = new AsyncCallback<Match>() {
+			public void onFailure(Throwable caught) {
+			}
+
+			public void onSuccess(Match result) {
+				res = result;
+
+			}
+		};
+		chessServices.getMatch(Presenter.matchId, callback);
+		return res;
+	}
+
+	Player player = new Player();
+	public Player getPlayer(String playerEmail) {
+		AsyncCallback<Player> callback = new AsyncCallback<Player>() {
+			public void onFailure(Throwable caught) {
+			}
+
+			public void onSuccess(Player result) {
+				Window.alert("result.name is "+result.getUserEmail()+"matches is "+result.getMatches());
+				player = result;
+			}
+		};
+		chessServices.getPlayer(playerEmail, callback);
+		return player;
+	}
+		
+	public void addExistMatchs(final String playerEmail){
+		AsyncCallback<List<Match>> callback = new AsyncCallback<List<Match>>() {
+			public void onFailure(Throwable caught) {
+			}
+
+			public void onSuccess(List<Match> result) {
+				
+				for(Match m : result){
+			//	Window.alert("m.matchId is "+m.getMatchId()+"m.whitePlayer is "+m.getPlayer("white")+"m.blackPlayer is "+m.getPlayer("black"));
+				String Op = m.getPlayer("white").equals(playerEmail)?m.getPlayer("black"):m.getPlayer("white");
+				String myTurn = m.getPlayer("white").equals(playerEmail)?"white":"black";
+				Date date = m.getStartDate();
+				
+				addMatchList(messages.gameinfo(Op, m.getMatchId(), myTurn)
+				+ " "
+				+ messages.gameStartTime(date.getYear() + 1900,
+						date.getMonth() + 1, date.getDate(),
+						date.getHours(), date.getMinutes(),
+						date.getSeconds()));
+				Presenter.matchIdList.add(m.getMatchId());
+			}
+				
+			}
+		};
+		chessServices.getMatchList(playerEmail, callback);
+
+	}
+
+	
+
+}

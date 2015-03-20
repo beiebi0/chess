@@ -1,0 +1,42 @@
+# Messages from org.alexanderoskotsky.hw8.GameMessages
+# Source locale en_US
+
+autoMatch=Auto Partido
+
+blackTurn=A su vez del negro
+
+blackWins=Negro gana
+
+cancel=Cancelar
+
+deleteGame=Eliminar Juego
+
+draw=Tablas
+
+fiftyMoveRule= Se termin� el juego - El cincuenta Regla Move
+
+findingPlayer=Encontrar Jugador
+
+hi=Hola
+
+match=Partido
+
+newGame=Nuevo Juego
+
+selectMatch=Seleccione un partido
+
+stalemate=estancamiento
+
+threeFoldRepetition=Tres Regla de repetici�n Fold
+
+#   0 - username
+turnOf=a su vez de {0}
+
+whiteTurn=A su vez de las blancas
+
+whiteWins=Blancas Ganan
+
+#   0 - username
+won={0} ganado
+
+playWithAI=jugar con el ordenador

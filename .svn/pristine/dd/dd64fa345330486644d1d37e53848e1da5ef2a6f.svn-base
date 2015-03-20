@@ -1,0 +1,5 @@
+package org.ashishmanral.hw7;
+
+public enum GameType {
+	NEWGAME, GAMEINPROGRESS, NEWGAMEREQUEST;
+}

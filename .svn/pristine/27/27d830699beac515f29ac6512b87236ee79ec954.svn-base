@@ -1,0 +1,92 @@
+package org.sanjana.hw6;
+
+import java.io.Serializable;
+
+import org.shared.chess.Color;
+
+public class LoginDetails implements Serializable {
+
+	private static final long serialVersionUID = 1L;
+
+	private boolean loggedIn = false;
+	private String loginUrl;
+	private String logoutUrl;
+	private String emailAddress;
+	private String nickname;
+	private Color playerColor;
+	private String token;
+	private int boardId;
+	private boolean online = false;
+
+	public boolean isLoggedIn() {
+		return loggedIn;
+	}
+
+	public void setLoggedIn(boolean loggedIn) {
+		this.loggedIn = loggedIn;
+	}
+
+	public String getLoginUrl() {
+		return loginUrl;
+	}
+
+	public void setLoginUrl(String loginUrl) {
+		this.loginUrl = loginUrl;
+	}
+
+	public String getLogoutUrl() {
+		return logoutUrl;
+	}
+
+	public void setLogoutUrl(String logoutUrl) {
+		this.logoutUrl = logoutUrl;
+	}
+
+	public String getEmailAddress() {
+		return emailAddress;
+	}
+
+	public void setEmailAddress(String emailAddress) {
+		this.emailAddress = emailAddress;
+	}
+
+	public void setNickname(String nickname) {
+		this.nickname = nickname;
+	}
+
+	public String getNickname() {
+		return nickname;
+	}
+
+	public Color getPlayerColor() {
+		return playerColor;
+	}
+
+	public void setPlayerColor(Color color){
+		this.playerColor=color;
+	}
+
+	public String getToken() {
+		return token;
+	}
+
+	public void setToken(String token) {
+		this.token = token;
+	}
+
+	public int getBoardId(){
+		return boardId;
+	}
+
+	public void setBoardId(int boardId){
+		this.boardId=boardId;
+	}
+	
+	public boolean isOnline() {
+		return online;
+	}
+
+	public void setOnline(boolean online) {
+		this.online = online;
+	}
+}

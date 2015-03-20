@@ -1,0 +1,175 @@
+package org.jiangfengchen.hw3;
+
+
+import static org.shared.chess.Color.BLACK;
+import static org.shared.chess.Color.WHITE;
+import static org.shared.chess.PieceKind.BISHOP;
+import static org.shared.chess.PieceKind.KING;
+import static org.shared.chess.PieceKind.PAWN;
+import static org.shared.chess.PieceKind.QUEEN;
+import static org.shared.chess.PieceKind.ROOK;
+import static org.shared.chess.State.COLS;
+import static org.shared.chess.State.ROWS;
+
+import org.junit.Before;
+import org.junit.Test;
+import org.markanderson.hw2.StateChangerImpl;
+import org.mockito.Mockito;
+import org.shared.chess.Color;
+import org.shared.chess.GameResult;
+import org.shared.chess.GameResultReason;
+import org.shared.chess.Move;
+import org.shared.chess.Piece;
+import org.shared.chess.PieceKind;
+import org.shared.chess.Position;
+import org.shared.chess.State;
+import org.shared.chess.StateChanger;
+
+/**
+ * Tests for the Presenter class.
+ */
+public class PresenterTest {
+  Presenter presenter;
+  Presenter.View view;
+  
+  @Before
+  public void setup() {
+    presenter = new Presenter();
+    view = Mockito.mock(Presenter.View.class); 
+    presenter.setView(view);
+  }
+  
+  @Test
+  public void testSetState() {
+    State state = new State();
+    presenter.setState(state);
+    Mockito.verify(view).setWhoseTurn(Color.WHITE);
+    Mockito.verify(view).setGameResult(null);
+    Mockito.verify(view).setPiece(0, 0, 
+        new Piece(Color.WHITE, PieceKind.ROOK));
+    Mockito.verify(view).setPiece(4, 4, null);
+  }
+  @Test
+  public void test1(){
+	  boolean[] CastleBool={true, true};
+		Piece[][] board = new Piece[ROWS][COLS];
+	    State original= new State(BLACK,board,CastleBool,CastleBool,null,7,null);
+	    original.setPiece(5, 5,new Piece(BLACK,PAWN));
+	    original.setPiece(4, 6,new Piece(WHITE,BISHOP));
+	    original.setPiece(0, 0,new Piece(BLACK,KING));
+	    original.setPiece(7, 7,new Piece(WHITE,KING));
+	    presenter.setState(original);
+	    Mockito.verify(view).setWhoseTurn(Color.BLACK);
+	    Mockito.verify(view).setGameResult(null);
+	    Mockito.verify(view).setPiece(5, 5, new Piece(Color.BLACK, PieceKind.PAWN));
+	    Mockito.verify(view).setPiece(4, 4, null);
+  }
+  @Test
+  public void test2(){
+	  boolean[] CastleBool={true, true};
+		Piece[][] board = new Piece[ROWS][COLS];
+	    State original= new State(BLACK,board,CastleBool,CastleBool,null,7,null);
+	    original.setPiece(4, 6,new Piece(BLACK,PAWN));
+	    original.setPiece(3, 7,new Piece(WHITE,PAWN));
+	    original.setPiece(0, 0,new Piece(BLACK,KING));
+	    original.setPiece(7, 7,new Piece(WHITE,KING));
+	    presenter.setState(original);
+	    Mockito.verify(view).setWhoseTurn(Color.BLACK);
+	    Mockito.verify(view).setGameResult(null);
+	    Mockito.verify(view).setPiece(4, 6, new Piece(Color.BLACK, PieceKind.PAWN));
+	    Mockito.verify(view).setPiece(0, 0, new Piece(Color.BLACK, PieceKind.KING));
+	    Mockito.verify(view).setPiece(3, 7, new Piece(Color.WHITE, PieceKind.PAWN));
+	    Mockito.verify(view).setPiece(1, 7, null);
+  }
+  @Test
+  public void test3(){
+	    boolean[] CastleBool={true, true};
+		Piece[][] board = new Piece[ROWS][COLS];
+	    State original= new State(BLACK,board,CastleBool,CastleBool,new Position(3,1),7,null);
+	    original.setPiece(3, 2,new Piece(BLACK,PAWN));
+	    original.setPiece(3, 1,new Piece(WHITE,PAWN));
+	    original.setPiece(0, 0,new Piece(BLACK,KING));
+	    original.setPiece(7, 7,new Piece(WHITE,KING));
+	    presenter.setState(original);
+	    Mockito.verify(view).setWhoseTurn(Color.BLACK);
+	    Mockito.verify(view).setGameResult(null);
+	    Mockito.verify(view).setPiece(3, 2, new Piece(Color.BLACK, PieceKind.PAWN));
+	    Mockito.verify(view).setPiece(3, 1, new Piece(Color.WHITE, PieceKind.PAWN));
+	    Mockito.verify(view).setPiece(7, 7, new Piece(Color.WHITE, PieceKind.KING));
+	    Mockito.verify(view).setPiece(7, 6, null);
+  }
+  @Test
+  public void test4(){
+	    boolean[] CastleBool={true, true};
+		Piece[][] board = new Piece[ROWS][COLS];
+	    State original= new State(BLACK,board,CastleBool,CastleBool,null,7,new GameResult(Color.WHITE,GameResultReason.CHECKMATE));
+	    original.setPiece(0, 0,new Piece(BLACK,KING));
+	    original.setPiece(1, 1,new Piece(WHITE,PieceKind.KNIGHT));
+	    original.setPiece(0, 6,new Piece(WHITE,ROOK));
+	    presenter.setState(original);
+	    Mockito.verify(view).setWhoseTurn(Color.BLACK);
+	    Mockito.verify(view).setGameResult(new GameResult(Color.WHITE,GameResultReason.CHECKMATE));
+	    Mockito.verify(view).setPiece(0, 0, new Piece(Color.BLACK, PieceKind.KING));
+	    Mockito.verify(view).setPiece(1, 1, new Piece(Color.WHITE, PieceKind.KNIGHT));
+	    Mockito.verify(view).setPiece(0, 6,new Piece(WHITE,ROOK));
+  }
+  @Test
+	public void test6() {
+		State state = new State();
+		StateChanger changer = new StateChangerImpl();
+
+		changer.makeMove(state, new Move(new Position(1, 0),new Position(3, 0), null));
+		changer.makeMove(state, new Move(new Position(6, 0),new Position(5, 0), null));
+		presenter.setState(state);
+		Mockito.verify(view).setPiece(1, 0, null);
+		Mockito.verify(view).setPiece(3, 0,
+				new Piece(Color.WHITE, PieceKind.PAWN));
+	}
+  @Test
+	public void test7() {
+		State state = new State();
+
+		state.setPiece(new Position(1, 0), null);
+		state.setPiece(new Position(0, 0), null);
+		state.setPiece(new Position(5, 5), new Piece(Color.WHITE,PieceKind.ROOK));
+		state.setPiece(new Position(1, 2), null);
+		state.setTurn(Color.BLACK);
+		presenter.setState(state);
+		Mockito.verify(view).setGameResult(null);
+	}
+  @Test
+  public void test8(){
+		State state = new State();
+		StateChanger changer = new StateChangerImpl();
+		changer.makeMove(state, new Move(new Position(0, 1),new Position(2, 0), null));
+
+		presenter.setState(state);
+
+		Mockito.verify(view).setPiece(0, 1, null);
+		Mockito.verify(view).setPiece(2, 0,new Piece(Color.WHITE, PieceKind.KNIGHT));
+  }
+  @Test
+  public void test9(){
+		State state = new State();
+		StateChanger changer = new StateChangerImpl();
+		changer.makeMove(state, new Move(new Position(0, 6),new Position(2, 5), null));
+
+		presenter.setState(state);
+
+		Mockito.verify(view).setPiece(0, 6, null);
+		Mockito.verify(view).setPiece(2, 5,new Piece(Color.WHITE, PieceKind.KNIGHT));
+  }
+  @Test
+  public void test10(){
+		State state = new State();
+		StateChanger changer = new StateChangerImpl();
+		changer.makeMove(state, new Move(new Position(0, 6),new Position(2, 7), null));
+
+		presenter.setState(state);
+
+		Mockito.verify(view).setPiece(0, 6, null);
+		Mockito.verify(view).setGameResult(null);
+		Mockito.verify(view).setWhoseTurn(Color.BLACK);
+  }
+  
+}

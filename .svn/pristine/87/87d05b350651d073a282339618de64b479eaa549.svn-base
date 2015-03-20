@@ -1,0 +1,17 @@
+package org.vorasahil.hw7.client;
+
+import com.google.gwt.user.client.rpc.RemoteService;
+import com.google.gwt.user.client.rpc.RemoteServiceRelativePath;
+
+@RemoteServiceRelativePath("register")
+public interface RegisterService extends RemoteService {
+   Register registerPlayer(String input, boolean createChannel);
+   Register autoMatchMe(String input, String state);
+   Register challenge(String myEmail,String opponentEmail,String state);
+   Boolean myMove(String myEmail,String newState,long gameId,int winner);
+   Register reloadGames(String myEmail);
+   Boolean deleteGame(String myEmail,long gameId);
+   int getRank(String Email);
+   Register RegisterAIGame(String myEmail,String newState,int playerTurn);
+   Boolean updateAIGameMove(String myEmail,long gameId, String state);
+}

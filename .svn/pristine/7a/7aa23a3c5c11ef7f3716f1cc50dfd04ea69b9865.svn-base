@@ -1,0 +1,108 @@
+package org.alishah.hw2_5;
+
+import com.google.common.collect.Sets;
+
+import java.util.Set;
+
+import static org.shared.chess.PieceKind.BISHOP;
+import static org.shared.chess.PieceKind.KNIGHT;
+import static org.shared.chess.PieceKind.QUEEN;
+import static org.shared.chess.PieceKind.ROOK;
+import static org.shared.chess.State.COLS;
+import static org.shared.chess.State.ROWS;
+
+import org.shared.chess.IllegalMove;
+import org.shared.chess.Move;
+import org.shared.chess.Piece;
+import org.shared.chess.Position;
+import org.shared.chess.State;
+import org.shared.chess.StateChanger;
+import org.shared.chess.StateExplorer;
+
+
+import org.alishah.hw2.StateChangerImpl;
+
+public class StateExplorerImpl implements StateExplorer {
+	
+	private StateChanger stateChanger;
+	
+	public StateExplorerImpl() {
+		stateChanger = new StateChangerImpl();
+	}
+
+	@Override
+	public Set<Move> getPossibleMoves(State state) {
+		Set<Move> moves = Sets.newHashSet();
+		Set<Position> startPositions = getPossibleStartPositions(state);
+		for (Position p : startPositions) {
+			moves.addAll(getPossibleMovesFromPosition(state, p));
+		}
+		return moves;
+	}
+
+	@Override
+	public Set<Move> getPossibleMovesFromPosition(State state, Position start) {
+  	Set<Move> moves = Sets.newHashSet();
+    for (int i = 0; i < ROWS; i++) {
+      for (int j = 0; j < COLS; j++) {
+        Move move = new Move(start, new Position(i,j), null);
+        if (isValidMove(state, move)) {
+        	moves.add(move);
+        }
+        move = new Move(start, new Position(i,j), QUEEN);
+        if (isValidMove(state, move)) {
+          moves.add(move);
+        }
+        move = new Move(start, new Position(i,j), ROOK);
+        if (isValidMove(state, move)) {
+          moves.add(move);
+        }
+        move = new Move(start, new Position(i,j), BISHOP);
+        if (isValidMove(state, move)) {
+          moves.add(move);
+        }
+        move = new Move(start, new Position(i,j), KNIGHT);
+        if (isValidMove(state, move)) {
+          moves.add(move);
+        }
+      }
+    }
+		return moves;
+	}
+
+	@Override
+	public Set<Position> getPossibleStartPositions(State state) {
+		Set<Position> startPositions = Sets.newHashSet();
+		for (int i = 0; i < ROWS; i++) {
+			for (int j = 0; j < COLS; j++) {
+				Piece piece = state.getPiece(i, j);
+				if (piece != null && piece.getColor() == state.getTurn()) {
+					Position testPosition = new Position(i, j);
+					if (doMovesExistForPiece(state, testPosition)) {
+						startPositions.add(testPosition);
+					}
+				}
+			}
+		}
+		return startPositions;
+	}
+	
+  private boolean isValidMove(State state, Move move) {
+    try {
+      stateChanger.makeMove(state.copy(), move);
+      return true;
+    }
+    catch (IllegalMove e) {
+      return false;
+    }
+  }
+  
+  public boolean doMovesExistForPiece(State state, Position position) {
+  	Set<Move> moves = getPossibleMovesFromPosition(state, position);
+  	if (moves.isEmpty()) {
+  		return false;
+  	} else {
+  		return true;
+  	}
+  }
+}

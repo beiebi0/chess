@@ -1,0 +1,35 @@
+package org.jiangfengchen.hw7;
+
+import java.io.Serializable;
+
+import com.googlecode.objectify.annotation.Entity;
+import com.googlecode.objectify.annotation.Id;
+
+@Entity
+public class Contact implements Serializable{
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 5987101188378529101L;
+	@Id long id;
+	String contact= "";
+	
+	private Contact(){}
+	
+	public Contact(long id,String mail){
+		this.id=id;
+		this.contact=mail;
+	}
+	public long getId() {
+		return id;
+	}
+	public void setId(long id) {
+		this.id = id;
+	}
+	public String getContact() {
+		return contact;
+	}
+	public void setContact(String contact) {
+		this.contact = contact;
+	}
+}

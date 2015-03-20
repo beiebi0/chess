@@ -1,0 +1,22 @@
+package org.leozis.hw6.client;
+
+import java.util.Date;
+
+import org.leozis.hw6.server.Player;
+import org.shared.chess.GameResult;
+
+import com.google.gwt.user.client.rpc.RemoteService;
+import com.google.gwt.user.client.rpc.RemoteServiceRelativePath;
+
+@RemoteServiceRelativePath("chess")
+public interface ChessService extends RemoteService {
+
+  String updateBoard(String state);
+  String sendReady(String color);
+  String getUser();
+  Date getDate();
+  Player connect();
+  String getSignout(String href);
+  String getSignin(String href);
+  String sendResult(String state);
+}

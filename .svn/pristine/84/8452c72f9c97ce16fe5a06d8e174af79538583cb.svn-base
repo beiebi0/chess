@@ -1,0 +1,122 @@
+package org.leozis.hw3;
+
+import org.junit.Before;
+import org.junit.Test;
+import org.leozis.hw2.StateChangerImpl;
+import org.leozis.hw2_5.StateExplorerImpl;
+import org.mockito.Mockito;
+import org.shared.chess.Color;
+import org.shared.chess.Piece;
+import org.shared.chess.PieceKind;
+import org.shared.chess.State;
+
+//NOTE: Since the boards origin is 0,0, white starts at rows 6/7 instead of 0/1
+public class PresenterTest {
+	Presenter presenter;
+	Presenter.View view;
+
+	@Before
+	public void setup() {
+		State state = new State();
+		StateChangerImpl sc = new StateChangerImpl();
+		StateExplorerImpl se = new StateExplorerImpl();
+
+		presenter = new Presenter(state, sc, se);
+		view = Mockito.mock(Presenter.View.class);
+		presenter.setView(view);
+	}
+
+	@Test
+	public void testSetState() {
+		State state = new State();
+		presenter.setState(state);
+		Mockito.verify(view).setPiece(7, 0, new Piece(Color.WHITE, PieceKind.ROOK));
+		Mockito.verify(view).setPiece(3, 3, null);
+		Mockito.verify(view).setWhoseTurn(Color.WHITE);
+		Mockito.verify(view).setGameResult(null);
+	}
+
+	@Test
+	public void testSelectingonClick_whitepawn() {
+		State state = new State();
+		presenter.setState(state);
+
+		presenter.clickedOn(6, 6);
+
+		Mockito.verify(view).setSelected(6, 6, true);
+	}
+
+	@Test
+	public void testHighlighting_whitepawn() {
+		State state = new State();
+		presenter.setState(state);
+		presenter.clickedOn(6, 0);
+
+		Mockito.verify(view).setHighlighted(5, 0, true);
+		Mockito.verify(view).setHighlighted(4, 0, true);
+
+	}
+	
+	@Test
+	public void testHighlighting_blackKnight() {
+		State state = new State();
+		state.setTurn(Color.BLACK);
+		presenter.setState(state);
+		presenter.clickedOn(0, 1);
+
+		Mockito.verify(view).setHighlighted(2, 0, true);
+		Mockito.verify(view).setHighlighted(2, 2, true);
+
+	}
+	
+	@Test
+	public void testSetWhoseTurn_black() {
+		State state = new State();
+		presenter.setState(state);
+		presenter.clickedOn(6, 0);
+
+		Mockito.verify(view).setWhoseTurn(Color.WHITE);
+		
+		presenter.clickedOn(4, 0);
+		
+		Mockito.verify(view).setWhoseTurn(Color.BLACK);
+
+	}
+	
+	@Test
+	public void testClearHighlighted_whitePawn() {
+		State state = new State();
+		presenter.setState(state);
+		presenter.clickedOn(6, 0);
+		presenter.clickedOn(5, 0);
+
+		Mockito.verify(view).setHighlighted(5,0,false);
+		Mockito.verify(view).setHighlighted(4,0,false);
+
+	}
+	
+	@Test
+	public void testPromotionGrid_isVisible() {
+		State state = new State();
+		for (int r = 0; r < 8; r++) {
+			for (int c = 0; c < 8; c++) {
+				state.setPiece(r, c, null);
+			}
+		}
+		Piece wking = new Piece(Color.WHITE, PieceKind.KING);
+		Piece bking = new Piece(Color.BLACK, PieceKind.KING);
+		Piece wpawn = new Piece(Color.WHITE, PieceKind.PAWN);
+
+		state.setPiece(0, 4, wking);
+		state.setPiece(7, 4, bking);
+		state.setPiece(6, 0, wpawn);
+		state.setTurn(Color.WHITE);
+		
+		presenter.setState(state);
+		presenter.clickedOn(1, 0);
+		presenter.clickedOn(0, 0);
+
+		Mockito.verify(view).setPromoteVisible(true);
+
+	}
+}

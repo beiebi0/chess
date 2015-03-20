@@ -1,0 +1,25 @@
+52FAEB4BF75FED186F2076A72E4E342C.cache.js
+locale zh
+phonegap.env yes
+
+69055AB727677038519C22557FA6FA74.cache.js
+locale zh
+phonegap.env no
+
+7C8024552AC52BC16D8E26BFB89C889F.cache.js
+locale default
+phonegap.env yes
+
+90DCB58335F26D4FCA7E33EDBFD773C0.cache.js
+locale en
+phonegap.env no
+
+97149B464A33741F8DF46434F5BA0174.cache.js
+locale default
+phonegap.env no
+
+CCB75280F41B001754DDA820C49B706B.cache.js
+locale en
+phonegap.env yes
+
+Devmode:devmode.js

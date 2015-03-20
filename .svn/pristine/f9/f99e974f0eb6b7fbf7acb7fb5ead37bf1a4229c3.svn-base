@@ -1,0 +1,9 @@
+package org.vorasahil.hw6.client;
+
+import com.google.gwt.user.client.rpc.RemoteService;
+import com.google.gwt.user.client.rpc.RemoteServiceRelativePath;
+
+@RemoteServiceRelativePath("update")
+public interface UpdateService extends RemoteService {
+	Boolean getUpdate(Update update);
+}

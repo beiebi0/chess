@@ -1,0 +1,261 @@
+package org.alishah.hw3;
+
+import java.util.Set;
+
+import org.chenji.hw2.StateChangerImpl;
+import org.chenji.hw2_5.StateExplorerImpl;
+import org.shared.chess.Color;
+import org.shared.chess.GameResult;
+import org.shared.chess.IllegalMove;
+import org.shared.chess.Piece;
+import org.shared.chess.PieceKind;
+import org.shared.chess.Position;
+import org.shared.chess.Move;
+import org.shared.chess.State;
+import org.shared.chess.StateChanger;
+import org.shared.chess.StateExplorer;
+
+import com.google.gwt.core.shared.GWT;
+import com.google.gwt.event.dom.client.ClickEvent;
+import com.google.gwt.event.dom.client.ClickHandler;
+import com.google.gwt.event.logical.shared.ValueChangeEvent;
+import com.google.gwt.event.logical.shared.ValueChangeHandler;
+import com.google.gwt.user.client.History;
+import com.google.gwt.user.client.ui.Grid;
+import com.google.gwt.user.client.ui.HTMLTable.Cell;
+
+public class Presenter {
+  public interface View {
+    /**
+     * Renders the piece at this position.
+     * If piece is null then the position is empty.
+     */
+    void setPiece(int row, int col, Piece piece);
+    /**
+     * Turns the highlighting on or off at this cell.
+     * Cells that can be clicked should be highlighted.
+     */
+    void setHighlightedPrimary(int row, int col, boolean highlighted);
+    /**
+     * Turns the highlighting on or off at this cell.
+     * Cells that can be clicked should be highlighted.
+     */
+    void setHighlightedSecondary(int row, int col, boolean highlighted);
+    /**
+     * Indicate whose turn it is.
+     */
+    void setWhoseTurn(Color color);
+    /**
+     * Indicate whether the game is in progress or over.
+     */
+    void setGameResult(GameResult gameResult);
+    
+    /**
+     * Add state to browser's history.
+     * @param stateString
+     */
+    void addToHistory(String stateString);
+    
+    /**
+     * Display white player's promotion chooser. Initially, not displayed.
+     * @param show
+     */
+    void showWhitePromotionChooser(boolean show);
+    
+    /**
+     * Display black player's promotion chooser. Initially, not displayed.
+     * @param show
+     */
+    void showBlackPromotionChooser(boolean show);
+    
+  	Grid getGrid();
+
+  	Grid getWhitePromotionChooser();
+
+  	Grid getBlackPromotionChooser();
+  }
+  
+  private View view;
+  private State currentState;
+  
+  private final StateExplorer stateExplorer = new StateExplorerImpl();
+  private final StateChanger stateChanger = new StateChangerImpl();
+  
+  private Position currentPosition;
+  private Move pendingMove;
+  
+  public State getState() {
+  	return currentState;
+  }
+  
+  public void setView(View view) {
+    this.view = view;
+    
+//    History.addValueChangeHandler(new ValueChangeHandler<String>() {
+//    	@Override
+//    	public void onValueChange(ValueChangeEvent<String> event) {
+//    		String token = event.getValue();
+//    		
+//    		if (token.isEmpty()) {
+//    			setState(new State());
+//    		} else {
+//    			setState(StateSerializer.deserialize(token));
+//    		}
+//    		resetTurn();
+//    	}
+//    });
+//    
+    view.getGrid().addClickHandler(new ClickHandler() {
+			@Override
+      public void onClick(ClickEvent event) {
+				Cell cell = ((Grid)event.getSource()).getCellForEvent(event);
+				registerBoardClick(cell.getRowIndex(), cell.getCellIndex());
+      }
+    });
+    
+    view.getBlackPromotionChooser().addClickHandler(new ClickHandler() {
+			@Override
+      public void onClick(ClickEvent event) {
+				Cell cell = ((Grid)event.getSource()).getCellForEvent(event);
+				registerPromotionClick(cell.getCellIndex());
+      }
+    });
+    
+    view.getWhitePromotionChooser().addClickHandler(new ClickHandler() {
+			@Override
+      public void onClick(ClickEvent event) {
+				Cell cell = ((Grid)event.getSource()).getCellForEvent(event);
+				registerPromotionClick(cell.getCellIndex());
+      }
+    });
+  }
+
+  private void resetTurn() {
+  	currentPosition = null;
+  	removeHighlighting();
+  	removePromotionDialog();
+  }
+  
+  private void removePromotionDialog() {
+  	pendingMove = null;
+  	view.showBlackPromotionChooser(false);
+  	view.showWhitePromotionChooser(false);
+  }
+
+	private void removeHighlighting() {
+		for (int r = 0; r < 8; r++) {
+			for (int c = 0; c < 8; c++) {
+				view.setHighlightedPrimary(r, c, false);
+				view.setHighlightedSecondary(r, c, false);
+			}
+		}
+  }
+
+	private void registerPromotionClick(int cell) {
+  	PieceKind promotionPieceKind;
+  	switch(cell) {
+  		case 0:
+  			promotionPieceKind = PieceKind.KNIGHT;
+  			break;
+  		case 1:
+  			promotionPieceKind = PieceKind.BISHOP;
+  			break;
+  		case 2:
+  			promotionPieceKind = PieceKind.ROOK;
+  			break;
+  		case 3:
+  			promotionPieceKind = PieceKind.QUEEN;
+  			break;
+  		default:
+  			promotionPieceKind = null;
+  	}
+  	Move move = new Move(pendingMove.getFrom(),
+  											 pendingMove.getTo(),
+  											 promotionPieceKind);
+  	makeMove(move);
+  }
+  
+  protected void registerBoardClick(int row, int col) {
+  	if (pendingMove != null) {
+  		return;
+  	}
+  	if (currentPosition == null) {
+  		Set<Position> startMoves =
+  				stateExplorer.getPossibleStartPositions(currentState);
+  		Position from = new Position(7 - row, col);
+  		
+  		if (startMoves.contains(from)) {
+  			removeHighlighting();
+  			currentPosition = from;
+  			view.setHighlightedPrimary(row, col, true);
+  			
+  			Set<Move> possibleMoves =
+  					stateExplorer.getPossibleMovesFromPosition(currentState, from);
+  			
+  			for (Move move : possibleMoves) {
+  				Position to = move.getTo();
+  				view.setHighlightedSecondary(7 - to.getRow(), to.getCol(), true);
+  			}
+  		}
+  	} else {
+  		Position to = new Position(7 - row, col);
+  		Move move = new Move(currentPosition, to, null);
+  		
+  		if (isValidMove(move)) {
+  			PieceKind fromPieceKind = currentState.getPiece(move.getFrom()).getKind();
+  			if (fromPieceKind.equals(PieceKind.PAWN) &&
+  					move.getTo().getRow() == backRank(currentState.getTurn())) {
+  				if (currentState.getTurn() == Color.WHITE) {
+  					view.showWhitePromotionChooser(true);
+  				} else {
+  					view.showBlackPromotionChooser(true);
+  				}
+  				pendingMove = move;
+  			} else {
+  				makeMove(move);
+  			}
+  		} else {
+  			removeHighlighting();
+  			currentPosition = null;
+  		}
+  	}
+  }
+  
+  public void setState(State state) {
+  	currentState = state;
+    view.setWhoseTurn(state.getTurn());
+    view.setGameResult(state.getGameResult());
+    for (int r = 0; r < 8; r++) {
+      for (int c = 0; c < 8; c++) {
+        view.setPiece(7 - r, c, state.getPiece(r, c));
+      }
+    } 
+  }
+  
+  private void makeMove(Move move) {
+		try {
+			stateChanger.makeMove(currentState, move);
+			setState(currentState);
+			resetTurn();
+			
+			view.addToHistory(StateSerializer.serialize(currentState));
+		} catch (IllegalMove e) {
+			GWT.log(move.toString(), e);
+		}
+  }
+  
+  private boolean isValidMove(Move move) {
+  	Set<Move> moves =
+				stateExplorer.getPossibleMovesFromPosition(currentState, currentPosition);
+  	for (Move possibleMove : moves) {
+  		if (possibleMove.equals(move)) {
+  			return true;
+  		}
+  	}
+  	return false;
+  }
+  
+  private int backRank(Color color) {
+  	return color == Color.WHITE ? 7 : 0;
+  }
+}

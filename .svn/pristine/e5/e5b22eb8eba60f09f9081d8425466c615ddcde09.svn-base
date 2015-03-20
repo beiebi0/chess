@@ -1,0 +1,29 @@
+package org.sanjana.hw6.server;
+import java.util.HashMap;
+
+public class MatchedPlayers
+{
+	private static HashMap<Integer,GameDetails> matchedPlayers = new HashMap<Integer,GameDetails>();
+	static int matchedPlayersId = -1;
+
+
+	public static GameDetails getmatchedPlayers(int matchedPlayersId) 
+	{
+		if (matchedPlayers.containsKey(matchedPlayersId)) 
+			return matchedPlayers.get(matchedPlayersId);
+
+		return null;
+	}
+
+	public static void setmatchedPlayers(GameDetails matchedPlayersDetails){
+		matchedPlayers.put(matchedPlayersId,matchedPlayersDetails);
+	}
+
+	public static int getmatchedPlayersId(){
+		return matchedPlayersId;
+	}
+
+	public static void increamentmatchedPlayersId(){
+		++matchedPlayersId;
+	}
+}

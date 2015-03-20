@@ -1,0 +1,39 @@
+package org.ashishmanral.hw3;
+
+import com.google.gwt.core.client.EntryPoint;
+import com.google.gwt.event.logical.shared.ValueChangeEvent;
+import com.google.gwt.event.logical.shared.ValueChangeHandler;
+import com.google.gwt.user.client.History;
+import com.google.gwt.user.client.ui.RootPanel;
+
+/**
+ * ChessEntryPoint class
+ * @author Ashish
+ * EntryPoint for GWT
+ */
+public class ChessEntryPoint implements EntryPoint{
+  
+  /**
+   * First method that gets fired
+   */
+  public void onModuleLoad() {
+	Graphics graphics;
+    if(History.getToken().isEmpty()){
+      History.newItem("WR$WG$WB$WQ$WK$WB$WG$WR$WP$WP$WP$WP$WP$WP$WP$WP$N$N$N$N$N$N$N$N$N$N$N$N$N$N$N$N$N$N$N$N$N$N$N$N$N$N$N$N$N$N$N$N$BP$BP$BP$BP$BP$BP$BP$BP$BR$BG$BB$BQ$BK$BB$BG$BR$W$T$T$T$T$0$88$N");
+      graphics=new Graphics();
+    }
+    else{
+      graphics=new Graphics();
+      graphics.restoreState(History.getToken());
+    }
+    RootPanel.get().add(graphics);
+    final Graphics finalGraphics=graphics;
+    History.addValueChangeHandler(new ValueChangeHandler<String>() {
+      public void onValueChange(ValueChangeEvent<String> event) {
+        String historyToken = event.getValue();
+        finalGraphics.restoreState(historyToken);
+      }
+    });
+  }
+}
+

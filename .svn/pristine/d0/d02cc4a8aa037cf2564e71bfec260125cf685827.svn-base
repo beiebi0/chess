@@ -1,0 +1,1029 @@
+package org.zhaohuizhang.hw3;
+
+import java.util.Date;
+import java.util.Set;
+
+import org.shared.chess.Color;
+import org.shared.chess.GameResult;
+import org.shared.chess.GameResultReason;
+import org.shared.chess.Move;
+import org.shared.chess.Piece;
+import org.shared.chess.PieceKind;
+import org.shared.chess.Position;
+import org.shared.chess.State;
+import org.shared.chess.StateChanger;
+import org.shared.chess.StateExplorer;
+import org.zhaohuizhang.hw2.StateChangerImpl;
+import org.zhaohuizhang.hw2_5.StateExplorerImpl;
+import org.zhaohuizhang.hw6.client.ChessGameService;
+import org.zhaohuizhang.hw6.client.ChessGameServiceAsync;
+import org.zhaohuizhang.hw8.ResultOfPlayer;
+import org.zhaohuizhang.hw9.AlphaBetaPruning;
+import org.zhaohuizhang.hw9.DateTimer;
+import org.zhaohuizhang.hw9.Heuristic;
+import org.zhaohuizhang.hw9.HeuristicImpl;
+
+import com.google.common.collect.Sets;
+import com.google.gwt.appengine.channel.client.Channel;
+import com.google.gwt.appengine.channel.client.ChannelError;
+import com.google.gwt.appengine.channel.client.ChannelFactory;
+import com.google.gwt.appengine.channel.client.ChannelFactoryImpl;
+import com.google.gwt.appengine.channel.client.Socket;
+import com.google.gwt.appengine.channel.client.SocketListener;
+import com.google.gwt.core.client.GWT;
+import com.google.gwt.dom.client.AudioElement;
+import com.google.gwt.event.dom.client.ChangeEvent;
+import com.google.gwt.event.dom.client.ChangeHandler;
+import com.google.gwt.event.dom.client.ClickEvent;
+import com.google.gwt.event.dom.client.ClickHandler;
+import com.google.gwt.event.dom.client.DragLeaveEvent;
+import com.google.gwt.event.dom.client.DragLeaveHandler;
+import com.google.gwt.event.dom.client.DragOverEvent;
+import com.google.gwt.event.dom.client.DragOverHandler;
+import com.google.gwt.event.dom.client.DragStartEvent;
+import com.google.gwt.event.dom.client.DragStartHandler;
+import com.google.gwt.event.dom.client.DropEvent;
+import com.google.gwt.event.dom.client.DropHandler;
+import com.google.gwt.event.dom.client.HasChangeHandlers;
+import com.google.gwt.event.dom.client.HasClickHandlers;
+import com.google.gwt.event.dom.client.HasDragLeaveHandlers;
+import com.google.gwt.event.dom.client.HasDragOverHandlers;
+import com.google.gwt.event.dom.client.HasDragStartHandlers;
+import com.google.gwt.event.dom.client.HasDropHandlers;
+import com.google.gwt.event.dom.client.HasKeyPressHandlers;
+import com.google.gwt.event.dom.client.KeyCodes;
+import com.google.gwt.event.dom.client.KeyPressEvent;
+import com.google.gwt.event.dom.client.KeyPressHandler;
+import com.google.gwt.event.logical.shared.ValueChangeEvent;
+import com.google.gwt.event.logical.shared.ValueChangeHandler;
+import com.google.gwt.i18n.client.DateTimeFormat;
+import com.google.gwt.media.client.Audio;
+import com.google.gwt.storage.client.Storage;
+import com.google.gwt.user.client.Window;
+import com.google.gwt.user.client.rpc.AsyncCallback;
+
+public class Presenter {
+	public interface View {
+		// Renders the piece at this position. If piece is null then the
+		// position is empty.
+		void setPiece(int row, int col, Piece piece);
+
+		// Turns the highlighting on or off at this cell. Cells that can be
+		// clicked should be highlighted
+		void setHighlighted(int row, int col, boolean highlighted);
+
+		// Indicate whose turn it is.
+		void setWhoseTurn(Color color);
+
+		// Indicate whether the game is in progress or over.
+		void setGameResult(GameResult gameResult);
+
+		void setDragOverHighlighted(int row, int col, boolean dragged);
+
+		void setPromotionPiece();
+
+		void setPromotionGrid(boolean flag, Color color);
+
+		void setOpponent(String opponentName);
+
+		void setPlayerColor(Color color);
+
+		void setPlayerName(String nickName);
+
+		void setPlayerEmail(String email);
+
+		void setDesiredOpponent(String opponentName);
+
+		void setMatchInfo(String[] str);
+
+		void setSignOutLink(String strHref);
+
+		void setPlayerRanking(String strRanking);
+
+		void setStartDate(String strDate);
+
+		HasClickHandlers getClickCellOnChessBoard(int row, int col);
+
+		HasDragStartHandlers getDraggedCellOnChessBoard(int row, int col);
+
+		HasDropHandlers getDroppedCellOnChessBoard(int row, int col);
+
+		HasDragOverHandlers getDraggedOverCellOnChessBoard(int row, int col);
+
+		HasDragLeaveHandlers getDraggedLeaveCellOnChessBoard(int row, int col);
+
+		HasClickHandlers getClickPromotionKindWhite(int row);
+
+		HasClickHandlers getClickPromotionKindBlack(int row);
+
+		HasClickHandlers getClickStartGame();
+
+		HasClickHandlers getClickSaveGame();
+
+		HasClickHandlers getClickLoadGame();
+
+		HasClickHandlers getClickMakeMatch();
+
+		HasClickHandlers getClickFindOpponent();
+
+		HasKeyPressHandlers getEnterFindOpponent();
+
+		HasChangeHandlers getChangeMatchInfo();
+
+		HasClickHandlers getClickSelectMatch();
+
+		HasClickHandlers getClickDeleteMatch();
+
+		HasClickHandlers getClickPlayWithAI();
+
+		void addHistoryItem(String str);
+
+		String getHistoryItem();
+
+		void addHistoryHandler(ValueChangeHandler<String> handler);
+
+		void animation(Position p);
+
+		String getOpponentEmail();
+
+		String getSelectedMatch();
+
+		// void addSocketListener(SocketListener listener);
+
+	}
+
+	private ChessGameServiceAsync chessGameSvc = GWT.create(ChessGameService.class);
+	
+
+	private View view;
+	private State state;
+	private Position fromPosition = null;
+	private Position toPosition = null;
+	// private Position draggedPosition = null;
+	private PieceKind promotionPiece = null;
+	private StateExplorer stateExplorer = new StateExplorerImpl();
+	private StateChanger stateChanger = new StateChangerImpl();
+	private Set<Position> highlightedPositions = Sets.newHashSet();
+	private Set<Move> possibleMoves = Sets.newHashSet();
+	private Storage storage = Storage.getLocalStorageIfSupported();
+	private String historyToken = null;
+	private Color userColor;
+	private Channel channel = null;
+	private Socket socket = null;
+	private String opponentEmail;
+	private boolean isPlayWithAI = false;
+
+	private AsyncCallback<Void> tmptCallback = new AsyncCallback<Void>() {
+		@Override
+		public void onFailure(Throwable caught) {
+		}
+
+		@Override
+		public void onSuccess(Void result) {
+		}
+	};
+
+	public void initView(Graphics graphics) {
+		//((ServiceDefTarget) chessGameSvc).setServiceEntryPoint("chess-online-zhaohui-3.appspot.com/zhaohuizhang/chessGames");
+		this.setView(graphics);
+		state = new State();
+		this.setState(state);
+		view.setPromotionPiece();
+		connectServer();
+		bindHandler();
+		updatePlayerInfo();
+		setMatchInfo();
+	}
+
+	public void setView(View view) {
+		this.view = view;
+	}
+
+	public void setState(State state) {
+		view.setWhoseTurn(state.getTurn());
+		if (state.getGameResult() != null) {
+			Audio gameResultAudio = creatGameResultAudio();
+			gameResultAudio.play();
+			GameResult gameResult = state.getGameResult();
+			updateRank(gameResult);
+			isPlayWithAI = false;
+		}
+		view.setGameResult(state.getGameResult());
+		for (int row = 0; row < State.ROWS; row++) {
+			for (int col = 0; col < State.COLS; col++) {
+				view.setPiece(row, col, state.getPiece(row, col));
+			}
+		}
+		view.addHistoryItem(serializeState(state));
+
+	}
+
+	public void bindHandler() {
+		for (int row = 0; row < State.ROWS; row++) {
+			for (int col = 0; col < State.COLS; col++) {
+				final int r = row;
+				final int c = col;
+				view.getClickCellOnChessBoard(row, col).addClickHandler(
+						new ClickHandler() {
+							public void onClick(ClickEvent event) {
+								clickedOn(r, c);
+							}
+
+						});
+				view.getDraggedCellOnChessBoard(row, col).addDragStartHandler(
+						new DragStartHandler() {
+							public void onDragStart(DragStartEvent event) {
+								event.setData("text", "Drag");
+								draggedItem(r, c);
+							}
+						});
+				view.getDraggedOverCellOnChessBoard(row, col)
+						.addDragOverHandler(new DragOverHandler() {
+							@Override
+							public void onDragOver(DragOverEvent event) {
+								view.setDragOverHighlighted(r, c, true);
+							}
+						});
+				view.getDraggedLeaveCellOnChessBoard(row, col)
+						.addDragLeaveHandler(new DragLeaveHandler() {
+							@Override
+							public void onDragLeave(DragLeaveEvent event) {
+								view.setDragOverHighlighted(r, c, false);
+							}
+						});
+				view.getDroppedCellOnChessBoard(row, col).addDropHandler(
+						new DropHandler() {
+							@Override
+							public void onDrop(DropEvent event) {
+								event.preventDefault();
+								handleDrop(r, c);
+							}
+						});
+			}
+		}
+
+		for (int row = 0; row < 4; row++) {
+			final int n = row;
+			view.getClickPromotionKindBlack(row).addClickHandler(
+					new ClickHandler() {
+
+						@Override
+						public void onClick(ClickEvent event) {
+							getPromotionType(n, Color.BLACK);
+						}
+					});
+			view.getClickPromotionKindWhite(row).addClickHandler(
+					new ClickHandler() {
+
+						@Override
+						public void onClick(ClickEvent event) {
+							getPromotionType(n, Color.WHITE);
+						}
+					});
+		}
+
+		view.getClickStartGame().addClickHandler(new ClickHandler() {
+
+			@Override
+			public void onClick(ClickEvent event) {
+				state = new State();
+				setState(state);
+			}
+
+		});
+
+		view.addHistoryHandler(new ValueChangeHandler<String>() {
+
+			@Override
+			public void onValueChange(ValueChangeEvent<String> event) {
+				historyToken = event.getValue();
+				String currentState = serializeState(state);
+				if (!historyToken.equals(currentState)) {
+					State newState = parseState(historyToken);
+					state = newState;
+					setState(state);
+				}
+
+			}
+
+		});
+
+		view.getClickSaveGame().addClickHandler(new ClickHandler() {
+			@Override
+			public void onClick(ClickEvent event) {
+				if (storage != null) {
+					storage.setItem("storedState", historyToken);
+				} else {
+					Window.alert("The save & load function is not supported. Try upgrading to a newer browser!");
+				}
+			}
+
+		});
+
+		view.getClickLoadGame().addClickHandler(new ClickHandler() {
+
+			@Override
+			public void onClick(ClickEvent event) {
+				if (storage != null) {
+					String value = storage.getItem("storedState");
+					State newState = parseState(value);
+					state = newState;
+					setState(state);
+				} else {
+					Window.alert("The save & load function is not supported. Try upgrading to a newer browser!");
+				}
+
+			}
+		});
+
+		view.getClickMakeMatch().addClickHandler(new ClickHandler() {
+			@Override
+			public void onClick(ClickEvent event) {
+				mapPlayer();
+			}
+
+		});
+
+		view.getClickFindOpponent().addClickHandler(new ClickHandler() {
+
+			@Override
+			public void onClick(ClickEvent event) {
+				findOpponentWithEmail();
+			}
+
+		});
+
+		view.getEnterFindOpponent().addKeyPressHandler(new KeyPressHandler() {
+
+			@Override
+			public void onKeyPress(KeyPressEvent event) {
+				if (event.getCharCode() == KeyCodes.KEY_ENTER) {
+					findOpponentWithEmail();
+				}
+			}
+		});
+
+		view.getChangeMatchInfo().addChangeHandler(new ChangeHandler() {
+
+			@Override
+			public void onChange(ChangeEvent event) {
+				// switchMatch();
+			}
+		});
+
+		view.getClickPlayWithAI().addClickHandler(new ClickHandler() {
+
+			@Override
+			public void onClick(ClickEvent event) {
+				dealWithAI();
+			}
+
+		});
+
+	}
+
+	private void dealWithAI() {
+		//Window.alert("AI!");
+		view.setOpponent("Computer");
+		view.setPlayerColor(Color.WHITE);
+		userColor = Color.WHITE;
+		isPlayWithAI = true;
+
+	}
+
+	private void updateRank(GameResult gameResult) {
+		ResultOfPlayer playerResult;
+		if (gameResult.getWinner() == null) {
+			playerResult = ResultOfPlayer.DRAW;
+		} else if (gameResult.getWinner() == userColor) {
+			playerResult = ResultOfPlayer.WIN;
+		} else {
+			playerResult = ResultOfPlayer.LOSE;
+		}
+
+		if (chessGameSvc == null) {
+			chessGameSvc = GWT.create(ChessGameService.class);
+		}
+		AsyncCallback<String> callback = new AsyncCallback<String>() {
+			@Override
+			public void onFailure(Throwable caught) {
+			}
+
+			@Override
+			public void onSuccess(String result) {
+				view.setPlayerRanking(result);
+			}
+		};
+		chessGameSvc.updateRank(opponentEmail, playerResult, callback);
+
+	}
+
+	private void updatePlayerInfo() {
+		if (chessGameSvc == null) {
+			chessGameSvc = GWT.create(ChessGameService.class);
+		}
+		AsyncCallback<String[]> callback = new AsyncCallback<String[]>() {
+			@Override
+			public void onFailure(Throwable caught) {
+
+			}
+
+			@Override
+			public void onSuccess(String[] result) {
+				String rank = result[0];
+				view.setPlayerRanking(rank);
+			}
+		};
+		chessGameSvc.getPlayerInfo(callback);
+
+	}
+
+	private void updateStartDate() {
+		Date date = new Date();
+		String strDate = DateTimeFormat.getShortDateFormat().format(date);
+		view.setStartDate(strDate);
+	}
+
+	private void setMatchInfo() {
+		if (chessGameSvc == null) {
+			chessGameSvc = GWT.create(ChessGameService.class);
+		}
+		AsyncCallback<String[]> callback = new AsyncCallback<String[]>() {
+
+			@Override
+			public void onFailure(Throwable caught) {
+
+			}
+
+			@Override
+			public void onSuccess(String[] result) {
+				view.setMatchInfo(result);
+			}
+
+		};
+		chessGameSvc.getAllMatches(callback);
+	}
+
+	private void findOpponentWithEmail() {
+		opponentEmail = view.getOpponentEmail();
+		view.setDesiredOpponent("");
+		String stateStr = serializeState(state);
+		if (opponentEmail.length() == 0) {
+			Window.alert("Opponent Email is empty!");
+		} else {
+			if (chessGameSvc == null) {
+				chessGameSvc = GWT.create(ChessGameService.class);
+			}
+			AsyncCallback<Void> callback = new AsyncCallback<Void>() {
+
+				@Override
+				public void onFailure(Throwable caught) {
+
+				}
+
+				@Override
+				public void onSuccess(Void result) {
+
+				}
+
+			};
+			chessGameSvc.updateMatch(opponentEmail, stateStr, "White", false,
+					callback);
+		}
+
+		// temperially add this sentence, need to update when match works right
+		updateStartDate();
+	}
+
+	public void connectServer() {
+		if (chessGameSvc == null) {
+			chessGameSvc = GWT.create(ChessGameService.class);
+		}
+		AsyncCallback<String> callback = new AsyncCallback<String>() {
+
+			@Override
+			public void onFailure(Throwable caught) {
+				Window.alert("Error: Could not connect to server");
+			}
+
+			@Override
+			public void onSuccess(String result) {
+
+				// Window.alert("Connection Success!" + result);
+				if (result != null) {
+					createSocket(result);
+				}
+				// mapPlayer();
+
+			}
+
+		};
+		chessGameSvc.connectToServer(callback);
+	}
+
+	private void createSocket(String result) {
+		ChannelFactory channelFactory = new ChannelFactoryImpl();
+		channel = channelFactory.createChannel(result);
+		// Window.alert("Click Button to find player");
+		socket = channel.open(new SocketListener() {
+
+			@Override
+			public void onOpen() {
+				// Window.alert("Socket Open!");
+			}
+
+			@Override
+			public void onMessage(String message) {
+
+				// Window.alert("Received:" + message);
+				char flag = message.charAt(0);
+				if (flag == 'W') {
+					userColor = Color.BLACK;
+					view.setPlayerColor(Color.BLACK);
+					String opponentName = message.substring(1);
+					view.setOpponent(opponentName);
+					// temperially add this sentence, need to update when match
+					// works right
+					updateStartDate();
+				} else if (flag == 'B') {
+					userColor = Color.WHITE;
+					view.setPlayerColor(Color.WHITE);
+					String opponentName = message.substring(1);
+					view.setOpponent(opponentName);
+					// temperially add this sentence, need to update when match
+					// works right
+					updateStartDate();
+				} else if (flag == 'M') {
+					String moveStr = message.substring(1);
+					Move move = parseMove(moveStr);
+					stateChange(move);
+				} else if (flag == 'S') {
+					String stateStr = message.substring(1);
+					State state = parseState(stateStr);
+					setState(state);
+				}
+
+			}
+
+			@Override
+			public void onError(ChannelError error) {
+				Window.alert("Channel Error!");
+			}
+
+			@Override
+			public void onClose() {
+			}
+
+		});
+	}
+
+	private void mapPlayer() {
+		// Window.alert("Begin Mapping!");
+		if (chessGameSvc == null) {
+			chessGameSvc = GWT.create(ChessGameService.class);
+		}
+		AsyncCallback<Void> callback = new AsyncCallback<Void>() {
+
+			@Override
+			public void onFailure(Throwable caught) {
+				Window.alert("Error: Could not connect to server");
+			}
+
+			@Override
+			public void onSuccess(Void result) {
+				// Window.alert("Map Success!");
+			}
+		};
+		chessGameSvc.matchPlayers(callback);
+
+	}
+
+	public Audio creatMoveAudio() {
+		Audio audio = Audio.createIfSupported();
+		if (audio == null) {
+			Window.alert("The sound of the chess is not supported. Try upgrading to a newer browser!");
+		}
+		audio.addSource("sound_zhaohuizhang/move.ogg", AudioElement.TYPE_OGG);
+		audio.addSource("sound_zhaohuizhang/move.wav", AudioElement.TYPE_WAV);
+		audio.setControls(true);
+		return audio;
+	}
+
+	public Audio creatCaptureAudio() {
+		Audio audio = Audio.createIfSupported();
+		if (audio == null) {
+			Window.alert("The sound of the chess is not supported. Try upgrading to a newer browser!");
+		}
+		audio.addSource("sound_zhaohuizhang/capture.ogg", AudioElement.TYPE_OGG);
+		audio.addSource("sound_zhaohuizhang/capture.wav", AudioElement.TYPE_WAV);
+		audio.setControls(true);
+		return audio;
+	}
+
+	public Audio creatGameResultAudio() {
+		Audio audio = Audio.createIfSupported();
+		if (audio == null) {
+			Window.alert("The sound of the chess is not supported. Try upgrading to a newer browser!");
+		}
+		audio.addSource("sound_zhaohuizhang/gameresult.ogg",
+				AudioElement.TYPE_OGG);
+		audio.addSource("sound_zhaohuizhang/gameresult.wav",
+				AudioElement.TYPE_WAV);
+		audio.setControls(true);
+		return audio;
+	}
+
+	public void clickedOn(int row, int col) {
+		Position clickedPosition = new Position(row, col);
+		clearHighlights();
+		if (state.getPiece(clickedPosition) != null
+				&& state.getPiece(clickedPosition).getColor() == state
+						.getTurn()) {
+			if (state.getTurn() == userColor) {
+				// trim moves that don't have the selected position
+				possibleMoves = stateExplorer.getPossibleMovesFromPosition(
+						state, clickedPosition);
+				if (possibleMoves.isEmpty()) {
+					return;
+				} else {
+					for (Move move : possibleMoves) {
+						Position position = move.getTo();
+						view.setHighlighted(position.getRow(),
+								position.getCol(), true);
+						highlightedPositions.add(position);
+					}
+				}
+				fromPosition = clickedPosition;
+			} else if (isPlayWithAI) {
+				aiMove();
+			}
+		} else if (fromPosition != null) {
+			toPosition = clickedPosition;
+			Color turnColor = state.getTurn();
+			int promotionToRow = turnColor == Color.WHITE ? 7 : 0;
+			if (row == promotionToRow
+					&& state.getPiece(fromPosition).getKind() == PieceKind.PAWN) {
+				view.setPromotionGrid(true, turnColor);
+			} else {
+				Move move = new Move(fromPosition, clickedPosition, null);
+				stateChange(move);
+				fromPosition = null;
+				toPosition = null;
+				chessGameSvc.sendMove(move.toString(), tmptCallback);
+			}
+		}
+
+	}
+
+	public void draggedItem(int row, int col) {
+
+		Position pos = new Position(row, col);
+		if (state.getPiece(pos) != null
+				&& state.getPiece(pos).getColor() == state.getTurn()) {
+			if (state.getTurn() == userColor) {
+				possibleMoves = stateExplorer.getPossibleMovesFromPosition(
+						state, pos);
+				if (possibleMoves.isEmpty()) {
+					return;
+				} else {
+					for (Move move : possibleMoves) {
+						Position position = move.getTo();
+						highlightedPositions.add(position);
+						view.setHighlighted(position.getRow(),
+								position.getCol(), true);
+
+					}
+				}
+				fromPosition = pos;
+			} else if (isPlayWithAI) {
+				aiMove();
+			}
+		}
+
+	}
+	
+	private void aiMove(){
+		Heuristic heuristic = new HeuristicImpl();
+		AlphaBetaPruning pruning = new AlphaBetaPruning(heuristic);
+		Move move = pruning
+				.findBestMove(state, 4, new DateTimer(1500));
+		//Window.alert("AI move caculated!");
+		stateChange(move);
+	}
+
+	public void handleDrop(int row, int col) {
+		clearHighlights();
+		if (fromPosition != null) {
+			toPosition = new Position(row, col);
+			Color turnColor = state.getTurn();
+			int promotionToRow = turnColor == Color.WHITE ? 7 : 0;
+			if (row == promotionToRow
+					&& state.getPiece(fromPosition).getKind() == PieceKind.PAWN) {
+				view.setPromotionGrid(true, turnColor);
+			} else {
+				Move move = new Move(fromPosition, toPosition, null);
+				stateChange(move);
+				possibleMoves.clear();
+				fromPosition = null;
+				chessGameSvc.sendMove(move.toString(), tmptCallback);
+			}
+		}
+
+	}
+
+	public void getPromotionType(int row, Color color) {
+		if (color == Color.BLACK) {
+			if (row == 0) {
+				promotionPiece = PieceKind.QUEEN;
+			} else if (row == 1) {
+				promotionPiece = PieceKind.KNIGHT;
+			} else if (row == 2) {
+				promotionPiece = PieceKind.BISHOP;
+			} else if (row == 3) {
+				promotionPiece = PieceKind.ROOK;
+			}
+		} else {
+			if (row == 0) {
+				promotionPiece = PieceKind.ROOK;
+			} else if (row == 1) {
+				promotionPiece = PieceKind.BISHOP;
+			} else if (row == 2) {
+				promotionPiece = PieceKind.KNIGHT;
+			} else if (row == 3) {
+				promotionPiece = PieceKind.QUEEN;
+			}
+		}
+		Move move = new Move(fromPosition, toPosition, promotionPiece);
+
+		stateChange(move);
+		clearPromotion();
+		possibleMoves.clear();
+		fromPosition = null;
+		toPosition = null;
+		chessGameSvc.sendMove(move.toString(), tmptCallback);
+	}
+
+	public void stateChange(Move move) {
+		try {
+			if (state.getPiece(move.getTo()) == null) {
+				Audio moveAudio = creatMoveAudio();
+				moveAudio.play();
+			} else {
+				Audio captureAudio = creatCaptureAudio();
+				captureAudio.play();
+			}
+			stateChanger.makeMove(state, move);
+		} catch (Exception e) {
+
+		}
+		setState(state);
+		view.animation(move.getTo());
+	}
+
+	private static Move parseMove(String str) {
+		PieceKind promotionKind = null;
+		if (str.contains(" (promoting to ")) {
+			String strPromotion = str.substring(str.lastIndexOf(" ") + 1,
+					str.lastIndexOf(")"));
+			promotionKind = PieceKind.valueOf(strPromotion);
+			str = str.substring(0, str.indexOf(" (promoting to "));
+		}
+		String[] positions = str.split("->");
+		int fromRow = Integer.parseInt((positions[0].substring(
+				positions[0].indexOf("(") + 1, positions[0].indexOf(","))));
+		int fromCol = Integer.parseInt((positions[0].substring(
+				positions[0].indexOf(",") + 1, positions[0].indexOf(")"))));
+		int toRow = Integer.parseInt((positions[1].substring(
+				positions[0].indexOf("(") + 1, positions[1].indexOf(","))));
+		int toCol = Integer.parseInt((positions[1].substring(
+				positions[0].indexOf(",") + 1, positions[1].indexOf(")"))));
+
+		Position from = new Position(fromRow, fromCol);
+		Position to = new Position(toRow, toCol);
+		Move move = new Move(from, to, promotionKind);
+		return move;
+	}
+
+	private String serializeState(State state) {
+		Color color = state.getTurn();
+		StringBuffer serializedStateBuff = new StringBuffer();
+		serializedStateBuff.append(color == Color.WHITE ? "W" : "B");
+		serializedStateBuff.append("-");
+		for (int i = 0; i < State.ROWS; i++) {
+			for (int j = 0; j < State.COLS; j++) {
+				Piece piece = state.getPiece(i, j);
+				if (piece == null) {
+					serializedStateBuff.append("__");
+				} else {
+					Color pieceColor = piece.getColor();
+					PieceKind kind = piece.getKind();
+					serializedStateBuff.append(pieceColor == Color.WHITE ? "W"
+							: "B");
+					char pieceChar = 0;
+					switch (kind) {
+					case QUEEN:
+						pieceChar = 'Q';
+						break;
+					case KING:
+						pieceChar = 'K';
+						break;
+					case KNIGHT:
+						pieceChar = 'N';
+						break;
+					case BISHOP:
+						pieceChar = 'B';
+						break;
+					case ROOK:
+						pieceChar = 'R';
+						break;
+					case PAWN:
+						pieceChar = 'P';
+						break;
+					default:
+						break;
+					}
+					serializedStateBuff.append(pieceChar);
+				}
+			}
+		}
+		serializedStateBuff.append("-");
+		serializedStateBuff
+				.append(state.isCanCastleKingSide(Color.WHITE) == true ? 'T'
+						: 'F');
+		serializedStateBuff
+				.append(state.isCanCastleKingSide(Color.BLACK) == true ? 'T'
+						: 'F');
+		serializedStateBuff
+				.append(state.isCanCastleQueenSide(Color.WHITE) == true ? 'T'
+						: 'F');
+
+		serializedStateBuff
+				.append(state.isCanCastleQueenSide(Color.BLACK) == true ? 'T'
+						: 'F');
+		serializedStateBuff.append("-");
+		Position empassPosition = state.getEnpassantPosition();
+		if (empassPosition != null) {
+			serializedStateBuff.append("[" + empassPosition.getRow()
+					+ empassPosition.getCol() + "]");
+		} else {
+			serializedStateBuff.append("NULL");
+		}
+		serializedStateBuff.append("-");
+		GameResult gameResult = state.getGameResult();
+		StringBuffer gameResultBuff = new StringBuffer();
+		if (gameResult == null) {
+			gameResultBuff.append("[NULL]");
+		} else {
+			Color winner = gameResult.getWinner();
+			gameResultBuff.append("[");
+			if (winner == null) {
+				gameResultBuff.append('_');
+			} else {
+				gameResultBuff.append(winner == Color.WHITE ? "W" : "B");
+			}
+
+			switch (gameResult.getGameResultReason()) {
+			case CHECKMATE:
+				gameResultBuff.append(1);
+				break;
+			case FIFTY_MOVE_RULE:
+				gameResultBuff.append(2);
+				break;
+			case THREEFOLD_REPETITION_RULE:
+				gameResultBuff.append(3);
+				break;
+			case STALEMATE:
+				gameResultBuff.append(4);
+				break;
+			default:
+				break;
+			}
+			gameResultBuff.append("]");
+
+		}
+		serializedStateBuff.append(gameResultBuff);
+		serializedStateBuff.append("-");
+		serializedStateBuff.append(state
+				.getNumberOfMovesWithoutCaptureNorPawnMoved());
+		return serializedStateBuff.toString();
+	}
+
+	private State parseState(String stateStr) {
+		try {
+			String[] splitsStr = stateStr.split("-");
+
+			Color turn;
+			if (splitsStr[0].equals("W")) {
+				turn = Color.WHITE;
+			} else {
+				turn = Color.BLACK;
+			}
+
+			Piece[][] board = new Piece[State.ROWS][State.COLS];
+			for (int i = 0; i < State.ROWS; i++) {
+				for (int j = 0; j < State.COLS; j++) {
+					Piece piece;
+					String pieceStr = splitsStr[1].substring(2 * State.ROWS * i
+							+ 2 * j, 2 * State.ROWS * i + 2 * j + 2);
+					if (pieceStr.equals("__")) {
+						piece = null;
+					} else {
+						Color pieceCol;
+						PieceKind kind = null;
+						if (pieceStr.subSequence(0, 1).equals("W")) {
+							pieceCol = Color.WHITE;
+						} else {
+							pieceCol = Color.BLACK;
+						}
+						if (pieceStr.substring(1).equals("Q")) {
+							kind = PieceKind.QUEEN;
+						} else if (pieceStr.substring(1).equals("K")) {
+							kind = PieceKind.KING;
+						} else if (pieceStr.substring(1).equals("N")) {
+							kind = PieceKind.KNIGHT;
+						} else if (pieceStr.substring(1).equals("B")) {
+							kind = PieceKind.BISHOP;
+						} else if (pieceStr.substring(1).equals("R")) {
+							kind = PieceKind.ROOK;
+						} else if (pieceStr.substring(1).equals("P")) {
+							kind = PieceKind.PAWN;
+						}
+						piece = new Piece(pieceCol, kind);
+					}
+					board[i][j] = piece;
+				}
+			}
+
+			boolean castleKingWhite = splitsStr[2].substring(0, 1).equals("T") ? true
+					: false;
+			boolean castleKingBlack = splitsStr[2].substring(1, 2).equals("T") ? true
+					: false;
+			boolean castleQueenWhite = splitsStr[2].substring(2, 3).equals("T") ? true
+					: false;
+			boolean castleQueenBlack = splitsStr[2].substring(3, 4).equals("T") ? true
+					: false;
+			boolean[] castleKingSide = new boolean[] { castleKingWhite,
+					castleKingBlack };
+			boolean[] castleQueenSide = new boolean[] { castleQueenWhite,
+					castleQueenBlack };
+
+			Position enpassantPosition;
+			if (splitsStr[3].equals("NULL")) {
+				enpassantPosition = null;
+			} else {
+				int row = Integer.parseInt(splitsStr[3].substring(1, 2));
+				int col = Integer.parseInt(splitsStr[3].substring(2, 3));
+				enpassantPosition = new Position(row, col);
+			}
+
+			GameResult gameResult;
+			if (splitsStr[4].equals("[NULL]")) {
+				gameResult = null;
+			} else {
+				Color winner;
+				if (splitsStr[4].substring(1, 2).equals("_")) {
+					winner = null;
+				} else if (splitsStr[4].substring(1, 2).equals("W")) {
+					winner = Color.WHITE;
+				} else {
+					winner = Color.BLACK;
+				}
+				GameResultReason gameResultReason;
+				if (splitsStr[4].substring(2, 3).equals("1")) {
+					gameResultReason = GameResultReason.CHECKMATE;
+				} else if (splitsStr[4].substring(2, 3).equals("2")) {
+					gameResultReason = GameResultReason.FIFTY_MOVE_RULE;
+				} else if (splitsStr[4].substring(2, 3).equals("3")) {
+					gameResultReason = GameResultReason.THREEFOLD_REPETITION_RULE;
+				} else {
+					gameResultReason = GameResultReason.STALEMATE;
+				}
+				gameResult = new GameResult(winner, gameResultReason);
+			}
+
+			int numberOfMoves = Integer.parseInt(splitsStr[5]);
+
+			return new State(turn, board, castleKingSide, castleQueenSide,
+					enpassantPosition, numberOfMoves, gameResult);
+		} catch (Exception e) {
+			return new State();
+		}
+	}
+
+	public void clearHighlights() {
+		for (Position position : highlightedPositions) {
+			view.setHighlighted(position.getRow(), position.getCol(), false);
+		}
+		highlightedPositions.clear();
+	}
+
+	public void handleDragOver(int rowId, int colId) {
+	}
+
+	public void clearPromotion() {
+		promotionPiece = null;
+		view.setPromotionGrid(false, Color.WHITE);
+		view.setPromotionGrid(false, Color.BLACK);
+	}
+
+}

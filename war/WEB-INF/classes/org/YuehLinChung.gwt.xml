@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  When updating your version of GWT, you should also update this DTD reference,
+  so that your app can take advantage of the latest GWT module capabilities.
+-->
+<!DOCTYPE module PUBLIC "-//Google Inc.//DTD Google Web Toolkit 2.5.0//EN"
+  "http://google-web-toolkit.googlecode.com/svn/tags/2.5.0/distro-source/core/src/gwt-module.dtd">
+<module rename-to='yuehlinchung'>
+  <!-- Inherit the core Web Toolkit stuff.                        -->
+  <inherits name='com.google.gwt.user.User'/>
+
+  <!-- Inherit the default GWT style sheet.  You can change       -->
+  <!-- the theme of your GWT application by uncommenting          -->
+  <!-- any one of the following lines.                            -->
+  <inherits name='com.google.gwt.user.theme.clean.Clean'/>
+  <!-- <inherits name='com.google.gwt.user.theme.standard.Standard'/> -->
+  <!-- <inherits name='com.google.gwt.user.theme.chrome.Chrome'/> -->
+  <!-- <inherits name='com.google.gwt.user.theme.dark.Dark'/>     -->
+
+  <!-- Google Guava for GWT                                       -->
+  <inherits name='com.google.common.collect.Collect'/>
+  <!-- Google Channel API                                         -->
+  <inherits name='com.google.gwt.appengine.channel.Channel'/>
+  <inherits name="com.google.gwt.inject.Inject"/>
+  <!-- DND -->
+  <inherits name='com.allen_sauer.gwt.dnd.gwt-dnd'/>
+  <!-- I18N -->
+  <!-- <inherits name="com.google.gwt.i18n.I18N"/> -->
+  <!-- HTML5Manifest   -->
+  <!--  
+  <inherits name='com.googlecode.mgwt.MGWT'/>
+  <inherits name="com.googlecode.mgwt.linker.Linker" />
+  <add-linker name="permutationmaplinker" />
+  <extend-configuration-property name="html5manifestlinker_files" value="yuehlinchung.html" />
+  <extend-configuration-property name="html5manifestlinker_files" value="yuehlinchung.css" />
+  -->
+  <!-- PhoneGap -->
+  <inherits name='com.googlecode.gwtphonegap.PhoneGap' />
+  <!-- Specify the app entry point class.                         -->
+  <entry-point class='org.yuehlinchung.hw6.client.ChessEntryPoint'/>
+  <!-- <extend-property values="cn" name="locale"/>  -->
+  
+  <add-linker name="xsiframe"/>
+  
+  <!-- Specify the paths for translatable code                    -->
+  <source path='yuehlinchung'/>
+  <source path='shared'/>
+
+</module>

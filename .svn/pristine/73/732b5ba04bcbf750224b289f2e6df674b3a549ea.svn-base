@@ -1,0 +1,75 @@
+package org.mengyanhuang.hw6.client;
+
+import java.io.Serializable;
+
+import org.shared.chess.Color;
+
+@SuppressWarnings("serial")
+public class LoginInfo implements Serializable {
+
+	private boolean loggedIn = false;
+	private String nickname;
+	private String emailAddress;
+	private String loginUrl;
+	private String logoutUrl;
+	private String token;
+	private Color color;
+	
+	public boolean isLoggedIn() {
+		return loggedIn;
+	}
+
+	public void setLoggedIn(boolean loggedIn) {
+		this.loggedIn = loggedIn;
+	}
+
+	public String getLoginUrl() {
+		return loginUrl;
+	}
+
+	public void setLoginUrl(String loginUrl) {
+		this.loginUrl = loginUrl;
+	}
+
+	public String getLogoutUrl() {
+		return logoutUrl;
+	}
+
+	public void setLogoutUrl(String logoutUrl) {
+		this.logoutUrl = logoutUrl;
+	}
+
+	public String getEmailAddress() {
+		return emailAddress;
+	}
+
+	public void setEmailAddress(String emailAddress) {
+		this.emailAddress = emailAddress;
+	}
+
+	public String getNickname() {
+		return nickname;
+	}
+
+	public void setNickname(String nickname) {
+		this.nickname = nickname;
+	}
+
+	public void setToken(String token) {
+		// TODO Auto-generated method stub
+		this.token = token;
+	}
+	
+	public String getToken(){
+		return token;
+	}
+	
+	public void setUserColor(Color color){
+		this.color = color;
+	}
+	
+	public Color getUserColor(){
+		return color;
+	}
+
+}

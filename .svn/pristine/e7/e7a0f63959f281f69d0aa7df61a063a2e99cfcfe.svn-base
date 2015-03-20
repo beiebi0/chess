@@ -1,0 +1,427 @@
+package org.harshmehta.hw1;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.shared.chess.Color.BLACK;
+import static org.shared.chess.Color.WHITE;
+import static org.shared.chess.PieceKind.QUEEN;
+import static org.shared.chess.PieceKind.KING;
+import static org.shared.chess.PieceKind.ROOK;
+import static org.shared.chess.PieceKind.PAWN;
+
+import org.junit.Test;
+import org.shared.chess.AbstractStateChangerTest;
+import org.shared.chess.IllegalMove;
+import org.shared.chess.Move;
+import org.shared.chess.Piece;
+import org.shared.chess.Position;
+import org.shared.chess.State;
+
+public abstract class AbstractStateChangerCastlingForBlackTest extends AbstractStateChangerTest {
+  public void initForHarshMehta() {
+    start.setTurn(BLACK);
+  }
+	  
+	  /**
+   * Helper functions to clear pieces on King / Queen side
+   */
+  private void clearQueenSidePieces() {
+    start.setPiece(7, 3, null);
+    start.setPiece(7, 2, null);
+    start.setPiece(7, 1, null);
+  }
+	  
+  private void clearKingSidePieces() {
+    start.setPiece(7, 5, null);
+    start.setPiece(7, 6, null);
+  }
+  
+  /**
+   * Tests to check if the canCastleKingSide and canCastleQueenSide booleans work as expected
+   */
+  @Test
+  public void testMoveRookKingSideSetsBooleanFalse() {
+    initForHarshMehta();
+    start.setPiece(6, 7, null);  // Remove pawn in front of rook
+    Move move = new Move(new Position(7, 7), new Position(6, 7), null);  // Move rook
+    stateChanger.makeMove(start, move);
+    assertFalse(start.isCanCastleKingSide(BLACK));
+  }
+  
+  @Test
+  public void testMoveRookQueenSideSetsBooleanFalse() {
+    initForHarshMehta();
+    start.setPiece(6, 0, null);  // Remove pawn in front of rook
+    Move move = new Move(new Position(7, 0), new Position(6, 0), null);  // Move rook
+    stateChanger.makeMove(start, move);
+    assertFalse(start.isCanCastleQueenSide(BLACK));
+  }
+  
+  @Test
+  public void testMoveKingSetsCanCastleKingSideBooleanFalse() {
+    initForHarshMehta();
+    start.setPiece(6, 4, null);  // Remove pawn in front of king
+    Move move = new Move(new Position(7, 4), new Position(6, 4), null);  // Move king
+    stateChanger.makeMove(start, move);
+    assertFalse(start.isCanCastleKingSide(BLACK));    
+  }
+  
+  @Test
+  public void testMoveKingSetsCanCastleQueenSideBooleanFalse() {
+    initForHarshMehta();
+    start.setPiece(6, 4, null);  // Remove pawn in front of king
+    Move move = new Move(new Position(7, 4), new Position(6, 4), null);  // Move king
+    stateChanger.makeMove(start, move);
+    assertFalse(start.isCanCastleQueenSide(BLACK));    
+  }
+  
+  /**
+   * Tests for Illegal moves
+   */
+  @Test(expected = IllegalMove.class)
+  public void testIllegalCastleKingSideKingMoved() {
+    initForHarshMehta();
+    start.setCanCastleKingSide(BLACK,false);
+    Move move = new Move(new Position(7, 4), new Position(7, 6), null);
+    stateChanger.makeMove(start, move);
+  }
+  
+  @Test(expected = IllegalMove.class)
+  public void testIllegalCastleQueenSideKingMoved() {
+    initForHarshMehta();
+	start.setCanCastleQueenSide(BLACK,false);
+    Move move = new Move(new Position(7, 4), new Position(7, 2), null);
+    stateChanger.makeMove(start, move);
+  }
+  
+  @Test(expected = IllegalMove.class)
+  public void testIllegalCastleKingSideRookMoved() {
+    initForHarshMehta();
+    start.setCanCastleKingSide(BLACK,false);
+    Move move = new Move(new Position(7, 4), new Position(7, 6), null);
+    stateChanger.makeMove(start, move);
+  }
+  
+  @Test(expected = IllegalMove.class)
+  public void testIllegalCastleQueenSideRookMoved() {
+    initForHarshMehta();
+    start.setCanCastleQueenSide(BLACK,false);
+    Move move = new Move(new Position(7, 4), new Position(7, 2), null);
+    stateChanger.makeMove(start, move);
+  }
+  
+  @Test(expected = IllegalMove.class)
+  public void testIllegalCastleKingSidePiecesBetween() {
+    initForHarshMehta();
+    Move move = new Move(new Position(7, 4), new Position(7, 6), null);
+    stateChanger.makeMove(start, move);
+  }
+  
+  @Test(expected = IllegalMove.class)
+  public void testIllegalCastleQueenSidePiecesBetween() {
+    initForHarshMehta();
+    Move move = new Move(new Position(7, 4), new Position(7, 2), null);
+    stateChanger.makeMove(start, move);
+  }
+  
+  @Test(expected = IllegalMove.class)
+  public void testIllegalCastleQueenSideKingInCheck() {
+    initForHarshMehta();
+    start.setPiece(6, 4, null);
+    clearQueenSidePieces();
+    start.setPiece(0, 3, null);
+    // Set White Queen to new position in direct check with Black King
+    start.setPiece(3, 4, new Piece(WHITE,QUEEN));
+    Move move = new Move(new Position(7, 4), new Position(7, 2), null);
+    stateChanger.makeMove(start, move);
+  }
+  
+  @Test(expected = IllegalMove.class)
+  public void testIllegalCastleKingSideKingInCheck() {
+    initForHarshMehta();
+    start.setPiece(6, 4, null);
+    clearKingSidePieces();
+    start.setPiece(0, 0, null);
+    // Set White Rook to new position in direct check with Black King
+    start.setPiece(3, 4, new Piece(WHITE,ROOK));
+    Move move = new Move(new Position(7, 4), new Position(7, 6), null);
+    stateChanger.makeMove(start, move);
+  }
+  
+  @Test(expected = IllegalMove.class)
+  public void testIllegalCastleQueenSideKingPassThroughCheck() {
+    initForHarshMehta();
+    start.setPiece(6, 3, null);
+    clearQueenSidePieces();
+    start.setPiece(0, 3, null);
+    // Set White Queen to new position attacking the castling path of Black King 
+    start.setPiece(3, 3, new Piece(WHITE,QUEEN));
+    Move move = new Move(new Position(7, 4), new Position(7, 2), null);
+    stateChanger.makeMove(start, move);
+  }
+  
+  @Test(expected = IllegalMove.class)
+  public void testIllegalCastleKingSideKingPassThroughCheck() {
+    initForHarshMehta();
+    start.setPiece(6, 5, null);
+    clearKingSidePieces();
+    start.setPiece(0, 3, null);
+    // Set White Queen to new position attacking the castling path of Black King 
+    start.setPiece(3, 5, new Piece(WHITE,QUEEN));
+    Move move = new Move(new Position(7, 4), new Position(7, 6), null);
+    stateChanger.makeMove(start, move);
+  }
+  
+  @Test(expected = IllegalMove.class)
+  public void testIllegalCastleQueenSideKingEndsUpInCheck() {
+    initForHarshMehta();
+    start.setPiece(6, 2, null);
+    clearQueenSidePieces();
+    start.setPiece(0, 3, null);
+    // Set White Queen to new position attacking the castling end path of Black King 
+    start.setPiece(3, 2, new Piece(WHITE,QUEEN));
+    Move move = new Move(new Position(7, 4), new Position(7, 2), null);
+    stateChanger.makeMove(start, move);
+  }
+  
+  @Test(expected = IllegalMove.class)
+  public void testIllegalCastleKingSideKingEndsUpInCheck() {
+    initForHarshMehta();
+    start.setPiece(6, 6, null);
+    clearKingSidePieces();
+    start.setPiece(0, 3, null);
+    // Set White Queen to new position attacking the castling end path of Black King 
+    start.setPiece(3, 6, new Piece(WHITE,QUEEN));
+    Move move = new Move(new Position(7, 4), new Position(7, 6), null);
+    stateChanger.makeMove(start, move);
+  }
+  
+  // See http://de.wikipedia.org/wiki/Pam-Krabb%C3%A9-Rochade
+  @Test(expected = IllegalMove.class)
+  public void testIllegalCastleDifferentRanks() {
+    initForHarshMehta();
+    start.setPiece(6, 4, null);
+    start.setPiece(1, 4, null);
+    start.setPiece(0, 4, null);
+    start.setPiece(4, 0, new Piece(WHITE,KING));  // Set White King somewhere else
+    start.setPiece(0, 4, new Piece(BLACK,ROOK));
+    Move move = new Move(new Position(7, 4), new Position(5, 4), null);
+    stateChanger.makeMove(start, move);
+  }
+  
+  
+  /**
+   * Tests for Legal moves:
+   * A powerset of 3 basic test scenarios:
+   *   1. Queen/King Side
+   *   2. Sparse/Dense Rank - Presence of other pieces on the same rank
+   *   3. Other rook moved/not moved
+   */
+  
+  /**
+   * Helper functions for legal tests
+   */
+  private void setExpectedStateAfterKingSideCastle(State expected) {
+    expected.setTurn(WHITE);
+    expected.setPiece(7, 4, null);
+    expected.setPiece(7, 6, new Piece(BLACK, KING));
+    expected.setPiece(7, 7, null);
+    expected.setPiece(7, 5, new Piece(BLACK, ROOK));
+    expected.setNumberOfMovesWithoutCaptureNorPawnMoved(1);
+    expected.setCanCastleKingSide(BLACK, false);
+    expected.setCanCastleQueenSide(BLACK, false);
+    expected.setEnpassantPosition(null);
+  }
+  
+  private void setExpectedStateAfterQueenSideCastle(State expected) {
+    expected.setTurn(WHITE);
+    expected.setPiece(7, 4, null);
+    expected.setPiece(7, 2, new Piece(BLACK, KING));
+    expected.setPiece(7, 0, null);
+    expected.setPiece(7, 3, new Piece(BLACK, ROOK));
+    expected.setNumberOfMovesWithoutCaptureNorPawnMoved(1);
+    expected.setCanCastleKingSide(BLACK, false);
+    expected.setCanCastleQueenSide(BLACK, false);
+    expected.setEnpassantPosition(null);
+  }
+  
+  @Test
+  public void testLegalCastleKingSideDenseRankOtherRookNotMoved() {
+    initForHarshMehta();
+    clearKingSidePieces();
+    Move move = new Move(new Position(7, 4), new Position(7, 6), null);
+    State expected = start.copy();  // Copy the current (start) state
+    setExpectedStateAfterKingSideCastle(expected);
+    stateChanger.makeMove(start, move);
+    assertEquals(expected, start);
+  }
+  
+  @Test
+  public void testLegalCastleKingSideDenseRankOtherRookMoved() {
+    initForHarshMehta();
+    clearKingSidePieces();
+    Move move = new Move(new Position(7, 4), new Position(7, 6), null);
+    start.setCanCastleQueenSide(BLACK, false);  // Other rook moved earlier 
+    State expected = start.copy();  // Copy the current (start) state
+    setExpectedStateAfterKingSideCastle(expected);
+    stateChanger.makeMove(start, move);
+    assertEquals(expected, start);
+  }
+  
+  @Test
+  public void testLegalCastleKingSideSparseRankOtherRookNotMoved() {
+    initForHarshMehta();
+    clearKingSidePieces();
+    clearQueenSidePieces();
+    Move move = new Move(new Position(7, 4), new Position(7, 6), null);
+    State expected = start.copy();  // Copy the current (start) state
+    setExpectedStateAfterKingSideCastle(expected);
+    stateChanger.makeMove(start, move);
+    assertEquals(expected, start);
+  }
+  
+  @Test
+  public void testLegalCastleKingSideSparseRankOtherRookMoved() {
+    initForHarshMehta();
+    clearKingSidePieces();
+    clearQueenSidePieces();
+    Move move = new Move(new Position(7, 4), new Position(7, 6), null);
+    start.setCanCastleQueenSide(BLACK, false);  // Other rook moved earlier 
+    State expected = start.copy();  // Copy the current (start) state
+    setExpectedStateAfterKingSideCastle(expected);
+    stateChanger.makeMove(start, move);
+    assertEquals(expected, start);
+  }
+  
+  @Test
+  public void testLegalCastleQueenSideDenseRankOtherRookNotMoved() {
+    initForHarshMehta();
+    clearQueenSidePieces();
+    Move move = new Move(new Position(7, 4), new Position(7, 2), null);
+    State expected = start.copy();  // Copy the current (start) state
+    setExpectedStateAfterQueenSideCastle(expected);
+    stateChanger.makeMove(start, move);
+    assertEquals(expected, start);
+  }
+  
+  @Test
+  public void testLegalCastleQueenSideDenseRankOtherRookMoved() {
+    initForHarshMehta();
+    clearQueenSidePieces();
+    start.setCanCastleKingSide(BLACK, false);  // Other rook moved earlier
+    Move move = new Move(new Position(7, 4), new Position(7, 2), null);
+    State expected = start.copy();  // Copy the current (start) state
+    setExpectedStateAfterQueenSideCastle(expected);
+    stateChanger.makeMove(start, move);
+    assertEquals(expected, start);
+  }
+  
+  @Test
+  public void testLegalCastleQueenSideSparseRankOtherRookNotMoved() {
+    initForHarshMehta();
+    clearKingSidePieces();
+    clearQueenSidePieces();
+    Move move = new Move(new Position(7, 4), new Position(7, 2), null);
+    State expected = start.copy();  // Copy the current (start) state
+    setExpectedStateAfterQueenSideCastle(expected);
+    stateChanger.makeMove(start, move);
+    assertEquals(expected, start);
+  }
+  
+  @Test
+  public void testLegalCastleQueenSideSparseRankOtherRookMoved() {
+    initForHarshMehta();
+    clearKingSidePieces();
+    clearQueenSidePieces();
+    Move move = new Move(new Position(7, 4), new Position(7, 2), null);
+    start.setCanCastleKingSide(BLACK, false);  // Other rook moved earlier
+    State expected = start.copy();  // Copy the current (start) state
+    setExpectedStateAfterQueenSideCastle(expected);
+    stateChanger.makeMove(start, move);
+    assertEquals(expected, start);
+  }
+  
+  /**
+   * Additionally,
+   * 1. The rook involved in castling may be under attack.
+   * 2. In queenside castling, the square next to the rook involved may be under attack.
+   * These are legal castles
+   * 
+   */
+  @Test
+  public void testLegalCastleKingSideRookUnderAttack() {
+    initForHarshMehta();
+    clearKingSidePieces();
+    start.setPiece(6, 7, null);  // Remove Black Pawn in front of Black Rook
+    start.setPiece(0, 3, null);  // Remove White Queen
+    // Set White Queen to new position attacking Black Rook
+    start.setPiece(3, 7, new Piece(WHITE,QUEEN));
+    Move move = new Move(new Position(7, 4), new Position(7, 6), null);
+    State expected = start.copy();  // Copy the current (start) state
+    setExpectedStateAfterKingSideCastle(expected);
+    stateChanger.makeMove(start, move);
+    assertEquals(expected, start);
+  }
+  
+  @Test
+  public void testLegalCastleQueenSideRookUnderAttack() {
+    initForHarshMehta();
+    clearQueenSidePieces();
+    start.setPiece(6, 0, null);  // Remove Black Pawn in front of Black Rook
+    start.setPiece(0, 3, null);  // Remove White Queen
+    // Set White Queen to new position attacking Black Rook
+    start.setPiece(3, 0, new Piece(WHITE,QUEEN));
+    Move move = new Move(new Position(7, 4), new Position(7, 2), null);
+    State expected = start.copy();  // Copy the current (start) state
+    setExpectedStateAfterQueenSideCastle(expected);
+    stateChanger.makeMove(start, move);
+    assertEquals(expected, start);
+  }
+  
+  @Test
+  public void testLegalCastleQueenSideSquareNextToRookUnderAttack() {
+    initForHarshMehta();
+    clearQueenSidePieces();
+    start.setPiece(6, 1, null);  // Remove Black Pawn in front of square next to rook under attack
+    start.setPiece(0, 3, null);  // Remove White Queen
+    // Set White Queen to new position attacking square next to Black Rook
+    start.setPiece(3, 1, new Piece(WHITE,QUEEN));
+    Move move = new Move(new Position(7, 4), new Position(7, 2), null);
+    State expected = start.copy();  // Copy the current (start) state
+    setExpectedStateAfterQueenSideCastle(expected);
+    stateChanger.makeMove(start, move);
+    assertEquals(expected, start);
+  }
+  
+  /**
+   * Random legal castles: Moving pawns arbitrarily (To test if castling interferes with
+   * other properties of State, like enpassantPosition)
+   */
+  @Test
+  public void testLegalCastleKingSideRandomPawnMoves() {
+    initForHarshMehta();
+    clearKingSidePieces();
+    start.setPiece(6, 1, null);  // Remove random Black Pawn
+    start.setPiece(4, 1, new Piece(BLACK,PAWN));  // Set Black Pawn two squares ahead 
+    start.setEnpassantPosition(new Position(4, 1));  // Set its enpassant position
+    Move move = new Move(new Position(7, 4), new Position(7, 6), null);
+    State expected = start.copy();  // Copy the current (start) state
+    setExpectedStateAfterKingSideCastle(expected);
+    stateChanger.makeMove(start, move);
+    assertEquals(expected, start);
+  }
+  
+  @Test
+  public void testLegalCastleQueenSideRandomPawnMoves() {
+    initForHarshMehta();
+    clearQueenSidePieces();
+    start.setPiece(6, 1, null);  // Remove random Black Pawn
+    start.setPiece(4, 1, new Piece(BLACK,PAWN));  // Set Black Pawn two squares ahead 
+    start.setEnpassantPosition(new Position(4, 1));  // Set its enpassant position
+    Move move = new Move(new Position(7, 4), new Position(7, 2), null);
+    State expected = start.copy();  // Copy the current (start) state
+    setExpectedStateAfterQueenSideCastle(expected);
+    stateChanger.makeMove(start, move);
+    assertEquals(expected, start);
+  }
+}

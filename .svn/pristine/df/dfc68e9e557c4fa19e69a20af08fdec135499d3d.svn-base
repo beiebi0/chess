@@ -1,0 +1,114 @@
+package org.karthikmahadevan.hw3;
+
+import org.junit.Before;
+import org.junit.Test;
+import org.mockito.Mockito;
+import static org.mockito.Mockito.*;
+import org.shared.chess.Color;
+import org.shared.chess.GameResult;
+import org.shared.chess.GameResultReason;
+import org.shared.chess.Piece;
+import org.shared.chess.PieceKind;
+import org.shared.chess.Position;
+import org.shared.chess.State;
+import org.karthikmahadevan.hw3.Presenter;
+import org.karthikmahadevan.hw3.Presenter.View;
+
+public class PresenterTest {
+	  Presenter presenter;
+	  View view;
+	  
+	  public State getBoardWithOnlyKings() {
+		  State state = new State();
+		  for (int row = 0; row < 8; ++row) {
+			  for (int col = 0; col < 8; ++col) {
+				  state.setPiece(new Position(row, col), null);
+			  }
+		  }
+		  state.setPiece(new Position(0,4), new Piece(Color.WHITE, PieceKind.KING));
+		  state.setPiece(new Position(7,4), new Piece(Color.BLACK, PieceKind.KING));
+		  state.setCanCastleKingSide(Color.WHITE, false);
+		  state.setCanCastleKingSide(Color.BLACK, false);
+		  state.setCanCastleQueenSide(Color.WHITE, false);
+		  state.setCanCastleQueenSide(Color.BLACK, false);
+		  return state;
+	  }
+	  
+	  @Before
+	  public void setup() {
+		view = Mockito.mock(View.class);
+	    presenter = new Presenter(view);
+	  }
+	  
+	  @Test
+	  public void testSetHighlighted() {
+		  presenter.clickedOn(0, 1);
+		  Mockito.verify(view).setHighlighted(2, 0, true);
+		  Mockito.verify(view).setHighlighted(2, 2, true);
+	  }
+	  
+	  @Test
+	  public void testPromotionOptions() {
+		  State state = getBoardWithOnlyKings();
+		  state.setPiece(new Position(6,0), new Piece(Color.WHITE, PieceKind.PAWN));
+		  presenter.restoreState(state.toString());
+		  presenter.clickedOn(6, 0);
+		  Mockito.verify(view).makePromotionOptionsAvailable(true);
+	  }
+	  
+	  @Test
+	  public void testSetHighlightNotCalledWhenNotTurn() {
+		  presenter.clickedOn(6, 0);
+		  Mockito.verify(view, Mockito.never());
+	  }
+	  
+	  @Test
+	  public void testSetHighlightNotCalledWhenNoMovePossible() {
+		  presenter.clickedOn(0, 4);
+		  Mockito.verify(view,times(0)).setHighlighted(0, 4, true);
+	  }
+	  
+	  @Test
+	  public void testSetHighlightPawnDoubleMove() {
+		  presenter.clickedOn(1, 4);
+		  Mockito.verify(view,times(1)).setHighlighted(3, 4, true);
+		  Mockito.verify(view,times(1)).setHighlighted(2, 4, true);
+	  }
+	  
+	  @Test
+	  public void testSetHighlightPawnSingleMove() {
+		  State state = getBoardWithOnlyKings();
+		  state.setPiece(new Position(3,0), new Piece(Color.WHITE, PieceKind.PAWN));
+		  presenter.restoreState(state.toString());
+		  presenter.clickedOn(3, 0);
+		  Mockito.verify(view,times(1)).setHighlighted(4, 0, true);
+		  Mockito.verify(view,times(0)).setHighlighted(5, 0, true);
+	  }
+	  
+	  @Test
+	  public void testDoNotSetResult() {
+		  presenter.clickedOn(1, 0);
+		  Mockito.verify(view,times(0)).setGameResult((GameResult) any());
+	  }
+	  
+	  @Test
+	  public void testSetTurnToWhiteInitially() {
+		  Mockito.verify(view).setWhoseTurn(Color.WHITE);
+	  }
+	  
+	  @Test
+	  public void testPromotionOptionsInvisibleInitially() {
+		  Mockito.verify(view).makePromotionOptionsAvailable(false);
+	  }
+	  
+	  @Test
+	  public void testPromotionOptionsDisappearWhenUnused() {
+		  State state = getBoardWithOnlyKings();
+		  state.setPiece(new Position(6,0), new Piece(Color.WHITE, PieceKind.PAWN));
+		  presenter.restoreState(state.toString());
+		  presenter.clickedOn(6, 0);
+		  presenter.clickedOn(5, 2);
+		  Mockito.verify(view,times(2)).makePromotionOptionsAvailable(false);
+		  Mockito.verify(view,times(1)).makePromotionOptionsAvailable(true);
+	  }
+}

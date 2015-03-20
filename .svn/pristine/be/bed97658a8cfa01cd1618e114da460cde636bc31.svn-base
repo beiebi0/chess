@@ -1,0 +1,86 @@
+package org.mengyanhuang.hw5;
+
+import org.shared.chess.Move;
+import org.shared.chess.PieceKind;
+import org.shared.chess.Position;
+import org.shared.chess.State;
+import org.mengyanhuang.hw3.GameImages;
+import org.mengyanhuang.hw3.Graphics;
+import org.mengyanhuang.hw3.Presenter;
+
+import com.google.gwt.animation.client.Animation;
+import com.google.gwt.core.client.GWT;
+import com.google.gwt.dom.client.Style.Unit;
+import com.google.gwt.user.client.History;
+import com.google.gwt.user.client.Window;
+import com.google.gwt.user.client.ui.Image;
+import com.google.gwt.user.client.ui.RootPanel;
+import com.google.gwt.user.client.ui.Widget;
+
+public class MoveAnimation extends Animation{
+
+private static GameImages gameImages = GWT.create(GameImages.class);
+	
+	private int fromLeft;
+	private int fromTop;
+	private int toLeft;
+	private int toTop;
+	private int toRow;
+	private int toCol;
+	private Image image;
+	private Image image1 = new Image();
+	private State state;
+	private Move move;
+	
+	public MoveAnimation(State in_state,Image in_image, Position selected, int toRow, int toCol, Move inmove){
+		this.state = in_state;
+		this.toRow = toRow;
+		this.toCol = toCol;
+		fromTop = Graphics.gameGrid.getAbsoluteTop()+(7-selected.getRow())*50;
+		fromLeft = Graphics.gameGrid.getAbsoluteLeft()+selected.getCol()*50;
+		toTop = Graphics.gameGrid.getAbsoluteTop()+(7-toRow)*50;
+		toLeft = Graphics.gameGrid.getAbsoluteLeft()+toCol*50;
+		this.image = in_image;
+		this.move = inmove;
+	}
+	
+	/*
+	@Override
+	protected void onStart(){
+		if (toRow % 2 == 0 && toCol % 2 == 1 || toRow % 2 == 1 && toCol % 2 == 0) {
+			image1.setResource(gameImages.blackTile());
+		} else {
+			image1.setResource(gameImages.whiteTile());
+		}
+		RootPanel.get().add(image1, toRow, toCol);
+		//Graphics.gameGrid.setWidget(toRow, toCol, image1);
+		//Graphics.gameGrid.getWidget(toRow, toCol);
+		//RootPanel.get().remove(Graphics.gameGrid.getWidget(toRow, toCol));
+	}
+	*/
+	
+	@Override
+    protected void onUpdate(double progress) {
+       int top = extractProportionalTop(progress);
+       int left = extractProportionalLeft(progress);
+       RootPanel.get().add(image,left,top);
+    }
+	
+	@Override
+	protected void onComplete(){
+		//History.newItem(Presenter.serialize(state));
+		//image1.removeFromParent();
+		image.removeFromParent();
+	}
+	
+	private int extractProportionalTop(double progress){
+		int outTop = (int) (fromTop + ( toTop - fromTop ) * progress);
+		return outTop;
+	}
+	
+	private int extractProportionalLeft(double progress){
+		int outLeft = (int) (fromLeft + ( toLeft - fromLeft ) * progress);
+		return outLeft;
+	}
+
+}

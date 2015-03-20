@@ -1,0 +1,58 @@
+package org.alexanderoskotsky.hw5;
+
+import org.shared.chess.Color;
+import org.shared.chess.Move;
+
+import com.google.gwt.animation.client.Animation;
+import com.google.gwt.dom.client.Style.Position;
+import com.google.gwt.dom.client.Style.Unit;
+import com.google.gwt.user.client.ui.Image;
+
+public class MoveAnimation extends Animation {
+	private Move move;
+	private Image img;
+	private Callback callback;
+	private Color color;
+	
+	public MoveAnimation(Image[][] board, Move move, Callback callback, Color myColor) {
+		this.move = move;
+		this.callback = callback;
+		this.color = myColor;
+		
+		// board could be flipped if we are playing as white
+		int gameRow = move.getFrom().getRow();
+		
+		img = board[translateRow(gameRow)][move.getFrom().getCol()];
+	}
+	
+	private int translateRow(int row) {
+		if(color.isWhite()) {
+			return 7 - row;
+		} else {
+			return row;
+		}
+	}
+	
+	@Override
+	protected void onUpdate(double progress) {
+		int dx = (move.getFrom().getRow() - move.getTo().getRow()) * (color.isWhite() ? 1 : -1);
+		int dy = move.getFrom().getCol() - move.getTo().getCol();
+		
+		img.getElement().getStyle().setRight(progress * dy * 52, Unit.PX);
+		img.getElement().getStyle().setTop(progress * dx * 52, Unit.PX);
+	}
+	
+	@Override
+	protected void onStart() {
+		super.onStart();
+		
+		img.getElement().getStyle().setPosition(Position.RELATIVE);
+	}
+	
+	protected void onComplete() {
+		super.onComplete();
+		
+		callback.execute();
+	}
+
+}

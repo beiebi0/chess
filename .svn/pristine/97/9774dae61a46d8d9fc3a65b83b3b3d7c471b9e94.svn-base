@@ -1,0 +1,32 @@
+package org.yuehlinchung.hw6.client;
+
+import org.yuehlinchung.hw6.shared.LoginInfo;
+import org.yuehlinchung.hw6.shared.Match;
+
+import com.google.gwt.core.client.GWT;
+import com.google.gwt.user.client.rpc.RemoteService;
+import com.google.gwt.user.client.rpc.RemoteServiceRelativePath;
+
+@RemoteServiceRelativePath("game_service")
+public interface GameService extends RemoteService {
+	/**
+	   * Utility/Convenience class. Use GameService.App.getInstance() to access
+	   * static instance of GameServiceAsync
+	   */
+	public static class App {
+
+		private static final GameServiceAsync ourInstance = (GameServiceAsync) GWT.create(GameService.class);
+
+	    public static GameServiceAsync getInstance() {
+	    	return ourInstance;
+	    }
+	}
+	
+	public LoginInfo login(String requestUri);
+	public void findGame(LoginInfo loginInfo, String newState); 
+	public void cancelFindGame(LoginInfo loginInfo);
+	public Long saveState(Long id, String self, String opponent, String state, String turn, boolean over, String result);
+	public void deleteState(Long id, String self);
+	public Match getGame(Long id);
+	public LoginInfo updateInfo(String self);
+}

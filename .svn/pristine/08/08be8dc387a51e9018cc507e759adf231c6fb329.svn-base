@@ -1,0 +1,586 @@
+package org.markanderson.hw3;
+
+import java.util.List;
+import java.util.logging.Level;
+
+import org.markanderson.hw3.Presenter.View;
+import org.markanderson.hw6.client.ManderChessService;
+import org.markanderson.hw6.client.ManderChessServiceAsync;
+import org.markanderson.hw6.helper.ManderChessGameSessionInfo;
+import org.markanderson.hw8.ManderLocalizedStrings;
+import org.shared.chess.Color;
+import org.shared.chess.GameResult;
+import org.shared.chess.Piece;
+import org.shared.chess.PieceKind;
+import org.shared.chess.Position;
+
+import com.google.gwt.core.client.GWT;
+import com.google.gwt.event.dom.client.ChangeEvent;
+import com.google.gwt.event.dom.client.ChangeHandler;
+import com.google.gwt.event.dom.client.ClickEvent;
+import com.google.gwt.event.dom.client.ClickHandler;
+import com.google.gwt.event.dom.client.DragOverEvent;
+import com.google.gwt.event.dom.client.DragOverHandler;
+import com.google.gwt.event.dom.client.DragStartEvent;
+import com.google.gwt.event.dom.client.DragStartHandler;
+import com.google.gwt.event.dom.client.DropEvent;
+import com.google.gwt.event.dom.client.DropHandler;
+import com.google.gwt.uibinder.client.UiBinder;
+import com.google.gwt.uibinder.client.UiField;
+import com.google.gwt.user.client.Element;
+import com.google.gwt.user.client.Timer;
+import com.google.gwt.user.client.Window;
+import com.google.gwt.user.client.rpc.AsyncCallback;
+import com.google.gwt.user.client.ui.Button;
+import com.google.gwt.user.client.ui.Composite;
+import com.google.gwt.user.client.ui.Grid;
+import com.google.gwt.user.client.ui.Image;
+import com.google.gwt.user.client.ui.Label;
+import com.google.gwt.user.client.ui.ListBox;
+import com.google.gwt.user.client.ui.TextBox;
+import com.google.gwt.user.client.ui.Widget;
+
+public class Graphics extends Composite implements View {
+	private static GameImages gameImages = GWT.create(GameImages.class);
+	private static GraphicsUiBinder uiBinder = GWT
+			.create(GraphicsUiBinder.class);
+
+	ManderLocalizedStrings messages = (ManderLocalizedStrings) GWT
+			.create(ManderLocalizedStrings.class);
+
+	// public Socket socket;
+	ManderChessServiceAsync chessService = GWT.create(ManderChessService.class);
+
+	interface GraphicsUiBinder extends UiBinder<Widget, Graphics> {
+	}
+
+	@UiField
+	GameCss css;
+	@UiField
+	Label gameStatus;
+	@UiField
+	Grid gameGrid;
+	// @UiField
+	// AbsolutePanel gamePanel;
+	@UiField
+	Button save;
+	@UiField
+	Button load;
+	@UiField
+	Grid wPromotionGrid;
+	@UiField
+	Grid bPromotionGrid;
+	@UiField
+	ListBox currentGames;
+	@UiField
+	TextBox playerInviteTextBox;
+	@UiField
+	Button sendPlayerInviteButton;
+	@UiField
+	Label sendPlayerInviteLabel;
+	@UiField
+	Button restartButton;
+	@UiField
+	Label currentGameTime;
+	@UiField
+	Button singlePlayerButton;
+	@UiField
+	Button deleteMatch;
+
+	private Image[][] board = new Image[8][8];
+	Presenter presenter;
+	public Timer rpcTimer;
+
+	public Graphics() {
+		presenter = new Presenter();
+		initWidget(uiBinder.createAndBindUi(this));
+		// gamePanel.setSize("580px", "576px");
+		gameGrid.resize(8, 8);
+		gameGrid.setCellPadding(0);
+		gameGrid.setCellSpacing(0);
+		gameGrid.setBorderWidth(0);
+
+		// set up the drag/drop controllers. Absolute panel (gamePanel) is
+		// overlaid on top of the game grid.
+		// PickupDragController dragController = new
+		// PickupDragController(gamePanel, true);
+		// dragController.setBehaviorConstrainedToBoundaryPanel(false);
+		// dragController.setBehaviorMultipleSelection(false);
+		// DropController dropController = new
+		// AbsolutePositionDropController(gamePanel);
+		// dragController.registerDropController(dropController);
+
+		for (int row = 0; row < 8; row++) {
+			for (int col = 0; col < 8; col++) {
+				final int p = row;
+				final int q = col;
+				final Image image = new Image();
+				board[row][col] = image;
+				image.setWidth("100%");
+				gameGrid.setWidget(row, col, image);
+
+				// gameGrid.setWidget(Math.abs(row - 7), col, image);
+				gameGrid.getCellFormatter().setStyleName(row, col,
+						css.cellsizefix());
+				image.getElement().setDraggable(Element.DRAGGABLE_TRUE);
+
+				image.addClickHandler(new ClickHandler() {
+					@Override
+					public void onClick(ClickEvent event) {
+						presenter.clickedOn(p, q);
+					}
+				});
+				// dragController.makeDraggable(image);
+			}
+		}
+
+		// set up the delete button
+		deleteMatch.setText(messages.deleteString());
+		deleteMatch.addClickHandler(new ClickHandler() {
+
+			@Override
+			public void onClick(ClickEvent event) {
+				currentGames.removeItem(currentGames.getSelectedIndex());
+				presenter.setMatchID(getGameIDFromDropDown());
+			}
+		});
+
+		currentGames.addChangeHandler(new ChangeHandler() {
+
+			@Override
+			public void onChange(ChangeEvent event) {
+				chessService.loadGameFromDropDown(currentGames
+						.getItemText(currentGames.getSelectedIndex()),
+						new AsyncCallback<String>() {
+
+							@Override
+							public void onFailure(Throwable caught) {
+								Window.alert(messages.errorLoadingMatchAlert());
+							}
+
+							@Override
+							public void onSuccess(String result) {
+								// and set the state in the presenter
+								String[] splitter = result.split("date=");
+								currentGameTime.setText(splitter[1]);
+								presenter.setState(HistorySupport
+										.deserializeHistoryToken(splitter[0]));
+								presenter.setMatchID(getGameIDFromDropDown());
+							}
+						});
+			}
+		});
+
+		singlePlayerButton.setText(messages.singlePlayerModeString());
+		singlePlayerButton.addClickHandler(new ClickHandler() {
+
+			@Override
+			public void onClick(ClickEvent event) {
+				// TODO: a bit broken, need to fix.
+				 presenter.setSinglePlayerMode(true);
+				 presenter.restartGame();
+			}
+
+		});
+		restartButton.setText(messages.restartGame());
+		restartButton.addClickHandler(new ClickHandler() {
+
+			@Override
+			public void onClick(ClickEvent event) {
+				presenter.restartGame();
+			}
+		});
+		sendPlayerInviteButton.setText(messages.sendString());
+		sendPlayerInviteLabel.setText(messages.inviteUserText());
+		sendPlayerInviteButton.addClickHandler(new ClickHandler() {
+
+			@Override
+			public void onClick(ClickEvent event) {
+				// if we invite a new user, set the single player mode to false
+				presenter.setSinglePlayerMode(false);
+				String text = playerInviteTextBox.getText();
+				sendEmailToUserWithText(text);
+			}
+		});
+		// this apparently doesn't really do anything, but according to GWT, it
+		// is necessary for browser support of dragging
+		gameGrid.addDragOverHandler(new DragOverHandler() {
+			@Override
+			public void onDragOver(DragOverEvent event) {
+				Element elem = gameGrid.getCellFormatter().getElement(1, 7);
+
+				event.getDataTransfer();
+				event.setRelativeElement(elem);
+			}
+		});
+		presenter.setView(this);
+		presenter.initHistoryEventHandler();
+		handleDragDropEvents();
+
+		for (int i = 0; i < 2; i++) {
+			// this is where we set up the promotion grid for both black
+			// and white pieces. Click handlers are added to each piece so
+			// that the user can choose which piece to promote to
+			Grid currGrid = (i == 0 ? wPromotionGrid : bPromotionGrid);
+			currGrid.resize(1, 4);
+			currGrid.setBorderWidth(1);
+
+			Image knight = new Image(i == 0 ? gameImages.wKnight()
+					: gameImages.bKnight());
+			Image rook = new Image(i == 0 ? gameImages.wRook()
+					: gameImages.bRook());
+			Image bishop = new Image(i == 0 ? gameImages.wBishop()
+					: gameImages.bBishop());
+			Image queen = new Image(i == 0 ? gameImages.wQueen()
+					: gameImages.bQueen());
+
+			knight.addClickHandler(new ClickHandler() {
+				@Override
+				public void onClick(ClickEvent event) {
+					presenter.setPromotionPiece(PieceKind.KNIGHT);
+				}
+			});
+			rook.addClickHandler(new ClickHandler() {
+				@Override
+				public void onClick(ClickEvent event) {
+					presenter.setPromotionPiece(PieceKind.ROOK);
+				}
+			});
+			bishop.addClickHandler(new ClickHandler() {
+				@Override
+				public void onClick(ClickEvent event) {
+					presenter.setPromotionPiece(PieceKind.BISHOP);
+				}
+			});
+			queen.addClickHandler(new ClickHandler() {
+				@Override
+				public void onClick(ClickEvent event) {
+					presenter.setPromotionPiece(PieceKind.QUEEN);
+				}
+			});
+			currGrid.setWidget(0, 0, knight);
+			currGrid.setWidget(0, 1, rook);
+			currGrid.setWidget(0, 2, bishop);
+			currGrid.setWidget(0, 3, queen);
+
+			currGrid.setVisible(false);
+		}
+
+		Button[] bArray = getSaveAndLoadButtons();
+		// simply add some click handlers for the 'save' and 'load' buttons
+		for (int i = 0; i < 2; i++) {
+			final Button butt = bArray[i];
+			butt.setStyleName(css.customButton());
+			butt.addClickHandler(new ClickHandler() {
+				@Override
+				public void onClick(ClickEvent event) {
+					if (butt.getText().equalsIgnoreCase("save")) {
+						presenter.saveHandler("saved");
+					} else {
+						presenter.loadHandler("saved");
+					}
+				}
+			});
+		}
+	}
+
+	public void sendEmailToUserWithText(String text) {
+		chessService.sendInvitationToUser(text,
+				new AsyncCallback<ManderChessGameSessionInfo>() {
+
+					@Override
+					public void onFailure(Throwable caught) {
+						System.out.println("failure sending email");
+					}
+
+					@Override
+					public void onSuccess(ManderChessGameSessionInfo result) {
+						System.out.println("Success sending email!");
+						// populateCurrentGamesDropDown();
+						addGamesToDropDown(result);
+					}
+
+				});
+	}
+
+	@Override
+	public void updateCurrentTime(String timeStr) {
+		currentGameTime.setText(messages.currentGameBeganString() + timeStr);
+	}
+
+	@Override
+	public void addGamesToDropDown(ManderChessGameSessionInfo gInfo) {
+
+		currentGames.addItem(messages.whitePlayer() + gInfo.getwPlayerEmail()
+				+ messages.blackPlayer() + gInfo.getbPlayerEmail()
+				+ messages.turnString() + gInfo.getCurrentTurn() + "] "
+				+ messages.gameID() + gInfo.getCurrentGameID() + ":");
+		presenter.setMatchID(getGameIDFromDropDown()
+				+ messages.blackPlayerRank() + gInfo.getbRank()
+				+ messages.whitePlayerRank() + gInfo.getwRank());
+	}
+
+	@Override
+	public void populateCurrentGamesDropDown() {
+		currentGames.setVisibleItemCount(1);
+
+		chessService
+				.retrieveMatchesForCurrentPlayer(new AsyncCallback<List<ManderChessGameSessionInfo>>() {
+
+					@Override
+					public void onFailure(Throwable caught) {
+						presenter.logger.log(Level.SEVERE,
+								"failed to retrieve matches for user!");
+					}
+
+					@Override
+					public void onSuccess(
+							List<ManderChessGameSessionInfo> result) {
+						for (ManderChessGameSessionInfo gInfo : result) {
+							currentGames.addItem(messages.whitePlayer()
+									+ gInfo.getwPlayerEmail()
+									+ messages.blackPlayer()
+									+ gInfo.getbPlayerEmail()
+									+ messages.turnString()
+									+ gInfo.getCurrentTurn() + "] "
+									+ messages.gameID()
+									+ gInfo.getCurrentGameID() + ":"
+									+ messages.blackPlayerRank()
+									+ gInfo.getbRank()
+									+ messages.whitePlayerRank()
+									+ gInfo.getwRank());
+						}
+						presenter.setMatchID(getGameIDFromDropDown());
+					}
+				});
+	}
+
+	public Button[] getSaveAndLoadButtons() {
+		Button[] bArray = { save, load };
+		return bArray;
+	}
+
+	@Override
+	public void setPromotionGridVisible(Color color) {
+		// convenience function to set the promotion grid visible
+		if (color.isWhite()) {
+			wPromotionGrid.setVisible(true);
+		} else {
+			bPromotionGrid.setVisible(true);
+		}
+	}
+
+	@Override
+	public void setPromotionGridHidden() {
+		// convenience function to set the promotion grid hidden.
+		// just to be safe, set them both hidden...doesn't matter
+		wPromotionGrid.setVisible(false);
+		bPromotionGrid.setVisible(false);
+	}
+
+	@Override
+	public void handleDragDropEvents() {
+		// this handles the drag and drop events
+		// essentially, the one we care most about
+		// is the addDropHandler, which is handled
+		// when the 'toPosition' is clicked.
+		for (int i = 0; i < 8; i++) {
+			for (int j = 0; j < 8; j++) {
+				final int p = i;
+				final int q = j;
+
+				board[p][q].addDragStartHandler(new DragStartHandler() {
+					@Override
+					public void onDragStart(DragStartEvent event) {
+						presenter.clickedOn(p, q);
+						event.getDataTransfer().setDragImage(
+								board[p][q].getElement(),
+								event.getNativeEvent().getClientX(),
+								event.getNativeEvent().getClientY());
+					}
+				});
+
+				board[p][q].addDropHandler(new DropHandler() {
+					@Override
+					public void onDrop(DropEvent event) {
+						event.preventDefault();
+						presenter.clickedOn(p, q);
+					}
+				});
+			}
+		}
+	}
+
+	@Override
+	public Image getImageFromPosition(Position pos) {
+		// this is used for animating. we need the image x and y origin
+		// in order to set its rect
+		return board[pos.getRow()][pos.getCol()];
+	}
+
+	@Override
+	public void setPiece(int row, int col, Piece piece) {
+		if (piece == null) {
+			if ((row % 2 == 0 && col % 2 == 1)
+					|| (row % 2 == 1 && col % 2 == 0)) {
+				board[row][col].setResource(gameImages.blank());
+			} else {
+				board[row][col].setResource(gameImages.blank());
+			}
+			return;
+		}
+		switch (piece.getKind()) {
+		case PAWN:
+			board[row][col].setResource(piece.getColor().isWhite() ? gameImages
+					.wPawn() : gameImages.bPawn());
+			break;
+		case KNIGHT:
+			board[row][col].setResource(piece.getColor().isWhite() ? gameImages
+					.wKnight() : gameImages.bKnight());
+			break;
+		case BISHOP:
+			board[row][col].setResource(piece.getColor().isWhite() ? gameImages
+					.wBishop() : gameImages.bBishop());
+			break;
+		case QUEEN:
+			board[row][col].setResource(piece.getColor().isWhite() ? gameImages
+					.wQueen() : gameImages.bQueen());
+			break;
+		case KING:
+			board[row][col].setResource(piece.getColor().isWhite() ? gameImages
+					.wKing() : gameImages.bKing());
+			break;
+		case ROOK:
+			board[row][col].setResource(piece.getColor().isWhite() ? gameImages
+					.wRook() : gameImages.bRook());
+			break;
+		}
+	}
+
+	@Override
+	public void setHighlighted(int row, int col, boolean highlighted) {
+		Element element = board[row][col].getElement();
+
+		if (highlighted) {
+			element.setClassName(css.highlighted());
+		} else {
+			element.removeClassName(css.highlighted());
+		}
+	}
+
+	@Override
+	public void setWhoseTurn(Color color) {
+		if (color.isWhite()) {
+			gameStatus.setText(messages.whitesTurn());
+		} else {
+			gameStatus.setText(messages.blacksTurn());
+		}
+	}
+
+	@Override
+	public void setGameResult(GameResult gameResult) {
+		if (gameResult == null) {
+			return;
+		}
+		switch (gameResult.getGameResultReason()) {
+
+		case CHECKMATE:
+			gameStatus.setText(gameResult.getWinner()
+					+ messages.checkmateString());
+			break;
+		case FIFTY_MOVE_RULE:
+			gameStatus.setText(messages.drawString());
+			break;
+		case STALEMATE:
+			gameStatus.setText(messages.stalemateString());
+			break;
+		case THREEFOLD_REPETITION_RULE:
+			gameStatus.setText(gameResult.getWinner()
+					+ messages.threefoldString());
+			break;
+		default:
+			return;
+		}
+	}
+
+	@Override
+	public String getGameStatusString() {
+		return gameStatus.toString();
+	}
+
+	// @Override
+	// public void openChannelWithSocketListener(String token,
+	// SocketListener listener) {
+	// ChannelFactory factory = new ChannelFactoryImpl();
+	// Channel channel = factory.createChannel(token);
+	// socket = channel.open(listener);
+	// }
+
+	// @Override
+
+	// public void joinThisGame() {
+	// chessService
+	// .createUserChannel(new AsyncCallback<ManderChessUserSessionInfo>() {
+	//
+	// @Override
+	// public void onFailure(Throwable caught) {
+	// presenter.logger.log(Level.SEVERE,
+	// "Failure to create User Channel");
+	// }
+	//
+	// @Override
+	// public void onSuccess(ManderChessUserSessionInfo result) {
+	// // method to handle setting the clientID and color
+	// presenter
+	// .handleChannelOpeningAndSetClientWhenSuccessful(result);
+	// }
+	// });
+	// }
+
+	@Override
+	public String getGameIDFromDropDown() {
+		if (currentGames.getItemCount() > 0) {
+			String fullString = currentGames.getItemText(currentGames
+					.getSelectedIndex());
+			String[] splitStr = fullString.split(":");
+			return splitStr[1];
+		}
+
+		return "0";
+	}
+
+	@Override
+	public void sendAsyncStateUpdateToServer(String clientID, String state) {
+		final String id = clientID;
+		chessService.updateStateForMove(clientID, state,
+				new AsyncCallback<Void>() {
+
+					@Override
+					public void onFailure(Throwable caught) {
+						rpcTimer = new Timer() {
+							@Override
+							public void run() {
+								sendAsyncStateUpdateToServer(
+										id,
+										presenter
+												.loadStateFromLocalStorage("moveToProcess"));
+							}
+						};
+						rpcTimer.scheduleRepeating(10000);
+					}
+
+					@Override
+					public void onSuccess(Void result) {
+						presenter.logger
+								.log(Level.WARNING,
+										"successful state update. Updating games dropdown now!");
+						// if we were successful, remove the state from the
+						// local storage.
+						presenter.removeStateFromLocalStorage("moveToProcess");
+						if (rpcTimer != null) {
+							rpcTimer.cancel();
+						}
+					}
+				});
+	}
+}

@@ -1,0 +1,43 @@
+package org.yuehlinchung.hw6.shared;
+
+import java.util.Date;
+
+public class Cell {
+	private Long id;
+	private String turn;
+	private String opponent;
+	private boolean over;
+	private Date startDate;
+	
+	public Cell(Long id, String player1, String player2, String turn, String self, boolean over, Date startDate) {
+		this.id = id;
+		this.turn = turn;
+		this.over = over;
+		if (player1 != null && player1.equals(self)) {
+			this.opponent = player2;
+		} else if (player2 != null && player2.equals(self)){
+			this.opponent = player1;
+		}
+		this.startDate = startDate;
+	}
+	
+	public Long getId() {
+		return id;
+	}
+	
+	public String getOpponent() {
+		return opponent;
+	}
+		
+	public String getTurn() {
+		return turn;
+	}
+	
+	public boolean getOver() {
+		return over;
+	}
+	
+	public Date getStartDate() {
+		return startDate;
+	}
+}

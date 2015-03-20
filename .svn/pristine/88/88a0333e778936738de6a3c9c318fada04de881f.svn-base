@@ -1,0 +1,605 @@
+package org.peigenyou.hw3;
+
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.Set;
+
+import org.peigenyou.hw8.ChessMessages;
+import org.peigenyou.hw9.AI;
+import org.peigenyou.hw9.DateTimer;
+import org.peigenyou.hw9.Timer;
+import org.shared.chess.*;
+
+import com.google.appengine.api.users.UserService;
+import com.google.appengine.api.users.UserServiceFactory;
+import com.google.gwt.appengine.channel.client.Channel;
+import com.google.gwt.appengine.channel.client.ChannelError;
+import com.google.gwt.appengine.channel.client.ChannelFactory;
+import com.google.gwt.appengine.channel.client.ChannelFactoryImpl;
+import com.google.gwt.appengine.channel.client.Socket;
+import com.google.gwt.appengine.channel.client.SocketListener;
+import com.google.gwt.core.client.GWT;
+import com.google.gwt.event.dom.client.ClickEvent;
+import com.google.gwt.event.dom.client.ClickHandler;
+import com.google.gwt.storage.client.Storage;
+import com.google.gwt.user.client.Window;
+import com.google.gwt.user.client.rpc.AsyncCallback;
+import com.googlecode.gwtphonegap.client.PhoneGap;
+import com.googlecode.gwtphonegap.client.PhoneGapAvailableEvent;
+import com.googlecode.gwtphonegap.client.PhoneGapAvailableHandler;
+import com.googlecode.gwtphonegap.client.PhoneGapTimeoutEvent;
+import com.googlecode.gwtphonegap.client.PhoneGapTimeoutHandler;
+import com.googlecode.gwtphonegap.client.util.PhonegapUtil;
+import com.googlecode.mgwt.linker.server.MGWTPhonegapHtml5ManifestServlet;
+import com.google.gwt.user.client.rpc.ServiceDefTarget;
+import com.google.gwt.user.client.ui.Button;
+import com.google.gwt.user.client.ui.PopupPanel;
+import com.google.gwt.user.client.ui.RootPanel;
+import com.google.gwt.user.client.ui.SimplePanel;
+import com.google.gwt.user.client.ui.TextBox;
+import com.google.gwt.user.client.ui.VerticalPanel;
+
+import static org.shared.chess.Color.BLACK;
+import static org.shared.chess.Color.WHITE;
+public class Presenter {
+	public interface View {
+		void setPiece(int row, int col, Piece piece);
+		void setHighlighted(int row, int col, boolean highlighted);
+		void setMatchInfo(String string);
+		void setGameStatus(String string);
+		void setGameResult(GameResult gameResult);
+		void setPresenter(Presenter presenter);
+		void setUserInfo(String string);
+		void animate(int iniR,int iniC,int tarR,int tarC);
+		public void setListBox(ArrayList<String> matches);
+	}
+	private View view;
+	private State state = new State();
+	private State lastState = new State();
+	private StateChangerImpl stateChanger = new StateChangerImpl();
+	private boolean isFirstClick = true;
+	private boolean isSelectingPromotion = false;
+	private boolean isWaiting=true;
+	private Position from = new Position(0, 0);
+	private Position to = new Position(0, 0);
+	private Player user=new Player();
+	private Match currentMatch;
+	private Match aiMatch;
+	private Boolean isAIGame=false;
+  private GreetingServiceAsync server = (GreetingServiceAsync)GWT.create(GreetingService.class);
+  
+  private ChannelFactory channelFactory = new ChannelFactoryImpl();
+  private static ChessMessages msg = GWT.create(ChessMessages.class);
+  private AI ai=new AI();
+  private Storage localStorage= Storage.getLocalStorageIfSupported();
+  private Timer timer=new DateTimer(100000);
+  private PhoneGap pg=GWT.create(PhoneGap.class);
+  
+  public void popupLogin(){
+  	VerticalPanel sp=new VerticalPanel();
+		final PopupPanel popup = new PopupPanel(false);
+    final TextBox tb=new TextBox();
+		sp.add(tb);
+		Button con=new Button("Confirm");
+		
+		popup.setStyleName("z-index:5;");
+		popup.setTitle("Input email");
+		con.addClickHandler(new ClickHandler(){
+
+			@Override
+			public void onClick(ClickEvent event) {
+				user.Email=tb.getText().toString();
+				popup.hide();
+				gs();
+			}
+			
+		});
+		sp.add(con);
+		popup.setWidget(sp);
+		RootPanel.get().add(popup);
+		popup.center();
+
+  }
+  
+	public void setView(final View view) {
+		this.view = view;
+				pg.initializePhoneGap();
+		pg.addHandler(new PhoneGapAvailableHandler() {
+		@Override
+		public void onPhoneGapAvailable(PhoneGapAvailableEvent event) {
+			Window.alert("PhoneGapAvailable");
+		}
+		});
+		pg.addHandler(new PhoneGapTimeoutHandler() {
+		@Override
+		public void onPhoneGapTimeout(PhoneGapTimeoutEvent event) {
+		}
+		});
+		((ServiceDefTarget) server).setServiceEntryPoint("http://peigenyou-chess1.appspot.com/peigenyou/service");
+		PhonegapUtil.prepareService((ServiceDefTarget) server, "http://peigenyou-chess1.appspot.com/", "peigenyou/service");
+		
+		
+	}
+	public void gs(){
+		//Window.alert(user.Email);
+		server.greetServer(user.Email.toString(), new AsyncCallback<String>() {
+			@Override
+			public void onFailure(Throwable caught) {
+				Window.alert(msg.connectionError());
+				System.out.println(caught);
+				
+			}
+			@Override
+			public void onSuccess(String result) {
+				user = parsePlayer( result);
+				view.setUserInfo(msg.userName() + "    "+user.Name + msg.email() + "   "+user.Email+msg.rank()+"    "+user.rank);
+				view.setListBox(user.Matches);
+				
+				if(user.Matches.size()==0) view.setGameStatus(msg.noMatchInformation());
+				else loadMatch(user.Matches.get(0));
+				System.out.println(user.Tokens);
+				createChannel(user.Tokens);
+			}
+		});
+	}
+	public void startAIGame(){
+		aiMatch=new Match();
+		aiMatch.whiteID="computer" ;
+		aiMatch.blackID=user.Email;
+		aiMatch.MatchID="ai";
+		aiMatch.state=stateToString(new State());
+		isAIGame=true;
+		view.setMatchInfo("Playing with computer!");
+		this.currentMatch=aiMatch;
+		this.setState(stateParse(aiMatch.state));
+	}
+	public void loadAIMatch(){
+		isAIGame=true;
+		this.currentMatch=aiMatch;
+		this.setState(stateParse(aiMatch.state));
+		view.setMatchInfo("Playing with computer!");
+		
+	}
+	public void aiProceedMove(){
+		Move move=ai.getMove(state);
+		//System.out.println(move.toString());
+		if(move.getPromoteToPiece()!=null){
+			stateChanger.makeMove(state, move);
+			setState(state);
+		}
+		else{
+			isWaiting=false;
+			isFirstClick=true;
+			selectCell(move.getFrom().getRow(),move.getFrom().getCol(),true);
+			selectCell(move.getTo().getRow(),move.getTo().getCol(),true);
+		}
+		//System.out.println(stateToString(state));
+	}
+	public Match getAIMatch(){
+		return this.aiMatch;
+	}
+	public void loadMatch(String matchID){
+		isAIGame=false;
+		server.loadMatch(matchID, new AsyncCallback<String>() {
+			@Override
+			public void onFailure(Throwable caught) {
+				System.out.println(msg.loadMatchError());
+			}
+			@Override
+			public void onSuccess(String result) {
+				currentMatch=parseMatch(result);
+				state=stateParse(currentMatch.state);
+				setState(state);
+				
+			}
+		});
+	}
+	public void delMatch(String MatchID){
+		server.delMatch(MatchID, new AsyncCallback() {
+			@Override
+			public void onFailure(Throwable caught) {
+				Window.alert(msg.delError());
+			}
+			@Override
+			public void onSuccess(Object result) {
+				view.setGameStatus(msg.sucDel());
+			}
+		});
+	}
+	public void createMatch(final String email){
+		Match match=new Match(email,user.Email);
+		
+		server.creatMatch(email,user.Email.toString(),stateToString(new State()), new AsyncCallback() {
+			@Override
+			public void onFailure(Throwable caught) {
+				Window.alert("Fail to match with   "+email);
+			}
+			@Override
+			public void onSuccess(Object result) {
+				server.updatePlayer(user.Email.toString(),new AsyncCallback<String>() {
+
+					@Override
+					public void onFailure(Throwable caught) {
+						Window.alert(msg.updateError());
+					}
+					@Override
+					public void onSuccess(String result) {
+						user=parsePlayer(result);
+						view.setListBox(user.Matches);
+						loadMatch(user.Matches.get(user.Matches.size()-1));
+					}
+					
+				});
+			}
+		});
+	}
+	public void createChannel(final String token){
+		Channel channel = channelFactory.createChannel(token);
+		Socket socket = channel.open(new SocketListener() {
+			@Override
+			public void onOpen() {
+				
+			}
+
+			@Override
+			public void onMessage(String message) {
+				if(message.length()<15) Window.alert(msg.autoSuccess());
+				updatePlayer();
+			}
+
+			@Override
+			public void onError(ChannelError error) {
+				System.out.println(error);
+			}
+
+			@Override
+			public void onClose() {
+				Window.alert(msg.channelClose());
+			}
+
+		});
+	}
+	public void updatePlayer(){
+		final String currMatch;
+		if(currentMatch!=null){
+			currMatch=currentMatch.MatchID;
+		}
+		else{
+			currMatch=null;
+		}
+		server.updatePlayer(user.Email,new AsyncCallback<String>() {
+
+			@Override
+			public void onFailure(Throwable caught) {
+				Window.alert(msg.updateError());
+			}
+
+			@Override
+			public void onSuccess(String result) {
+				user=parsePlayer(result);
+				view.setListBox(user.Matches);
+				if(isAIGame==true) return;
+				if(currMatch!=null)	loadMatch(currMatch);
+				else{
+					loadMatch(user.Matches.get(user.Matches.size()-1));
+				}
+				localStorage.setItem("matches", user.Matches.toString());
+			}
+		});
+
+	}
+	public void autoMatch(){
+		String newstate=org.peigenyou.hw3.Presenter.stateToString(new State());
+		server.autoMatch(user.Email.toString(),newstate, new AsyncCallback<String>() {
+			@Override
+			public void onFailure(Throwable caught) {
+				Window.alert(msg.autoMatchError());
+			}
+
+			@Override
+			public void onSuccess(String result) {
+				if (result == null) {
+					view.setGameStatus(msg.noOpponentInformation());
+				}
+				else {
+					Window.alert(msg.autoSuccess());
+					server.updatePlayer(user.Email.toString(),new AsyncCallback<String>() {
+
+						@Override
+						public void onFailure(Throwable caught) {
+							Window.alert(msg.updateError());
+						}
+						@Override
+						public void onSuccess(String result) {
+							user=parsePlayer(result);
+							view.setListBox(user.Matches);
+							if(user.Matches.size()>0)loadMatch(user.Matches.get(user.Matches.size()-1));
+						}
+						
+					});
+					
+				}
+			}
+		});
+	}
+	
+	public void sendMove(String state){
+		if(isAIGame==true) return;
+		server.submitMove(user.Email,currentMatch.MatchID, state, new AsyncCallback<String>() {
+			@Override
+			public void onFailure(Throwable caught) {
+				Window.alert(msg.submitMoveError());
+			}
+			@Override
+			public void onSuccess(String result) {
+			}
+		});
+
+	}
+	public void selectCell(int row, int col,boolean isClick) {
+		//System.out.println(row+""+col);
+		if (state.getGameResult() != null) return;
+		if(isWaiting == true) return;
+		if ((state.getPiece(row, col) == null || state.getPiece(row, col)
+			.getColor() != state.getTurn()) && isFirstClick == true) return;
+		if (isSelectingPromotion == true) {
+			if (state.getPiece(row, col) == null) return;
+			else {
+				try {
+					stateChanger.makeMove(lastState,
+						new Move(from, to, state.getPiece(row, col).getKind()));
+
+					sendMove(stateToString(lastState));	
+					isWaiting=true;
+				}
+			catch (Exception e) {
+				view.setHighlighted(from.getRow(), from.getCol(), false);
+				
+					return;
+				}
+				finally {
+					state = lastState;
+					view.setHighlighted(from.getRow(), from.getCol(), false);
+					view.setHighlighted(row, col, false);
+					setState(state);
+					isFirstClick = true;
+					to = null;
+					isSelectingPromotion = false;
+					
+					view.setGameStatus("");
+					
+				}
+				return;
+			}
+		}
+		if (isFirstClick == true) {
+			from = new Position(row, col);
+			view.setHighlighted(row, col, true);
+			isFirstClick = false;
+		}
+		else {
+			
+			if (state.getPiece(from) != null && state.getPiece(from).getKind() == PieceKind.PAWN
+				&& row == (state.getPiece(from).getColor() == BLACK ? 0 : 7)) {
+				if (!stateChanger.isLegalMove(state, new Move(from, new Position(row,
+					col), PieceKind.ROOK))) return;
+				to = new Position(row, col);
+				lastState=state.copy();
+				promotionView(state.getPiece(from).getColor());
+				//view.setInfo("PROMOTION Please Choose One Piece to Promote to.");
+				isSelectingPromotion = true;
+				Window.alert(msg.promoteInfo());
+				
+				return;
+			}
+			try {
+				//System.out.println(row+"  &   "+col);
+				stateChanger.makeMove(state, new Move(from, new Position(row, col),
+					null));
+				if(isClick==true){ 
+					view.animate(from.getRow(), from.getCol(), row, col);
+				}
+				
+				isWaiting=true;
+				sendMove(stateToString(state));
+				
+				//System.out.println(row+"   *  "+col);
+				view.setHighlighted(from.getRow(), from.getCol(), false);
+				isFirstClick = true;
+				setState(state);
+			}
+			catch (IllegalMove e) {
+				//System.out.println("fuck you!");
+				//System.out.println(row+"   *  "+col);
+				view.setHighlighted(from.getRow(), from.getCol(), false);
+				isFirstClick = true;
+				return;
+			}
+		}
+	}
+	public void promotionView(Color color) {
+		for (int r = 0; r < 8; r++) {
+			for (int c = 0; c < 8; c++) {
+				state.setPiece(r, c, null);
+			}
+		}
+		state.setPiece(4, 2, new Piece(color, PieceKind.QUEEN));
+		state.setPiece(4, 3, new Piece(color, PieceKind.BISHOP));
+		state.setPiece(4, 4, new Piece(color, PieceKind.KNIGHT));
+		state.setPiece(4, 5, new Piece(color, PieceKind.ROOK));
+		setState(state);
+	}
+	@SuppressWarnings("deprecation")
+	public void setState(State state) {
+		this.state=state;
+		view.setGameStatus("");
+		for (int r = 0; r < 8; r++) {
+			for (int c = 0; c < 8; c++) {
+				view.setPiece(r, c, state.getPiece(r, c));
+			}
+		}
+		
+		if (state.getGameResult() != null){ 
+			view.setGameResult(state.getGameResult());
+			String result,mm=new String();
+			if(state.getGameResult().getGameResultReason().equals(GameResultReason.CHECKMATE)){
+				if(state.getGameResult().getWinner().equals(Color.BLACK)) {
+					mm=msg.blackWin();
+					result="Black";
+				}
+				else {
+					mm=msg.whiteWin();
+					result="White";
+				}
+			}
+			else{
+				result="Draw";
+			}
+			Window.alert(mm);
+			if(isAIGame!=true){
+				server.sendResult(stringMatch(currentMatch), result,new AsyncCallback(){
+	
+					@Override
+					public void onFailure(Throwable caught) {
+						System.out.println("send result error!");
+					}
+	
+					@Override
+					public void onSuccess(Object result) {
+						
+					}
+				
+				});
+				return;
+			}
+		}
+		
+		if((currentMatch.blackID==user.Email && state.getTurn()==Color.BLACK)||currentMatch.whiteID==user.Email&&state.getTurn()==Color.WHITE) this.isWaiting=false;
+		else this.isWaiting=true;
+		String a=currentMatch.blackID==user.Email?currentMatch.whiteID:currentMatch.blackID;
+		String b=currentMatch.blackID==user.Email?msg.black():msg.white();
+		if(isAIGame==false && !currentMatch.equals(aiMatch))		view.setMatchInfo(msg.playWith()+a+msg.MatchID()+currentMatch.MatchID+msg.year()+currentMatch.startDate.getYear()+msg.month()+currentMatch.startDate.getMonth()+msg.day()+currentMatch.startDate.getDay()+msg.hour()+currentMatch.startDate.getHours()+msg.minitue()+currentMatch.startDate.getMinutes());
+		if(isWaiting == true) {
+			view.setGameStatus(msg.opponentTurn());
+			
+		}
+		else{
+			view.setGameStatus(msg.playerTurn()+b);
+		}
+		if(state.getTurn()==WHITE && isAIGame==true) {
+			timer1 = new com.google.gwt.user.client.Timer(){
+      	@Override
+      	public void run(){
+      		aiProceedMove();
+      	}
+      };
+      timer1.schedule(500);
+		}
+	}
+	com.google.gwt.user.client.Timer timer1;
+	public State stateParse(String statestring){
+		if(statestring.length()==0) return new State();
+		State historystate=new State();
+		historystate.setTurn(statestring.substring(0, 1).equals("B")?BLACK:WHITE);
+		historystate.setCanCastleKingSide(BLACK,statestring.substring(1, 2).equals("T") ? true:false);
+		historystate.setCanCastleKingSide(WHITE,statestring.substring(2, 3).equals("T") ? true:false);
+		historystate.setCanCastleQueenSide(BLACK,statestring.substring(3, 4).equals("T") ? true:false);
+		historystate.setCanCastleQueenSide(WHITE,statestring.substring(4, 5).equals("T") ? true:false);
+		historystate.setEnpassantPosition(statestring.substring(5,7).equals("FF")?null:new Position(Integer.valueOf(statestring.substring(5,6)),Integer.valueOf(statestring.substring(6,7))));
+		int k=0;
+		for(int i=0;i<8;i++){
+			for (int j=0;j<8;j++){
+				if(statestring.substring(7+k,9+k).equals("FF")) historystate.setPiece(i, j,null);
+				else historystate.setPiece(i, j,new Piece(statestring.substring(7+k,8+k).equals("B")?BLACK:WHITE,PieceKind.values()[Integer.valueOf(statestring.substring(8+k,9+k))]));
+				k+=2;
+			}
+		}
+		if(String.valueOf(statestring.substring(135,137)).equals("FF")) historystate.setGameResult(null);
+		else historystate.setGameResult(new GameResult(statestring.substring(135,136).equals("B")?BLACK:WHITE,GameResultReason.values()[Integer.valueOf(statestring.substring(136,137))])); 
+		historystate.setNumberOfMovesWithoutCaptureNorPawnMoved(Integer.valueOf(statestring.substring(137)));	
+		return historystate;
+	}
+	public static String stateToString(State state){
+		StringBuffer cache=new StringBuffer();
+		cache.append(state.getTurn()==BLACK?'B':'W');
+		cache.append(state.isCanCastleKingSide(BLACK)==true?'T':'F');
+		cache.append(state.isCanCastleKingSide(WHITE)==true?'T':'F');
+		cache.append(state.isCanCastleQueenSide(BLACK)==true?'T':'F');
+		cache.append(state.isCanCastleQueenSide(WHITE)==true?'T':'F');
+		if(state.getEnpassantPosition()==null) cache.append("FF");
+		else cache.append(state.getEnpassantPosition().getRow()+""+state.getEnpassantPosition().getCol());
+		for(int i=0;i<8;i++){
+			for(int j=0;j<8;j++){
+				if(state.getPiece(i, j)==null) cache.append("FF");
+				else{ 
+					cache.append(state.getPiece(i, j).getColor()==BLACK?'B':'W');
+					cache.append(state.getPiece(i, j).getKind().ordinal());
+		}}}
+		if(state.getGameResult()==null) cache.append("FF");
+		else{ cache.append(state.getGameResult().getWinner()==BLACK?'B':'W');
+		cache.append(state.getGameResult().getGameResultReason().ordinal());
+		}
+		cache.append(state.getNumberOfMovesWithoutCaptureNorPawnMoved());
+		return cache.toString();
+	}
+	public State getState(){
+		return state;
+	}
+	private Player parsePlayer(String player){
+		String[] cache=player.split("=");
+		Player p=new Player();
+		p.Email=cache[0];
+		p.Name=cache[1];
+		p.Tokens=cache[2];
+		p.rank=Integer.valueOf(cache[3]);
+		p.Matches=new ArrayList<String>();
+		for(int i=4;i<cache.length;++i){
+			p.Matches.add(cache[i]);
+		}
+		
+			return p;
+			
+	}
+	private Match parseMatch(String match){
+		String[] cache=match.split("=");
+		Match ne=new Match(cache[1],cache[2]);
+		ne.MatchID=cache[0];
+		ne.state=cache[3];
+		ne.turn=Integer.valueOf(cache[4]);
+		ne.startDate=new Date();
+		return ne;
+	}
+	private String stringPlayer(Player player){
+		StringBuffer a=new StringBuffer();
+		a.append(player.Email);
+		a.append('=');
+		a.append(player.Name);
+		a.append('=');
+		a.append(player.Tokens);
+		a.append('=');
+		a.append(player.rank);
+		for(String b:player.Matches){
+			a.append('=');
+			a.append(b);	
+		}
+		return a.toString();
+	}
+	
+	private String stringMatch(Match match){
+		StringBuffer a=new StringBuffer();
+		a.append(match.MatchID);
+		a.append('=');
+		a.append(match.blackID);
+		a.append('=');
+		a.append(match.whiteID);
+		a.append('=');
+		a.append(match.state);
+		a.append('=');
+		a.append(match.turn);
+		a.append('=');
+		a.append(match.startDate.toString());
+		return a.toString();
+	}
+	
+}

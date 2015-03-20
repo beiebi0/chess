@@ -1,0 +1,759 @@
+package org.paulsultan.hw3;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+import org.paulsultan.hw3.Presenter.View;
+import org.paulsultan.hw6.LoginInfo;
+import org.paulsultan.hw6.client.ChessService;
+import org.paulsultan.hw6.client.ChessServiceAsync;
+import org.paulsultan.hw8.ChessMessages;
+
+import org.shared.chess.Color;
+import org.shared.chess.GameResult;
+import org.shared.chess.GameResultReason;
+import org.shared.chess.Piece;
+import org.shared.chess.PieceKind;
+import org.shared.chess.Position;
+import org.shared.chess.State;
+
+import com.google.gwt.appengine.channel.client.ChannelError;
+import com.google.gwt.appengine.channel.client.ChannelFactoryImpl;
+import com.google.gwt.appengine.channel.client.SocketListener;
+import com.google.gwt.core.client.GWT;
+import com.google.gwt.event.dom.client.ClickEvent;
+import com.google.gwt.event.dom.client.ClickHandler;
+import com.google.gwt.event.dom.client.DragOverEvent;
+import com.google.gwt.event.dom.client.DragOverHandler;
+import com.google.gwt.event.dom.client.DragStartEvent;
+import com.google.gwt.event.dom.client.DragStartHandler;
+import com.google.gwt.event.dom.client.DropEvent;
+import com.google.gwt.event.dom.client.DropHandler;
+import com.google.gwt.i18n.client.DateTimeFormat;
+import com.google.gwt.i18n.client.NumberFormat;
+import com.google.gwt.uibinder.client.UiBinder;
+import com.google.gwt.uibinder.client.UiField;
+import com.google.gwt.user.client.Element;
+import com.google.gwt.user.client.Window;
+import com.google.gwt.user.client.rpc.AsyncCallback;
+import com.google.gwt.user.client.rpc.ServiceDefTarget;
+import com.google.gwt.user.client.ui.Anchor;
+import com.google.gwt.user.client.ui.Button;
+import com.google.gwt.user.client.ui.CheckBox;
+import com.google.gwt.user.client.ui.Composite;
+import com.google.gwt.user.client.ui.Grid;
+import com.google.gwt.user.client.ui.HorizontalPanel;
+import com.google.gwt.user.client.ui.Image;
+import com.google.gwt.user.client.ui.Label;
+import com.google.gwt.user.client.ui.ListBox;
+import com.google.gwt.user.client.ui.MultiWordSuggestOracle;
+import com.google.gwt.user.client.ui.SuggestBox;
+import com.google.gwt.user.client.ui.TextBox;
+import com.google.gwt.user.client.ui.VerticalPanel;
+import com.google.gwt.user.client.ui.Widget;
+import com.googlecode.gwtphonegap.client.util.PhonegapUtil;
+
+public class Graphics extends Composite implements View {
+	private static GameImages gameImages = GWT.create(GameImages.class);
+	private static GraphicsUiBinder uiBinder = GWT.create(GraphicsUiBinder.class);
+	interface GraphicsUiBinder extends UiBinder<Widget, Graphics>{}
+	
+    static Logger logger = Logger.getLogger("GraphicsLogger");
+    static ChessServiceAsync chessServices = GWT.create(ChessService.class);
+
+    static ChessMessages messages = GWT.create(ChessMessages.class);
+
+	@UiField GameCss css;
+	
+	@UiField Grid gameGrid;
+	@UiField Grid promotionGrid;
+	@UiField Label email;
+	@UiField Label rank;
+	@UiField Button quickWin;
+	@UiField Label gameStatus;
+	@UiField Button autoMatch;
+	@UiField Label matchStatus;
+	
+	@UiField HorizontalPanel startMatchHPanel;
+	@UiField Button startMatchWith;
+	@UiField TextBox startMatchWithTextBox;
+	
+	@UiField HorizontalPanel matchesHPanel;
+	@UiField ListBox matchesList;
+	@UiField Button loadMatch;
+	@UiField Button deleteMatch;
+	
+	@UiField ListBox playersList;
+	
+	@UiField VerticalPanel aiVPanel;
+	@UiField Button ai;
+	
+	@UiField HorizontalPanel serverHPanel;
+	@UiField CheckBox serverStatus;
+	@UiField Button updateServer;
+
+
+	Anchor locale = new Anchor();
+	public Image[][] images = new Image[8][8];
+	public Image[] promotionImages = new Image[4];
+	Presenter presenter;
+    public LoginInfo myLoginInfo;
+   
+	public Graphics(LoginInfo loginInfo, MultiWordSuggestOracle oracle){
+		PhonegapUtil.prepareService((ServiceDefTarget) chessServices,"http://11.psultanchess.appspot.com/paulsultan/", "service");
+		((ServiceDefTarget) chessServices).setServiceEntryPoint("http://11.psultanchess.appspot.com/paulsultan/service");
+
+		this.myLoginInfo=loginInfo;
+		initWidget(uiBinder.createAndBindUi(this));
+		gameGrid.resize(8, 8);
+		gameGrid.setCellPadding(0);
+		gameGrid.setCellSpacing(0);
+		gameGrid.setBorderWidth(0);
+
+		for (int row = 0; row < 8; row++) {
+			for (int col = 0; col < 8; col++) {
+				final Image image = new Image();
+				images[row][col] = image;
+				image.setWidth("100%");
+
+				if(row%2==0 && col%2==1 || row%2==1 && col%2==0)
+					image.setResource(gameImages.blackTile());
+				else
+					image.setResource(gameImages.whiteTile());
+				image.getElement().setDraggable(Element.DRAGGABLE_TRUE);
+				gameGrid.setWidget(row, col, image);
+			}
+		}
+		gameGrid.addDragOverHandler(new DragOverHandler(){
+			//"you must add a dragoverhandler to create a target"
+			public void onDragOver(DragOverEvent event){}
+		});
+		
+		//build promotion grid under board
+		promotionGrid.resize(1, 4);
+		promotionImages[0]=new Image(gameImages.goldKnight());
+		promotionImages[1]=new Image(gameImages.goldBishop());
+		promotionImages[2]=new Image(gameImages.goldRook());
+		promotionImages[3]=new Image(gameImages.goldQueen());	
+		promotionGrid.setWidget(0, 0, promotionImages[0]);
+		promotionGrid.setWidget(0, 1, promotionImages[1]);
+		promotionGrid.setWidget(0, 2, promotionImages[2]);
+		promotionGrid.setWidget(0, 3, promotionImages[3]);
+		
+		email.setText(loginInfo.getEmailAddress());
+		matchStatus.setText(messages.noGameSelected());
+		startMatchHPanel.add(startMatchWith);
+		SuggestBox suggestbox = new SuggestBox(oracle);
+		startMatchHPanel.add(suggestbox);
+		matchesList.setWidth("500px");
+		matchesHPanel.add(matchesList);
+		matchesHPanel.add(loadMatch);
+		matchesHPanel.add(deleteMatch);
+		playersList.setVisibleItemCount(10);
+		playersList.setWidth("250px");
+		quickWin.setEnabled(false);
+
+		aiVPanel.add(ai);
+		ai.setText(messages.ai());
+		
+		serverHPanel.add(serverStatus);
+		serverStatus.setValue(true);
+		serverHPanel.add(updateServer);
+		
+		quickWin.setText(messages.quickWin());
+		startMatchWith.setText(messages.startMatchWith());
+		loadMatch.setText(messages.loadMatch());
+		deleteMatch.setText(messages.deleteMatch());
+		autoMatch.setText(messages.autoMatch());
+		gameStatus.setText(messages.status());
+		chessServices.setServerStatus(serverStatus.getValue(), new AsyncCallback<Void>(){
+      		@Override
+      		public void onFailure(Throwable caught) {
+      			Window.alert("failure setting server status");
+      		}
+      		@Override
+      		public void onSuccess(Void msg){
+      			logger.log(Level.SEVERE,"success setting server status");
+      		}
+      	});
+		
+				
+		addDragDropHandlers();
+	    openChannel();
+		initButtonHandlers();
+		getData();
+				
+		presenter = new Presenter(this);
+
+	}
+	
+	
+	public void openChannel(){
+	  new ChannelFactoryImpl().createChannel(myLoginInfo.getChannelToken()).open(new SocketListener(){	
+		@Override
+		public void onOpen() {
+			logger.log(Level.SEVERE, myLoginInfo.getChannelToken()+" channel opened for "+myLoginInfo.getEmailAddress());
+		}
+		@Override
+		public void onMessage(String message) {
+			logger.log(Level.SEVERE, "channel message "+message);
+			message = message.replace("\n", "").replace("\r", "");
+			if (message.charAt(0)=='0'){
+				//makemove 
+				//state#matchId#newRank
+				String[] msg = message.substring(1).split("#");
+				String state = msg[0];
+				String matchId = msg[1];
+				String newRank = msg[2];
+				
+				setRank(Double.parseDouble(newRank));
+				
+				Long id = presenter.getMatchId();
+				if (Long.valueOf(matchId).equals(id))
+					//if i am currently playing the same game
+					presenter.setState(StateSerializer.parse(state));
+				
+			}
+			else if (message.charAt(0)=='1'){
+				//automatch 
+				//opponentEmail#matchId#myColor
+				String[] msg = message.substring(1).split("#");
+				String startDate = msg[0];
+				String opponentEmail = msg[1];
+				String matchId = msg[2];
+				String color = msg[3];
+				
+				Window.alert(messages.newMatch(opponentEmail, color, matchId));
+				addMatchToDropdown(startDate, opponentEmail, color, matchId);
+			}
+			else if (message.charAt(0)=='2'){
+				//find opponent 
+				//opponentEmail#matchId#myColor
+				String[] msg = message.substring(1).split("#");
+				String startDate = msg[0];
+				String opponentEmail = msg[1];
+				String matchId = msg[2];
+				String color = msg[3];
+				
+				Window.alert(messages.findOpponent(opponentEmail, matchId));
+				addMatchToDropdown(startDate, opponentEmail, color, matchId);
+			}
+			else if (message.charAt(0)=='3'){
+				//adding user 
+				//email
+				String player = message.substring(1);
+				playersList.addItem(player);
+			}
+			else if (message.charAt(0)=='4'){
+				//removing user
+				//email
+				String player = message.substring(1);
+				for (int i=0;i<=playersList.getItemCount();i++){
+					if(playersList.getItemText(i).equals(player)){
+						playersList.removeItem(i);
+						break;
+					}
+				}
+			}
+		}
+		@Override
+		public void onError(ChannelError error){
+			Window.alert("channel error");
+		}
+		@Override
+		public void onClose(){}
+	  });
+	}
+	
+	public void initButtonHandlers(){
+	  quickWin.addClickHandler(new ClickHandler(){
+		@Override
+		public void onClick(ClickEvent event){
+			State state = new State();
+			if(presenter.getColorForGame().equals(Color.WHITE)){
+
+				state.setPiece(new Position(0,3), null);
+				state.setPiece(new Position(0,5), null);
+				state.setPiece(new Position(1,4), null);
+				state.setPiece(new Position(3,2), new Piece(Color.WHITE, PieceKind.BISHOP));
+				state.setPiece(new Position(3,4), new Piece(Color.WHITE, PieceKind.PAWN));
+				state.setPiece(new Position(4,4), new Piece(Color.BLACK, PieceKind.PAWN));
+				state.setPiece(new Position(4,7), new Piece(Color.WHITE, PieceKind.QUEEN));
+				state.setPiece(new Position(5,2), new Piece(Color.BLACK, PieceKind.KNIGHT));
+				state.setPiece(new Position(5,5), new Piece(Color.BLACK, PieceKind.KNIGHT));
+				state.setPiece(new Position(6,4), null);
+				state.setPiece(new Position(7,1), null);
+				state.setPiece(new Position(7,6), null);
+			}
+			else{
+				state.setPiece(new Position(1,5), null);
+				state.setPiece(new Position(1,6), null);
+				state.setPiece(new Position(2,5), new Piece(Color.WHITE, PieceKind.PAWN));
+				state.setPiece(new Position(3,6), new Piece(Color.WHITE, PieceKind.PAWN));
+				state.setPiece(new Position(4,4), new Piece(Color.BLACK, PieceKind.PAWN));
+				state.setPiece(new Position(6,4), null);
+
+			}
+			state.setTurn(presenter.getState().getTurn());
+			presenter.setState(state);
+	     }
+	  });
+
+	  startMatchWith.addClickHandler(new ClickHandler(){
+		@Override
+		public void onClick(ClickEvent event){
+			if(presenter.matchId!=null && presenter.matchId==0)
+		        if (!Window.confirm("Single Player Game will be Lost. Continue?"))
+		            return;
+			
+			String newEmail = startMatchWithTextBox.getText();
+			if (newEmail.equals(""))
+				Window.alert(messages.invalidEmail());
+			else if(newEmail.equals(myLoginInfo.getEmailAddress())){
+				Window.alert(messages.emailErrorYourself());
+			}
+			else{
+				chessServices.startMatchWith(newEmail, myLoginInfo.getEmailAddress(), new AsyncCallback<String>(){
+					@Override
+					public void onFailure(Throwable caught){
+						Window.alert("startmatch async failure.");
+					}
+					@Override
+					public void onSuccess(String result){
+				        logger.log(Level.SEVERE, "startmatchwith:"+result);
+						//startDate#email#matchId#color;
+						String[] msg = result.split("#");
+						String startDate = msg[0];
+						String opponentEmail = msg[1];
+						String matchId = msg[2];
+						String color = msg[3];
+						
+						addMatchToDropdown(startDate, opponentEmail, color, matchId);
+						matchesList.setSelectedIndex(matchesList.getItemCount()-1);
+						startGame(startDate, opponentEmail, Long.parseLong(matchId), color, new State());
+					}
+				});
+			}
+		}});
+
+	  autoMatch.addClickHandler(new ClickHandler(){
+         @Override
+         public void onClick(ClickEvent event){
+			if(presenter.matchId!=null && presenter.matchId==0)
+		        if (!Window.confirm("Single Player Game will be Lost. Continue?"))
+		            return;
+
+			chessServices.autoMatch(myLoginInfo, new AsyncCallback<String>(){
+				@Override
+				public void onFailure(Throwable caught) {
+					Window.alert("error auto Match");
+				}
+				@Override
+				public void onSuccess(String result){
+					logger.log(Level.SEVERE,"success auto Match: "+result);
+					if (result.charAt(0)=='0')
+						//no others players free
+						Window.alert(result.substring(1));
+					else{
+						//found opponent
+						String[] msg = result.split("#");
+						String startDate = msg[0];
+						String opponentEmail = msg[1];
+						String matchId = msg[2];
+						String color = msg[3];
+						
+						addMatchToDropdown(startDate, opponentEmail, color, matchId);
+						startGame(startDate, opponentEmail, Long.parseLong(matchId), color, new State());
+					}
+				}
+			});
+		}
+	  });
+	  
+	  loadMatch.addClickHandler(new ClickHandler(){
+		@Override
+		public void onClick(ClickEvent event){
+			if(matchesList.getItemCount()==0)
+				Window.alert(messages.noGames());
+			else{
+				if(presenter.matchId!=null && presenter.matchId==0)
+			        if (!Window.confirm("Single Player Game will be Lost. Continue?"))
+			            return;
+				
+				 String selectedMatch = matchesList.getValue(matchesList.getSelectedIndex());
+				 String[] data = selectedMatch.split(":");
+				 String matchId = data[3];
+				 chessServices.loadMatch(myLoginInfo.getEmailAddress(), matchId, new AsyncCallback<String>(){
+				 	@Override
+				 	public void onFailure(Throwable caught){
+				 		Window.alert("could not load game from server.  using local storage.");
+				 		String startDate = getMatchStringStartDate();
+				 		String myColor = getMatchStringColor();
+				 		String matchId = getMatchStringMatchId();
+				 		String opponentEmail = getMatchStringOpponent();
+				 		
+				 		String localStateString = presenter.getMatchStateLocally(matchId);
+				 		State incomingState = StateSerializer.parse(localStateString);
+				 		
+				 		startGame(startDate, opponentEmail, Long.parseLong(matchId), myColor, incomingState);
+				 	}
+				 
+				 	@Override
+				 	public void onSuccess(String result) {
+				 		//state#color#matchId#opponent
+				 		logger.log(Level.SEVERE,"loading game");
+				 		String[] msg = result.split("#");
+				 		String startDate = msg[0];
+				 		String newState = msg[1];
+				 		String color = msg[2];
+				 		String matchId = msg[3];
+				 		String opponentEmail = msg[4];
+				 		State incomingState = StateSerializer.parse(newState);
+				 		
+				 		startGame(startDate, opponentEmail, Long.parseLong(matchId), color, incomingState);	
+				 	}
+				 });
+			}
+		}
+	  });
+  	
+	  deleteMatch.addClickHandler(new ClickHandler(){
+		@Override
+		public void onClick(ClickEvent event){
+			if (matchesList.getItemCount()==0)
+				Window.alert(messages.noGameSelected());
+			else{
+				String selectedMatch = matchesList.getValue(matchesList.getSelectedIndex());
+				String[] data = selectedMatch.split(":");
+				final String deleteGameId = data[3];
+				Boolean inGame=false;
+				if (presenter.getMatchId()==null||presenter.getMatchId().toString().equals(deleteGameId)){
+					presenter.clearGame();
+					inGame=true;
+				}
+				final Boolean inGameToDelete = inGame;	
+				chessServices.deleteMatch(myLoginInfo.getEmailAddress(), deleteGameId, inGameToDelete, new AsyncCallback<Void>(){
+					@Override
+					public void onFailure(Throwable caught){
+						Window.alert("cannot delete a match offline");
+					}
+					@Override
+					public void onSuccess(Void result){
+						if (inGameToDelete)
+							presenter.clearGame();
+						logger.log(Level.SEVERE,"Success deleting");
+						
+						matchesList.removeItem(matchesList.getSelectedIndex());
+						presenter.deleteMatchStateLocally(deleteGameId);
+					}
+				});
+			}
+		}
+	  });
+	        
+      ai.addClickHandler(new ClickHandler(){
+          @Override
+          public void onClick(ClickEvent event){
+              presenter.startSinglePlayer();
+          }     
+        });
+      
+	  serverStatus.addClickHandler(new ClickHandler(){
+	     @Override
+	     public void onClick(ClickEvent event){
+	      	chessServices.setServerStatus(serverStatus.getValue(), new AsyncCallback<Void>(){
+	      		@Override
+	      		public void onFailure(Throwable caught) {
+	      			Window.alert("failure setting server status");
+	      		}
+	      		@Override
+	      		public void onSuccess(Void msg){
+	      			logger.log(Level.SEVERE,"success setting server status");
+	      		}
+	      	});
+	      }
+	    });
+	  
+      updateServer.addClickHandler(new ClickHandler(){
+          @Override
+          public void onClick(ClickEvent event){
+              presenter.updateServer();
+          }     
+        });
+	}
+	
+	public void getData(){
+	  chessServices.getOtherPlayers(myLoginInfo, new AsyncCallback<ArrayList<String>>(){
+		 @Override
+		 public void onFailure(Throwable caught){
+			Window.alert("failed to get users");
+		 }
+		 @Override
+		 public void onSuccess(ArrayList<String> result){
+			logger.log(Level.SEVERE,"Success getting users");
+			for (String eachPlayer : result){
+				playersList.addItem(eachPlayer);
+			}
+		 }
+	  });
+	  
+	  chessServices.getMatches(myLoginInfo.getEmailAddress(), new AsyncCallback<ArrayList<String>>(){
+	  	  @Override
+		  public void onFailure(Throwable caught) {
+			  Window.alert("failure getting matches");
+		  }
+		  @Override
+		  public void onSuccess(ArrayList<String> result){
+			  logger.log(Level.SEVERE, "success getting matches");
+			  for (int i=0; i<result.size(); i++){
+			      String[] msg=result.get(i).split("#");
+			      String startDate = msg[0];
+				  String opponentEmail = msg[1];
+				  String color = msg[2];
+				  String matchId = msg[3];
+				  String state = msg[4];
+				  
+				  presenter.saveMatchStateLocally(matchId, state);
+				  addMatchToDropdown(startDate, opponentEmail, color, matchId);
+			  }
+		  }
+	   });
+	  
+	  chessServices.getRank(myLoginInfo.getEmailAddress(), new AsyncCallback<Double>(){
+	  	  @Override
+		  public void onFailure(Throwable caught) {
+			  Window.alert("failure getting rank");
+		  }
+		  @Override
+		  public void onSuccess(Double result){
+			  logger.log(Level.SEVERE, "success getting rank");
+			  setRank(result);
+		  }
+	   });
+	}
+	
+	
+	public void updateData(){
+	  matchesList.clear();
+	  getData();	  
+	}
+	
+	public void startGame(String startDate, String opponentEmail, Long matchId, String color, State state){
+		Color myColor = color.equals("w")?Color.WHITE:Color.BLACK;
+		presenter.startGame(startDate, opponentEmail, matchId, myColor, state);
+ 		if(!opponentEmail.contains("@")){
+ 			//game is deleted by opponent
+ 			presenter.removeBoardClickHandlers();
+ 		}	
+	}
+
+	public void setRank(Double newRank){
+	   NumberFormat fmt = NumberFormat.getDecimalFormat();
+	   rank.setText(messages.rank()+":"+fmt.format(newRank));	
+    }
+
+	/**
+	 * startDate - Opponent:opponentEmail - you are:myColor - matchId:matchId;
+	 */
+	public String getMatchStringStartDate(){
+		String selectedMatch = matchesList.getValue(matchesList.getSelectedIndex());
+		String result[] = selectedMatch.split(" ");
+		String startDate[] = result[0].split("-");
+		int m = Integer.parseInt(startDate[1]);
+		String month = String.valueOf(m);
+		month = month.length()==1 ? "0"+month : month;
+		return startDate[0]+month+startDate[2];
+	}
+	public String getMatchStringOpponent(){
+		String selectedMatch = matchesList.getValue(matchesList.getSelectedIndex());
+		String result[] = selectedMatch.split(" ");
+		String opp[] = result[2].split(":");
+		String opponent = opp[1];
+		return opponent;
+	}
+	public String getMatchStringColor(){
+		String selectedMatch = matchesList.getValue(matchesList.getSelectedIndex());
+		String result[] = selectedMatch.split("-");
+		String col[] = result[4].split(":");
+		String color = col[1].substring(0, 1);
+		return color;
+	}
+	public String getMatchStringMatchId(){
+		String selectedMatch = matchesList.getValue(matchesList.getSelectedIndex());
+		String result[] = selectedMatch.split(":");
+		String id = result[3];
+		return id;
+	}
+	public String getMatchString(String date, String opponentEmail, String myColor, String matchId){
+	    return getDateFormat(date)+" - "+messages.opponent()+":"+opponentEmail+" - "+messages.youAre()+":"+myColor+" - "+messages.matchId()+":"+matchId;
+	}
+	public void setMatchStatus(String startDate, String opponentEmail, Color color, String matchId){
+	    String c = color.equals(Color.WHITE) ? "w" : "b";
+	    setMatchStatus(startDate, opponentEmail, c, matchId);
+	}
+	public void setMatchStatus(String startDate, String opponentEmail, String color, String matchId){
+	    matchStatus.setText(getMatchString(startDate, opponentEmail, color, matchId));
+	}
+	public void setMatchStatus(String status){
+		matchStatus.setText(status);
+	}
+	public void addMatchToDropdown(String startDate, String opponentEmail, String color, String matchId){
+	   matchesList.addItem(getMatchString(startDate, opponentEmail, color, String.valueOf(matchId)));
+	}
+	@SuppressWarnings("deprecation")
+	public String getDateFormat(String startDate){
+		int year = Integer.parseInt(startDate.substring(0,4))-1900;
+		int month = Integer.parseInt(startDate.substring(4,6));
+		int day = Integer.parseInt(startDate.substring(6,8));
+		DateTimeFormat fmt = DateTimeFormat.getFormat(DateTimeFormat.PredefinedFormat.DATE_SHORT);
+		return fmt.format(new Date(year, month-1, day));
+	}
+		
+	@Override
+	public void setPiece(int row, int col, Piece piece) {
+		//sets the resource on the board for position
+		if (piece != null) {
+			if(piece.getKind()==PieceKind.KING){
+				if (piece.getColor().isWhite())
+					images[row][col].setResource(gameImages.whiteKing());
+				else
+					images[row][col].setResource(gameImages.blackKing());
+			}
+			else if(piece.getKind()==PieceKind.QUEEN){
+				if (piece.getColor().isWhite())
+					images[row][col].setResource(gameImages.whiteQueen());
+				else
+					images[row][col].setResource(gameImages.blackQueen());
+			}
+			else if(piece.getKind()==PieceKind.ROOK){
+				if (piece.getColor().isWhite())
+					images[row][col].setResource(gameImages.whiteRook());
+				else
+					images[row][col].setResource(gameImages.blackRook());
+			}
+			else if(piece.getKind()==PieceKind.BISHOP){
+				if (piece.getColor().isWhite())
+					images[row][col].setResource(gameImages.whiteBishop());
+				else
+					images[row][col].setResource(gameImages.blackBishop());
+			}
+			else if(piece.getKind()==PieceKind.KNIGHT){
+				if (piece.getColor().isWhite())
+					images[row][col].setResource(gameImages.whiteKnight());
+				else
+					images[row][col].setResource(gameImages.blackKnight());
+			}
+			else if(piece.getKind()==PieceKind.PAWN){
+				if (piece.getColor().isWhite())
+					images[row][col].setResource(gameImages.whitePawn());
+				else
+					images[row][col].setResource(gameImages.blackPawn());
+			}
+		}
+		else{
+			//square is null, put tile back on it
+			if (row%2==0 && col%2==1 || row%2==1 && col%2==0)
+				images[row][col].setResource(gameImages.blackTile());
+			else
+				images[row][col].setResource(gameImages.whiteTile());
+		}
+	}
+	@Override
+	public void setWhoseTurn(Color color){
+		quickWin.setEnabled(false);
+		if (color==null){
+			gameStatus.setText("");
+		}
+		else if(presenter.getState().getGameResult()==null){
+			if (color.equals(Color.BLACK)){
+				gameStatus.setText(messages.blacksTurn());
+				if(presenter.getState()!=null && presenter.getColorForGame().equals(Color.BLACK))
+					quickWin.setEnabled(true);
+			}
+			else if (color.equals(Color.WHITE)){
+				gameStatus.setText(messages.whitesTurn());
+				if(presenter.getState()!=null && presenter.getColorForGame().equals(Color.WHITE))
+					quickWin.setEnabled(true);
+			}
+		}
+	}
+	@Override
+	public void setHighlighted(int row, int col, boolean highlighted) {
+		//applies css highlighting 
+		Element element = images[row][col].getElement();
+		if (element!=null){
+			if (highlighted)
+				element.setClassName(css.highlighted());
+			else
+				element.removeClassName(css.highlighted());
+		}
+	}
+	@Override
+	public void setGameResult(GameResult gameResult) {
+		if(gameResult==null){
+			gameStatus.setText(messages.noGameSelected());
+			return;
+		}
+		
+		//sets end of game text
+		GameResultReason reason = gameResult.getGameResultReason();  
+		if (reason.name()=="CHECKMATE")
+		  gameStatus.setText(messages.checkmateWinner(gameResult.getWinner().toString()));
+		else if (reason.name()=="FIFTY_MOVE_RULE") 
+		  gameStatus.setText(messages.fiftyMoveRule());
+		else if (reason.name()=="THREEFOLD_REPITITION_RULE")
+		  gameStatus.setText(messages.threeFoldRule());
+		else if (reason.name()=="STALEMATE")
+		  gameStatus.setText(messages.stalemate());
+	}
+
+	@Override
+	public Image getImage(int row, int col) {
+		//get image for specific space
+		return images[row][col];
+	}
+	@Override
+	public Image getImage(Position pos) {
+		return images[7-pos.getRow()][pos.getCol()];
+	}
+	
+	@Override
+	public Image getPromotionImage(int index) {
+		return promotionImages[index];
+	}
+	@Override
+	public void setPromotionGridVisible(boolean vis) {
+		promotionGrid.setVisible(vis);
+	}
+			
+	@Override
+	public void addDragDropHandlers() {
+		//add drag and drop handlers for each image
+		for (int col = 0; col < 8; col++) {
+			for (int row = 0; row < 8; row++) {
+				final int f_row = row;
+				final int f_col = col;
+				
+				images[7-f_row][f_col].addDragStartHandler(new DragStartHandler(){
+					public void onDragStart(DragStartEvent event){
+						presenter.squareClicked(f_row, f_col);
+						//get image under cursor
+						event.getDataTransfer().setDragImage(
+									images[f_row][f_col].getElement(),
+									event.getNativeEvent().getClientX(),
+									event.getNativeEvent().getClientY());
+					}
+				});
+				images[7-f_row][f_col].addDropHandler(new DropHandler(){
+					public void onDrop(DropEvent event) {
+						event.preventDefault();
+						
+						presenter.squareClicked(f_row, f_col);
+					}
+				});
+			}
+		}
+	}
+}

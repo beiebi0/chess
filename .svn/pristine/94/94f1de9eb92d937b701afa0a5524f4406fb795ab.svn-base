@@ -1,0 +1,37 @@
+package org.mengyanhuang.hw6.client;
+
+import java.util.LinkedList;
+
+import org.mengyanhuang.hw7.Match;
+import org.mengyanhuang.hw7.Player;
+
+import com.google.gwt.user.client.rpc.AsyncCallback;
+
+public interface UserLoginServiceAsync {
+	
+	public void login(String requestUri, AsyncCallback<LoginInfo> async);
+	
+	public void LoadGame(String userId, AsyncCallback<LinkedList<Match>> async);
+	
+	public void AutoMatch(String userId, AsyncCallback<Match> async);
+	
+	public void MatchbyEmail(String opponentId, AsyncCallback<Match> async);
+	
+	public void getMatch(long matchId, AsyncCallback<Match> async);
+	
+	public void getCurrentState(String state, String Uid, long matchid, AsyncCallback<String> async);
+	
+	public void Delete(String userId, long matchid, AsyncCallback<String> async);
+	
+	public void loadMatch(String userId, long matchid, AsyncCallback<Match> async);
+	
+	public void setPlayerLastPlayedTime(String userId, long date, AsyncCallback<Void> async);
+	
+	public void setPlayerRD(String userId, int RD, AsyncCallback<Void> async);
+	
+	public void setPlayerRank(String userId, int rank, AsyncCallback<Void> async);
+	
+	public void getPlayer(String userId, AsyncCallback<Player> async);
+	
+	public void fakelogin(String requestUri, AsyncCallback<LoginInfo> async);
+}

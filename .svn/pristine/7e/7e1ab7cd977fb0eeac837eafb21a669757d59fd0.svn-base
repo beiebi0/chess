@@ -1,0 +1,64 @@
+package org.jiangfengchen.hw10;
+
+import org.jiangfengchen.hw3.Graphics;
+import org.jiangfengchen.hw3.Presenter;
+import org.jiangfengchen.hw6.client.LoginService;
+import org.jiangfengchen.hw6.client.LoginServiceAsync;
+import org.shared.chess.Position;
+
+import com.allen_sauer.gwt.dnd.client.DragContext;
+import com.allen_sauer.gwt.dnd.client.VetoDragException;
+import com.allen_sauer.gwt.dnd.client.drop.SimpleDropController;
+import com.google.gwt.core.shared.GWT;
+import com.google.gwt.user.client.ui.Image;
+import com.google.gwt.user.client.ui.SimplePanel;
+
+
+
+public class MyDropController extends SimpleDropController {
+	
+	private Graphics view;
+	private Presenter presenter;
+	private SimplePanel parent;
+	LoginServiceAsync loginService = GWT.create(LoginService.class);
+	public MyDropController(SimplePanel dropTarget) {
+		super(dropTarget);
+		parent = dropTarget;
+	}
+
+	public void sets(Graphics g,Presenter p){
+		this.presenter=p;
+		this.view=g;
+		
+	}
+	
+	
+	  @Override
+	  public void onDrop(DragContext context) {
+			
+		  	 view.drag.play();
+		  	 super.onDrop(context);
+			
+	  }
+	  
+	  @Override
+	  public void onPreviewDrop(DragContext context) throws VetoDragException {
+
+		  Image to =(Image) parent.getWidget();
+		  Image from =(Image) context.draggable;
+		  Position drop =view.findImage(to);
+	      Position drag = view.findImage(from);
+	
+			 if(presenter.isClicked()||!presenter.Judge(drag, drop)){
+				 throw new VetoDragException();
+			 }
+
+			 presenter.OnClick(7-drag.getRow(), drag.getCol());
+			 presenter.OnClick(7-drop.getRow(), drop.getCol());
+
+			 super.onPreviewDrop(context);
+	  }
+	  
+	  
+	
+}

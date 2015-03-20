@@ -1,0 +1,87 @@
+package org.vorasahil.hw6.client;
+
+import java.io.Serializable;
+
+public class LoginInfo implements Serializable {
+
+	private static final long serialVersionUID = 42L;
+	private boolean loggedIn = false;
+	private String loginUrl="";
+	private String logoutUrl="";
+	private String emailAddress="";
+	private String nickname="";
+
+	public LoginInfo(){
+	}
+	
+	public LoginInfo(boolean loggedIn, String loginUrl, String logoutUrl,
+			String emailAddress, String nickname) {
+		super();
+		this.loggedIn = loggedIn;
+		this.loginUrl = loginUrl;
+		this.logoutUrl = logoutUrl;
+		this.emailAddress = emailAddress;
+		this.nickname = nickname;
+	}
+
+
+
+	public boolean isLoggedIn() {
+		return loggedIn;
+	}
+
+	public void setLoggedIn(boolean loggedIn) {
+		this.loggedIn = loggedIn;
+	}
+
+	public String getLoginUrl() {
+		return loginUrl;
+	}
+
+	public void setLoginUrl(String loginUrl) {
+		this.loginUrl = loginUrl;
+	}
+
+	public String getLogoutUrl() {
+		return logoutUrl;
+	}
+
+	public void setLogoutUrl(String logoutUrl) {
+		this.logoutUrl = logoutUrl;
+	}
+
+	public String getEmailAddress() {
+		return emailAddress;
+	}
+
+	public void setEmailAddress(String emailAddress) {
+		this.emailAddress = emailAddress;
+	}
+
+	public String getNickname() {
+		return nickname;
+	}
+
+	public void setNickname(String nickname) {
+		this.nickname = nickname;
+	}
+
+	@Override
+	public String toString() {
+		return "" + loggedIn + "##" + loginUrl
+				+ "##" + logoutUrl + "##" + emailAddress
+				+ "##" + nickname + "";
+	}
+	
+	public LoginInfo generateLogin(String loginString){
+		String lStr[]=loginString.split("#");
+		if(lStr.length!=5)
+			return null;
+		try{
+		return new LoginInfo(Boolean.parseBoolean(lStr[0]),lStr[1],lStr[2],lStr[3],lStr[4]);
+		}
+		catch(Exception e){
+			return null;
+		}
+	}
+}

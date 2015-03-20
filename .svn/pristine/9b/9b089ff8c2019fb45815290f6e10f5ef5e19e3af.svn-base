@@ -1,0 +1,32 @@
+# Messages from org.leozis.hw8.ChessMessages
+# Source locale en_US
+
+draw=tablas
+
+whiteTurn=turno de blanco
+
+blackTurn=turno de negro
+
+whiteWins=blanco gana por jaque mate
+
+blackWins=negro gana por jaque mate
+
+fiftyMoveRule=tablas de cincuenta movimientos
+
+stalemate=tablas
+
+turn=turno de {0}
+
+won={0} gana
+
+singleplayerstarted=juego para un solo jugador ha comenzado
+
+save=guardar
+
+load=cargar
+
+singleplayer=solo jugador
+
+newgame=nuevo juego
+
+notsignedin={0} no presente

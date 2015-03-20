@@ -1,0 +1,939 @@
+package org.ashishmanral.hw7;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+import org.shared.chess.Color;
+import org.shared.chess.GameResult;
+import org.shared.chess.Piece;
+import org.shared.chess.PieceKind;
+import org.ashishmanral.hw7.Presenter.View;
+import org.ashishmanral.hw8.GameMessages;
+
+import com.google.gwt.appengine.channel.client.Channel;
+import com.google.gwt.appengine.channel.client.ChannelError;
+import com.google.gwt.appengine.channel.client.ChannelFactoryImpl;
+import com.google.gwt.appengine.channel.client.SocketListener;
+import com.google.gwt.core.client.GWT;
+import com.google.gwt.event.dom.client.ClickEvent;
+import com.google.gwt.event.dom.client.ClickHandler;
+import com.google.gwt.event.dom.client.DragOverEvent;
+import com.google.gwt.event.dom.client.DragOverHandler;
+import com.google.gwt.event.dom.client.DragStartEvent;
+import com.google.gwt.event.dom.client.DragStartHandler;
+import com.google.gwt.event.dom.client.DropEvent;
+import com.google.gwt.event.dom.client.DropHandler;
+import com.google.gwt.i18n.shared.DateTimeFormat;
+import com.google.gwt.i18n.shared.DateTimeFormat.PredefinedFormat;
+import com.google.gwt.uibinder.client.UiBinder;
+import com.google.gwt.uibinder.client.UiField;
+import com.google.gwt.user.client.Element;
+import com.google.gwt.user.client.Window;
+import com.google.gwt.user.client.rpc.AsyncCallback;
+import com.google.gwt.user.client.ui.Button;
+import com.google.gwt.user.client.ui.Composite;
+import com.google.gwt.user.client.ui.Grid;
+import com.google.gwt.user.client.ui.Image;
+import com.google.gwt.user.client.ui.Label;
+import com.google.gwt.user.client.ui.ListBox;
+import com.google.gwt.user.client.ui.TextBox;
+import com.google.gwt.user.client.ui.Widget;
+
+/**
+ * Graphics Class
+ * @author Ashish Manral
+ *
+ */
+public class Graphics extends Composite implements View {
+  private static GameImages gameImages = GWT.create(GameImages.class);
+  private static GraphicsUiBinder uiBinder = GWT.create(GraphicsUiBinder.class);
+  private static MultiplayerChessServiceAsync chessService = 
+	      GWT.create(MultiplayerChessService.class);
+
+  private static Logger logger = Logger.getLogger(Graphics.class.toString());
+  
+  interface GraphicsUiBinder extends UiBinder<Widget, Graphics> {
+  }
+
+  @UiField GameCss css;
+  @UiField Label gameStatus;
+  @UiField Label matchIdLabel;
+  @UiField Label matchStartDateLabel;
+  @UiField Label whiteLabel;
+  @UiField Label blackLabel;
+  @UiField Grid gameGrid;
+  @UiField Grid whitePromotionGrid;
+  @UiField Grid blackPromotionGrid;
+  @UiField Label opponentLabel;
+  @UiField TextBox opponentEmailBox;
+  @UiField Button challengeButton;
+  @UiField Button automatchButton;
+  @UiField Button AI;
+  @UiField ListBox matchList;
+  @UiField Button deleteButton;
+  @UiField Label currentPlayerLabel;
+  private Image[][] board = new Image[8][8];
+  public Presenter presenter;
+  private String currentState = "BlankState";
+  private Long matchId;
+  private String dateStarted;
+  public boolean clickEnabled = true;
+  private String userId;
+  private GameType gameType;
+  private boolean yourTurn;
+  private boolean gameEnded;
+  private String opponent;
+  private String winner="No Winner";
+  private String stateFromServer;
+  private boolean ignoreCheckToIgnoreARequest;
+  private GameMessages messages;
+  private String yourRankMin;
+  private String yourRankMax;
+  private String oppRankMin;
+  private String oppRankMax;
+  private boolean aiGame;
+  private boolean saveAIignore;
+
+  /**
+   * This method is used to initialize the promotion grid for white pieces.
+   */
+  public void initializeWhiteGrid(){
+	whitePromotionGrid.setBorderWidth(1);
+	whitePromotionGrid.resize(1,4);
+    Image[] imageArr={new Image(gameImages.whiteRook()),
+    				  new Image(gameImages.whiteKnight()),
+    				  new Image(gameImages.whiteBishop()),
+    				  new Image(gameImages.whiteQueen())};
+    final PieceKind[] pieceKind={PieceKind.ROOK,PieceKind.KNIGHT,PieceKind.BISHOP,PieceKind.QUEEN};
+    for(int i=0;i<4;i++){
+      final int j=i;
+      whitePromotionGrid.setWidget(0,i,imageArr[i]);
+      //Adding click handler.
+      imageArr[i].addClickHandler(new ClickHandler() {
+        @Override
+        public void onClick(ClickEvent event) {
+          if(clickEnabled) presenter.clickedOn(presenter.promotionPos.getRow(),presenter.promotionPos.getCol(),pieceKind[j],false);
+        }
+      });
+      //Adding drag handler.
+      imageArr[i].getElement().setDraggable(Element.DRAGGABLE_TRUE);
+      imageArr[i].addDragStartHandler(new DragStartHandler() {
+        @Override
+        public void onDragStart(DragStartEvent event) {
+          event.setData("text",Integer.toString(j));
+        }
+      });
+    }
+    whitePromotionGrid.setVisible(false);
+  }
+  
+  /**
+   * This method is used to initialize the promotion grid for black pieces.
+   */
+  public void initializeBlackGrid(){
+	blackPromotionGrid.setBorderWidth(1);
+    blackPromotionGrid.resize(1,4);
+    Image[] imageArr={new Image(gameImages.blackRook()),
+    				  new Image(gameImages.blackKnight()),
+    				  new Image(gameImages.blackBishop()),
+    				  new Image(gameImages.blackQueen())};
+    final PieceKind[] pieceKind={PieceKind.ROOK,PieceKind.KNIGHT,PieceKind.BISHOP,PieceKind.QUEEN};
+    for(int i=0;i<4;i++){
+      final int j=i;
+      blackPromotionGrid.setWidget(0,i,imageArr[i]);
+      //Adding click handler
+      imageArr[i].addClickHandler(new ClickHandler() {
+        @Override
+        public void onClick(ClickEvent event) {
+          if(clickEnabled) presenter.clickedOn(presenter.promotionPos.getRow(),presenter.promotionPos.getCol(),pieceKind[j],false);
+        }
+      });
+      //Adding drag handler.
+      imageArr[i].getElement().setDraggable(Element.DRAGGABLE_TRUE);
+      imageArr[i].addDragStartHandler(new DragStartHandler() {
+        @Override
+        public void onDragStart(DragStartEvent event) {
+          event.setData("text","Hello World");
+        }
+      });
+    }
+    blackPromotionGrid.setVisible(false);
+  }
+  
+  /**
+   * Graphics constructor that takes state as argument and passes that to Presenter.
+   */
+  public Graphics(final String token, String userEmail, GameMessages messagesFromEntryPoint){
+	this.messages = messagesFromEntryPoint;
+	userId = userEmail;
+    initWidget(uiBinder.createAndBindUi(this));
+    gameGrid.resize(8, 8);
+    gameGrid.setCellPadding(0);
+    gameGrid.setCellSpacing(0);
+    gameGrid.setBorderWidth(10);
+    for (int row = 0; row < 8; row++) {
+      for (int col = 0; col < 8; col++) {
+        final Image image = new Image();
+        board[row][col] = image;
+        image.setWidth("100%");
+        final int rowId=row;
+        final int colId=col;
+        image.addClickHandler(new ClickHandler() {
+          @Override
+          public void onClick(ClickEvent event) {
+        	if(clickEnabled) presenter.clickedOn(rowId, colId, null,false);
+          }
+        });
+        gameGrid.setWidget(row, col, image);
+      }
+    }
+    initializeWhiteGrid();
+    initializeBlackGrid();
+    matchList.setVisibleItemCount(1);
+    matchList.setVisible(true);
+    gameStatus.setText(messages.idleMessage());
+    automatchButton.setText(messages.autoMatch());
+    deleteButton.setText(messages.delete());
+    opponentEmailBox.setText(messages.opponentEmailAdd());
+    challengeButton.setText(messages.challenge());
+    addListeners(userEmail);
+    final String [] tokenStr = token.split("&&&");
+    Channel channel = new ChannelFactoryImpl().createChannel(tokenStr[0]);
+    channel.open(new SocketListener() {
+		
+		@Override
+		public void onOpen() {
+			gameStatus.setText(messages.idleMessage());
+			currentPlayerLabel.setText(messages.youAre() + userId + messages.rating() + tokenStr[1] + "," + tokenStr[2] + "]");
+			emptyBoard();
+		}
+		
+		@Override
+		public void onMessage(String message) {
+			if(message.charAt(0)=='&'){
+				String[] messageStr = message.split("&");
+				yourRankMin = messageStr[1];
+				yourRankMax = messageStr[2];
+				oppRankMin = messageStr[3];
+				oppRankMax = messageStr[4];
+				currentPlayerLabel.setText(messages.youAre() + userId + messages.rating() + yourRankMin + "," + yourRankMax + "]");
+	            opponentLabel.setText(messages.playingAgainst() + opponent + messages.rating() + oppRankMin + "," + oppRankMax + "]");
+		        return;
+			}
+			boolean ignore = true;
+			if(decodeMessage(message, !ignore)==-1) return;
+			if (gameType.equals(GameType.GAMEINPROGRESS)) {
+				currentState = stateFromServer;
+				gameStatus.setText(yourTurn==true?messages.yourTurnMessage():messages.opponentsTurnMessage());
+				presenter.restoreState(stateFromServer);
+		        clickEnabled = (yourTurn==true?true:false);
+		        matchIdLabel.setText(messages.matchId() + matchId.toString());
+		        setDateStartedLabel();
+		        currentPlayerLabel.setText(messages.youAre() + userId + messages.rating() + yourRankMin + "," + yourRankMax + "]");
+	            opponentLabel.setText(messages.playingAgainst() + opponent + messages.rating() + oppRankMin + "," + oppRankMax + "]");
+		        for (int i=0; i<matchList.getItemCount(); i++) {
+			      if (matchList.getValue(i).equals(matchId.toString())) {
+			    	matchList.removeItem(i);
+			        matchList.addItem(messages.matchListMessage(matchId.toString() , 
+			        											opponent, 
+			        											(yourTurn==true?messages.yourTurnMessage():messages.opponentsTurnMessage()), 
+			        											(winner.equals("No Winner")?messages.inProgressMessage():winner)), 
+			        											matchId.toString());
+			        break;
+			      }
+		        }
+	        }
+	        else if(gameType.equals(GameType.NEWGAME)){
+	        	if(currentState.equals("BlankState")){
+		        	decodeMessage(message, ignore);
+		        	Window.alert(messages.challengeMessage(opponent)); 
+		        	matchList.addItem(messages.matchListMessage(matchId.toString(), 
+		        												opponent,
+		        												(yourTurn==true?"Your Turn":"Opponent's Turn"),
+		        												messages.inProgressMessage()), 
+		        												matchId.toString());
+		            winner = "No Winner";
+		        	presenter = new Presenter(Graphics.this);
+		            clickEnabled = (yourTurn==true?true:false);
+		            gameStatus.setText(yourTurn==true?messages.yourTurnMessage():messages.opponentsTurnMessage());
+		            currentPlayerLabel.setText(messages.youAre() + userId + messages.rating() + yourRankMin + "," + yourRankMax + "]");
+		            opponentLabel.setText(messages.playingAgainst() + opponent + messages.rating() + oppRankMin + "," + oppRankMax + "]");
+		            matchIdLabel.setText(messages.matchId() + matchId.toString());
+		            setDateStartedLabel();
+		            gameEnded = false;
+	        	}
+	        	else{
+	        		String[] decodedMessage = message.split("\\%");
+		        	String matchId = decodedMessage[0];
+		        	String yourTurn = decodedMessage[2];
+		        	String opponent = decodedMessage[3];
+		        	Window.alert(messages.addToListMessage(opponent));
+		        	matchList.addItem(messages.matchListMessage(matchId, 
+		        												opponent, 
+		        												(yourTurn.equals("true")?messages.yourTurnMessage():messages.opponentsTurnMessage()), 
+		        												messages.inProgressMessage()),
+		        												matchId);
+	        	}
+	        }
+	        else{
+	          if(currentState.equals("BlankState")){
+	        	  winner = "No Winner";
+	        	  decodeMessage(message, ignore);
+	        	  Window.alert(messages.startingGameMessage(opponent));
+	        	  presenter = new Presenter(Graphics.this);
+		          clickEnabled = (yourTurn==true?true:false);
+		          gameStatus.setText(yourTurn==true?messages.yourTurnMessage():messages.opponentsTurnMessage());
+		          setDateStartedLabel();
+		          matchList.addItem(messages.matchListMessage(matchId.toString(), 
+		        		  									  opponent, 
+		        		  									  (yourTurn==true?messages.yourTurnMessage():messages.opponentsTurnMessage()), 
+		        		  									  messages.inProgressMessage()),
+		        		  									  matchId.toString());
+		          currentPlayerLabel.setText(messages.youAre() + userId + messages.rating() + yourRankMin + "," + yourRankMax + "]");
+		          opponentLabel.setText(messages.playingAgainst() + opponent + messages.rating() + oppRankMin + "," + oppRankMax + "]");
+		          matchIdLabel.setText(messages.matchId() + matchId.toString());
+	        	  gameEnded = false;
+	          }
+	          else{
+	        	  String[] decodedMessage = message.split("\\%");
+	        	  String matchId = decodedMessage[0];
+	        	  String yourTurn = decodedMessage[2];
+	        	  String opponent = decodedMessage[3];
+	        	  Window.alert(messages.addToListMessage(opponent));
+	        	  matchList.addItem(messages.matchListMessage(matchId, 
+	        			  									  opponent, 
+	        			  									  (yourTurn.equals("true")?messages.yourTurnMessage():messages.opponentsTurnMessage()), 
+	        			  									  messages.inProgressMessage()),
+	        			  									  matchId);
+	          }
+	        }
+		}
+		
+		@Override
+		public void onError(ChannelError error) {
+			Window.alert(messages.channelErrorMessage() + error.getDescription());
+		}
+		
+		@Override
+		public void onClose() {
+			Window.alert(messages.channelOnCloseMessage());
+		}
+	});
+    
+    chessService.loadMatchList(userId, new AsyncCallback<ArrayList<Message>>() {
+        
+    	@Override
+        public void onFailure(Throwable caught) {
+    		Window.alert(messages.loadMatchListOnFailure());
+        }
+        
+    	@Override
+        public void onSuccess(ArrayList<Message> matchListFromServer) {
+          if(matchListFromServer.size()==0) return;
+          for(Message currentMessage:matchListFromServer){
+        	  matchList.addItem(messages.matchListMessage(currentMessage.getMatchId().toString(), 
+        			  									  currentMessage.getOpponent(), 
+        			  								      (currentMessage.getYourTurn()==true?messages.yourTurnMessage():currentMessage.getOpponent().equals("Computer")?messages.computerTurn():messages.opponentsTurnMessage()), 
+        			  								      (currentMessage.getWinner().equals("No Winner")?messages.inProgressMessage():currentMessage.getWinner())),
+        			  								      currentMessage.getMatchId().toString());
+          }
+    	}
+     });
+    
+  }
+  
+  public void addListeners(final String userEmail){
+	  automatchButton.addClickHandler(new ClickHandler() {
+	      @Override
+	      public void onClick(ClickEvent event) {
+	    	Window.alert(messages.automatchMessage());
+	        gameStatus.setText(messages.opponentWaitingMessage());
+	        emptyBoard();
+	        whiteLabel.setText(messages.emptyMessage());
+	        blackLabel.setText(messages.emptyMessage());
+	        opponentLabel.setText(messages.emptyMessage());
+	        matchIdLabel.setText(messages.emptyMessage());
+	        clickEnabled=false;
+	        Long tempMatchId = matchId;
+	        String tempOpponent = opponent;
+	        String tempCurrState= currentState;
+	        if(matchId!=null){
+	          for (int i=0; i<matchList.getItemCount(); i++) {
+			    if (matchList.getValue(i).equals(matchId.toString())) {
+			      matchList.removeItem(i);
+			      matchList.addItem(messages.matchListMessage(matchId.toString(), 
+			    		  									  opponent, 
+			    		  									  (yourTurn==true?messages.yourTurnMessage():messages.opponentsTurnMessage()), 
+			    		  									  (gameEnded==true?winner:messages.inProgressMessage())), 
+			    		  									  matchId.toString());
+			      break;
+			    }
+			  }
+	        }
+	        matchId = null;
+	        opponent = null;
+	        currentState = "BlankState";
+	        clearDateStartedLabel();
+	        chessService.autoMatch(userId, tempOpponent, tempMatchId, tempCurrState, yourTurn, new AsyncCallback<Message>() {
+	          @Override
+	          public void onFailure(Throwable caught) {
+	        	  Window.alert(messages.autoMatchOnFailure() + "  " + caught.getMessage());
+	          }
+	          @Override
+	          public void onSuccess(Message message) {
+	            if(message==null) Window.alert(messages.noAutomatchMessage());
+	            else{
+	            	aiGame = false;
+	            	gameEnded = false;
+	            	winner="No Winner";
+	            	Window.alert(messages.beginningWithPlayerMessage(message.getOpponent()));
+	            	gameStatus.setText(messages.yourTurnMessage());
+	            	clickEnabled = true;
+	            	decodeMessage(message.toString(), true);
+	            	currentPlayerLabel.setText(messages.youAre() + userId + messages.rating() + yourRankMin + "," + yourRankMax + "]");
+	            	opponentLabel.setText(messages.playingAgainst() + message.getOpponent() + messages.rating() + oppRankMin + "," + oppRankMax + "]");
+	            	matchList.addItem(messages.matchListMessage(matchId.toString(), 
+	            												opponent, 
+	            												messages.yourTurnMessage(), 
+	            												messages.inProgressMessage()),
+	            												matchId.toString());
+	            	presenter = new Presenter(Graphics.this);
+	            	matchIdLabel.setText(messages.matchId() + matchId.toString());
+	            	setDateStartedLabel();
+	            }
+	          }
+	        });
+	      }
+	    });
+	  
+	    challengeButton.addClickHandler(new ClickHandler() {
+	      @Override
+	      public void onClick(ClickEvent event) {
+	        
+	    	chessService.opponentEmailMatch(userEmail, opponentEmailBox.getText(), currentState, matchId, yourTurn, new AsyncCallback<Message>() {
+
+	          @Override
+	          public void onFailure(Throwable caught) {
+	            Window.alert(messages.opponentEmailMatchOnFailure());
+	          }
+
+	          @Override
+	          public void onSuccess(Message message) {
+	        	  aiGame = false;
+	        	if (message == null) {
+	              Window.alert(messages.userIdWrongMessage());
+	            }
+	            else{
+	            	if(matchId!=null){
+	      	          for (int i=0; i<matchList.getItemCount(); i++) {
+	      			    if (matchList.getValue(i).equals(matchId.toString())) {
+	      			      matchList.removeItem(i);
+	      			      matchList.addItem(messages.matchListMessage(matchId.toString(), 
+	      			    		  									  opponent, 
+	      			    		  									  (yourTurn==true?messages.yourTurnMessage():messages.opponentsTurnMessage()), 
+	      			    		  									  (gameEnded==true?winner:messages.inProgressMessage())),
+	      			    		  									  matchId.toString());
+	      			      break;
+	      			    }
+	      			  }
+	      	        }
+	            	winner="No Winner";
+	            	gameEnded =false;
+	            	emptyBoard();
+	            	decodeMessage(message.toString(),true);
+	            	Window.alert(messages.startingGameMessage(opponent) + messages.previousGameSaveMessage());
+	  	            presenter = new Presenter(Graphics.this);
+	  	            clickEnabled = (yourTurn==true?true:false);
+	  	            gameStatus.setText(yourTurn==true?messages.yourTurnMessage():messages.opponentsTurnMessage());
+	  	            currentPlayerLabel.setText(messages.youAre() + userId + messages.rating() + yourRankMin + "," + yourRankMax + "]");
+	            	opponentLabel.setText(messages.playingAgainst() + opponent + messages.rating() + oppRankMin + "," + oppRankMax + "]");
+	            	matchIdLabel.setText(messages.matchId() + matchId.toString());
+	            	setDateStartedLabel();
+	            	matchList.addItem(messages.matchListMessage(matchId.toString(),
+	            												opponent, 
+	            												messages.yourTurnMessage(), 
+	            												messages.inProgressMessage()), 
+	            												matchId.toString());
+		      }
+	          }
+	        });
+	      } 
+	    });
+	    
+	    matchList.addClickHandler(new ClickHandler() {
+
+	      boolean ignore=true;
+	      @Override
+	      public void onClick(ClickEvent event) {
+	    	  if(!ignore && matchList.getSelectedIndex()!=-1){
+	    		  Long newMatchId = Long.valueOf(matchList.getValue(matchList.getSelectedIndex()));
+	    		  if(matchId == newMatchId) return;
+	    		  ignoreCheckToIgnoreARequest=true;
+	    		  chessService.changeMatch(userEmail, matchId, newMatchId, currentState, yourTurn==true?userEmail:opponent, new AsyncCallback<Message>() {
+        
+	    			  @Override
+	    			  public void onFailure(Throwable caught) {
+	    				  Window.alert(messages.changeMatchOnFailure());
+	    			  }
+
+		            @Override
+		            public void onSuccess(Message message) {
+		              emptyBoard();
+		              if(matchId!=null){
+		      	        for (int i=0; i<matchList.getItemCount(); i++) {
+		      			    if (matchList.getValue(i).equals(matchId.toString())) {
+		      			      matchList.removeItem(i);
+		      			      matchList.addItem(messages.matchListMessage(matchId.toString(), 
+		      			    		  									  opponent, 
+		      			    		  									  (yourTurn==true?messages.yourTurnMessage():messages.opponentsTurnMessage()), 
+		      			    		  								      (gameEnded==true?winner:messages.inProgressMessage())), 
+		      			    		  								      matchId.toString());
+		      			      break;
+		      			    }
+		      			  }
+	            	  }
+		              winner = "No Winner";
+		              gameEnded = true;
+		        	  decodeMessage(message.toString(),true);
+		        	  if(opponent.equals("Computer")) {
+		        		  aiGame = true;
+		        		  saveAIignore=true;
+		        	  }
+		        	  else aiGame = false;
+	            	  presenter = new Presenter(Graphics.this);
+	            	  presenter.restoreState(stateFromServer.equals("BlankState")?"WR$WG$WB$WQ$WK$WB$WG$WR$WP$WP$WP$WP$WP$WP$WP$WP$N$N$N$N$N$N$N$N$N$N$N$N$N$N$N$N$N$N$N$N$N$N$N$N$N$N$N$N$N$N$N$N$BP$BP$BP$BP$BP$BP$BP$BP$BR$BG$BB$BQ$BK$BB$BG$BR$W$T$T$T$T$0$88$N":stateFromServer);
+	            	  if(aiGame) yourTurn = (yourTurn?false:true);
+	            	  clickEnabled = (yourTurn==true?true:false);
+		        	  gameStatus.setText(yourTurn==true?messages.yourTurnMessage():messages.opponentsTurnMessage());
+		        	  currentPlayerLabel.setText(messages.youAre() + userId + (!aiGame?(messages.rating() + yourRankMin + "," + yourRankMax + "]"):" "));
+		              opponentLabel.setText(messages.playingAgainst() + opponent + (!aiGame?(messages.rating() + oppRankMin + "," + oppRankMax + "]"):" "));
+		              matchIdLabel.setText(messages.matchId() + matchId.toString());
+		        	  setDateStartedLabel();
+		        	  if(aiGame) saveAIGameState(stateFromServer);
+		            }
+		          });
+		        }
+	        ignore=!ignore;
+          }
+	    });
+	    
+	    deleteButton.addClickHandler(new ClickHandler() {
+
+	      @Override
+	      public void onClick(ClickEvent event) {
+	    	if(matchId==null){
+	    		Window.alert(messages.noGameToDeleteMessage());
+	    		return;
+	    	}
+	        for (int i=0; i<matchList.getItemCount(); i++) {
+	          if (matchList.getValue(i).equals(matchId.toString())) {
+	            matchList.removeItem(i);
+	            break;
+	          }
+	        }
+        	chessService.deleteMatch(userId, matchId, new AsyncCallback<Void>() {
+	  
+	          @Override
+	          public void onFailure(Throwable caught) {
+	            Window.alert(messages.deleteMatchOnFailure());
+	          }
+	  
+	          @Override
+	          public void onSuccess(Void result) {
+	        	emptyBoard();
+	          	opponentLabel.setText(messages.noOpponentMessage());
+	          	gameStatus.setText(messages.emptyMessage());
+	          	whiteLabel.setText(messages.whitePlayer() + messages.emptyMessage());
+	          	blackLabel.setText(messages.blackPlayer() + messages.emptyMessage());
+	          	matchIdLabel.setText(messages.matchId() + messages.emptyMessage());
+	          	opponent = null;
+	          	matchId = null;
+	          	currentState = "BlankState";
+	          	gameEnded=false;
+	          	winner="No Winner";
+	          	aiGame = false;
+	          	clearDateStartedLabel();
+	          } 
+	        });
+	      } 
+	    });
+	    
+	    AI.addClickHandler(new ClickHandler(){
+	    	
+	    	@Override
+	    	public void onClick(ClickEvent event){
+	            Window.alert("Starting game with Computer!!");
+	            chessService.AIGame(userEmail, currentState, matchId, yourTurn, false, new AsyncCallback<String>() {
+
+	  	          @Override
+	  	          public void onFailure(Throwable caught) {
+	  	            Window.alert(messages.AIGameOnFailure());
+	  	          }
+
+	  	          @Override
+	  	          public void onSuccess(String message) {
+	  	        	aiGame = true;
+  	            	String[] messageStr = message.split("&&");
+  	            	matchId = Long.parseLong(messageStr[0]);
+  	            	dateStarted = messageStr[1];
+  	            	winner="No Winner";
+  	            	opponent="Computer";
+  	            	yourTurn = true;
+  	            	clickEnabled = (yourTurn==true?true:false);
+  	            	gameEnded = false;
+  	            	matchIdLabel.setText(messages.matchId() + matchId);
+  	            	gameStatus.setText(messages.yourTurnMessage());
+  	            	currentPlayerLabel.setText(messages.youAre() + userId);
+  	            	opponentLabel.setText(messages.playingAgainst() + messages.computer());
+  	            	matchList.addItem(messages.matchListMessage(matchId.toString(),
+																"Computer", 
+																messages.yourTurnMessage(), 
+																messages.inProgressMessage()), 
+																matchId.toString());
+  	            	presenter = new Presenter(Graphics.this);
+  	  	            setDateStartedLabel();
+  		      }
+	  	    });
+	  	  }
+	    });
+  }
+  
+  public int decodeMessage(String message, boolean ignore){
+	  String[] decodedMessage = message.split("\\%");
+	  gameType = (decodedMessage[1]==("NEWGAME")?GameType.NEWGAME:decodedMessage[1]=="GAMEINPROGRESS"?GameType.GAMEINPROGRESS:GameType.NEWGAMEREQUEST);
+	  if(!ignore && gameType.equals(GameType.NEWGAMEREQUEST)) return 0;
+	  if(!ignore && gameType.equals(GameType.NEWGAME)) return 0;
+	  if(matchId!=null && Long.parseLong(decodedMessage[0]) != matchId && gameType.equals(GameType.GAMEINPROGRESS) && !ignoreCheckToIgnoreARequest){
+		  for (int i=0; i<matchList.getItemCount(); i++) {
+		  if (matchList.getValue(i).equals(decodedMessage[0])) {
+		      matchList.removeItem(i);
+		      matchList.addItem(messages.matchListMessage(decodedMessage[0], 
+		    		  									  decodedMessage[3], 
+		    		  									  (decodedMessage[2].equals("true")?messages.yourTurnMessage():messages.opponentsTurnMessage()), 
+		    		  									  (decodedMessage[5].equals("No Winner")?messages.inProgressMessage():decodedMessage[5])),
+		    		  									  decodedMessage[0].toString());
+		      break;
+		  }
+	    }
+		return -1;
+	  }
+	  ignoreCheckToIgnoreARequest=false;
+	  matchId = Long.parseLong(decodedMessage[0]);
+	  yourTurn = Boolean.parseBoolean(decodedMessage[2]);
+	  opponent = decodedMessage[3];
+	  stateFromServer = decodedMessage[4];
+	  dateStarted = decodedMessage[6];
+	  yourRankMin = decodedMessage[7];
+	  yourRankMax = decodedMessage[8];
+	  oppRankMin = decodedMessage[9];
+	  oppRankMax = decodedMessage[10];
+	  if(winner!="No Winner") gameEnded = true;
+	  else gameEnded = false;
+	  return 0;
+  }
+  
+  /**
+   * Restore the state using string. Used to provide History support.
+   * @param historyState This is the state that needs to be restored.
+   */
+  public void restoreState(String historyState){
+    presenter.restoreState(historyState);
+  }
+ 
+  public void emptyBoard(){
+	for(int row=0;row<8;row++){
+		for(int col=0;col<8;col++){
+			if(row % 2 == 0 && col % 2 == 1 || row % 2 == 1 && col % 2 == 0) {
+				board[row][col].getElement().removeClassName(css.highlighted());
+				board[row][col].setResource(gameImages.blackTile());
+			}
+		    else{
+		    	board[row][col].getElement().removeClassName(css.highlighted());
+		    	board[row][col].setResource(gameImages.whiteTile());
+		    }
+		}
+	  }
+    }
+
+  /**
+   * This method is in View interface contract. It sets the grid as the game state changes.
+   */
+  @Override
+  public void setPiece(final int row, final int col, Piece piece) {
+	if(piece==null){
+      if(row % 2 == 0 && col % 2 == 1 || row % 2 == 1 && col % 2 == 0) board[row][col].setResource(gameImages.blackTile());
+      else 													           board[row][col].setResource(gameImages.whiteTile());
+    }
+    else{
+    Color pieceColor=piece.getColor();
+    switch(piece.getKind()){
+      case PAWN    : if(pieceColor==Color.WHITE) board[row][col].setResource(gameImages.whitePawn());   	
+                     else 						 board[row][col].setResource(gameImages.blackPawn());
+      				 break;
+      case ROOK    : if(pieceColor==Color.WHITE) board[row][col].setResource(gameImages.whiteRook());   	
+      				 else 						 board[row][col].setResource(gameImages.blackRook());
+		 			 break;
+      case KNIGHT  : if(pieceColor==Color.WHITE) board[row][col].setResource(gameImages.whiteKnight());   	
+      				 else 						 board[row][col].setResource(gameImages.blackKnight());
+		 			 break;
+      case BISHOP  : if(pieceColor==Color.WHITE) board[row][col].setResource(gameImages.whiteBishop());   	
+		 			 else 						 board[row][col].setResource(gameImages.blackBishop());
+		 			 break;
+      case QUEEN   : if(pieceColor==Color.WHITE) board[row][col].setResource(gameImages.whiteQueen());   	
+		 			 else 						 board[row][col].setResource(gameImages.blackQueen());
+		 			 break;
+      case KING    : if(pieceColor==Color.WHITE) board[row][col].setResource(gameImages.whiteKing());   	
+		 			 else 						 board[row][col].setResource(gameImages.blackKing());
+		 			 break;	 			 
+    }}
+    //Adding drag over handler.
+    board[row][col].addDragOverHandler(new DragOverHandler() {
+      @Override
+      public void onDragOver(DragOverEvent event) {
+      }
+    });
+    //Adding drop handler.
+    board[row][col].addDropHandler(new DropHandler(){
+      @Override
+      public void onDrop(DropEvent event){
+        event.preventDefault();
+        String data=event.getData("text");
+        if(data.equals("normal")){
+          if(clickEnabled) presenter.clickedOn(row,col,null,true);
+        }
+        else{
+          PieceKind[] pieceKind={PieceKind.ROOK,PieceKind.KNIGHT,PieceKind.BISHOP,PieceKind.QUEEN};
+          if(clickEnabled) presenter.clickedOn(row, col, pieceKind[Integer.parseInt(data)],true);
+        }
+      }
+    });
+    //Adding drag start handler.
+    board[row][col].addDragStartHandler(new DragStartHandler() {
+      @Override
+      public void onDragStart(DragStartEvent event) {
+
+    	  event.setData("text","normal");
+        if(clickEnabled) presenter.clickedOn(row,col,null,false);
+      }
+    });
+  }
+
+  /**
+   * This method is in View interface contract. It highlights a particular cell/block..
+   */
+  @Override
+  public void setHighlighted(int row, int col, boolean highlighted) {
+    Element element = board[row][col].getElement();
+    if (highlighted) {
+      element.setClassName(css.highlighted());
+    } else {
+      element.removeClassName(css.highlighted());
+    }
+  }
+
+  /**
+   * This method is used to highlight the selected piece.
+   */
+  @Override
+  public void highlightSelectedPiece(int row,int col,boolean highlighted){
+	  Element element = board[row][col].getElement();
+	    if (highlighted) {
+	      element.setClassName(css.highlightSelected());
+	    } else {
+	      element.removeClassName(css.highlightSelected());
+	    }
+  }
+  
+  /**
+   * This method is in View interface contract. It sets the gameStatus to display whose turn it is.
+   */
+  @Override
+  public void displayTurn(boolean yourTurn) {
+    if (yourTurn == true) {
+	  gameStatus.setText(messages.yourTurnMessage());
+    }else{
+      gameStatus.setText(messages.opponentsTurnMessage());
+	}
+  }
+
+  /**
+   * This method is in View interface contract. It sets gameStatus to display if the game result if it has ended.
+   */
+  @Override
+  public void setGameResult(GameResult gameResult) {
+    if(gameResult==null) return;
+	if (gameResult.getWinner() == null) {
+		gameStatus.setText(messages.gameDrawnMessage(gameResult.getGameResultReason().toString()));
+		winner = "Game Drawn";
+	}
+	else{
+	  if(gameResult.getWinner()==Color.BLACK) gameStatus.setText(messages.winningMessage("BLACK", gameResult.getGameResultReason().toString()));
+	  else                                    gameStatus.setText(messages.winningMessage("WHITE", gameResult.getGameResultReason().toString()));
+	  if(winner.equals("No Winner"))  winner = userId + " has won";
+	}
+	clickEnabled=false;
+	gameEnded=true;
+  }
+  
+  /**
+   * This mehod is in View contract. It sets the promotion grid visibility.
+   * @param color Color of the promotion grid.
+   * @param value Indicates the visibility of grid.
+   */
+  @Override
+  public void setPromoteDisplay(Color color,boolean value){
+    if(color==Color.WHITE) whitePromotionGrid.setVisible(value);
+    else                   blackPromotionGrid.setVisible(value);
+  }
+  
+  /**
+   * Used to set the draggable property for a cell in the grid.
+   * @param row Row of the cell in the grid.
+   * @param col Col of the cell in the grid.
+   * @param value Value of the draggable property.
+   */
+  @Override
+  public void setDrag(int row,int col,boolean value){
+    board[row][col].getElement().setDraggable((value==true)?Element.DRAGGABLE_TRUE:Element.DRAGGABLE_FALSE);
+  }
+  
+  /**
+   * This method is used for animation.
+   * @param fromRow 
+   * @param fromCol 
+   * @param toRow 
+   * @param toCol
+   */
+  @Override
+  public void animateMove(int fromRow,int fromCol,int toRow,int toCol){
+	int fromAbsoluteLeft=board[fromRow][fromCol].getElement().getAbsoluteLeft();
+	int fromAbsoluteTop=board[fromRow][fromCol].getElement().getAbsoluteTop();
+	int toAbsoluteLeft=board[toRow][toCol].getElement().getAbsoluteLeft();
+	int toAbsoluteTop=board[toRow][toCol].getElement().getAbsoluteTop();
+	Presenter.TransitionAnimation animation=presenter.new TransitionAnimation(board[fromRow][fromCol].getElement(),fromAbsoluteLeft,fromAbsoluteTop,toAbsoluteLeft,toAbsoluteTop);
+    animation.run(500);
+  }
+
+  @Override
+  public void setCurrentState(String currentState){
+	  this.currentState = currentState;
+  }
+  
+  @Override
+  public void sendMoveToServer(String stateString) {
+	  for (int i=0; i<matchList.getItemCount(); i++) {
+	    if (matchList.getValue(i).equals(matchId.toString())) {
+	      matchList.removeItem(i);
+	      matchList.addItem(messages.matchListMessage(matchId.toString(), 
+	    		  									  opponent, 
+	    		  									  (yourTurn==true?messages.opponentsTurnMessage():messages.yourTurnMessage()), 
+	    		  									  (gameEnded==true?winner:messages.inProgressMessage())), 
+	    		  									  matchId.toString());
+	      break;
+	    }
+	  }
+	  clickEnabled = false;
+	  yourTurn = false;
+	  chessService.makeMove(userId, opponent, matchId, stateString, winner, new AsyncCallback<Void>() {
+      
+      @Override
+      public void onFailure(Throwable caught) {
+        Window.alert(messages.makeMoveOnFailure());
+      }
+
+      @Override
+      public void onSuccess(Void result) {
+    	  if(!gameEnded) gameStatus.setText(messages.opponentsTurnMessage());
+    	  else gameEnded = false;
+      }
+    });
+  }
+  
+  @Override
+  public void saveAIGameState(String stateString){
+	  yourTurn=(yourTurn==true?false:true);
+	  if(winner.equals("No Winner")){
+		  gameStatus.setText(yourTurn?messages.yourTurnMessage():messages.computerTurn());
+	      clickEnabled = (yourTurn==true?true:false);
+	  }
+	  for (int i=0; i<matchList.getItemCount(); i++) {
+      if (matchList.getValue(i).equals(matchId.toString())) {
+        matchList.removeItem(i);
+        matchList.addItem(messages.matchListMessage(matchId.toString(), 
+		  									      "Computer", 
+		  									      (yourTurn==true?messages.yourTurnMessage():messages.computerTurn()), 
+		  									      (gameEnded?winner:messages.inProgressMessage())),
+		  									      matchId.toString());
+        break;
+        }
+      }
+      chessService.saveAIState(userId, matchId, stateString, winner, yourTurn, new AsyncCallback<Void>() {
+          
+          @Override
+          public void onFailure(Throwable caught) {
+            Window.alert(messages.saveAIStateOnFailure());
+          }
+
+          @Override
+          public void onSuccess(Void result) {
+        	  if(!gameEnded) {
+        		  if(!yourTurn) presenter.startAI();
+        	  }
+        	  else gameEnded = false;
+          }
+        });
+  }
+  
+  @Override
+  public void setWhiteBlackLabel(Color turn){
+	  if(yourTurn && turn.equals(Color.WHITE)){
+		  whiteLabel.setText(messages.whitePlayer() + (userId.split("\\@"))[0]);
+		  blackLabel.setText(messages.blackPlayer() + (opponent.split("\\@"))[0]);
+	  }
+	  else{
+		  whiteLabel.setText(messages.whitePlayer() + (opponent.split("\\@"))[0]);
+		  blackLabel.setText(messages.blackPlayer() + (userId.split("\\@"))[0]);
+	  }
+  }
+
+  /**
+   * 
+   */
+  public void setDateStartedLabel(){
+	  Date dateStarted = new Date(Long.parseLong(this.dateStarted));
+	  matchStartDateLabel.setText(messages.matchStartDate() + DateTimeFormat.getFormat(PredefinedFormat.DATE_LONG).format(dateStarted));
+  }
+  
+  /**
+   * 
+   */
+  public void clearDateStartedLabel(){
+	  matchStartDateLabel.setText(messages.emptyMessage());
+  }
+  
+  @Override
+  public boolean isAIGame(){
+	  return aiGame;
+  }
+  
+  @Override
+  public boolean getSaveAIignore(){
+	  return saveAIignore;
+  }
+  
+  @Override
+  public void setSaveAIignore(boolean ignore){
+	saveAIignore = ignore;  
+  }
+  
+  /**
+   * This method is in View interface contract. This method is for testing purposes.
+   */
+  @Override
+  public void print(String str){
+	gameStatus.setText(str);
+  }
+}
+

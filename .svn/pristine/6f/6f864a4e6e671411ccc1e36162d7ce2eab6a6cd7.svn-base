@@ -1,0 +1,15 @@
+package org.bohuang.hw2_5;
+
+import org.shared.chess.AbstractStateExplorerAllTest;
+import org.shared.chess.StateExplorer;
+import org.bohuang.hw2_5.StateExplorerImpl;
+
+public class StateExplorerImplAllTest extends AbstractStateExplorerAllTest{
+
+	@Override
+	public StateExplorer getStateExplorer() {
+		// TODO Auto-generated method stub
+		return new StateExplorerImpl();
+	}
+
+}

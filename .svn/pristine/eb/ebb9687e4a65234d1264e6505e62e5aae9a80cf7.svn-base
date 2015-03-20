@@ -1,0 +1,11 @@
+package org.sanjana.hw6;
+
+
+import com.google.gwt.user.client.rpc.AsyncCallback;
+
+public interface ChessServiceAsync{
+	
+	void update(StateManager updateState,AsyncCallback Async);
+//	void send(String state, String playerID, AsyncCallback<String> Async);
+//	void createUserChannel(AsyncCallback<String> callback);
+}

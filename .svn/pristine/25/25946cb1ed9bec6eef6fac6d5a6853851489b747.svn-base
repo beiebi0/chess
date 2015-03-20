@@ -1,0 +1,109 @@
+package org.harshmehta.hw7.client;
+
+
+import java.util.Date;
+
+import com.googlecode.objectify.Key;
+import com.googlecode.objectify.annotation.Entity;
+import com.googlecode.objectify.annotation.Id;
+
+/**
+ * Match Entity which stores information about the match
+ * @author Harsh
+ *
+ */
+@Entity
+public class Match {
+  @Id
+  private Long matchId;
+  private Key<Player> whitePlayer;
+  private Key<Player> blackPlayer;
+  private String state;
+  private Date startDate;
+  private boolean isSinglePlayer;
+
+  public Match() {
+  }
+  
+  public Match(Key<Player> white, Key<Player> black, String state) {
+    this.whitePlayer = white;
+    this.blackPlayer = black;
+    this.state = state;
+    startDate = new Date();
+  }
+  
+  public Long getMatchId() {
+    return matchId;
+  }
+  
+  public String getState() {
+    return state;
+  }
+
+  public void setState(String state) {
+    this.state = state;
+  }
+  
+  public Key<Player> getOpponent(Key<Player> player) {
+    if (player.equals(whitePlayer)) {
+      return blackPlayer;
+    }
+    else if (player.equals(blackPlayer)) {
+      return whitePlayer;
+    }
+    else {
+      return null;
+    }
+  }
+  
+  public boolean isWhiteTurn() {
+    if (state.equals("")) {
+      return true;
+    }
+    if (state.charAt(0) == '0') {
+      return true;
+    }
+    return false;
+  }
+  
+  public boolean isWhitePlayer(Key<Player> player) {
+    return whitePlayer.equals(player);
+  }
+  
+  public boolean isBlackPlayer(Key<Player> player) {
+    return blackPlayer.equals(player);
+  }
+  
+  public boolean isMatchOver() {
+    if (state.split("-")[8].equals("_")) {
+      return false;
+    }
+    return true;
+  }
+  
+  public void removePlayer(Key<Player> player) {
+    if (whitePlayer.equals(player)) {
+      whitePlayer = null;
+    }
+    else if (blackPlayer.equals(player)) {
+      blackPlayer = null;
+    }
+  }
+  
+  public Date getStartDate() {
+    return startDate;
+  }
+
+  public void setStartDate(Date startDate) {
+    this.startDate = startDate;
+  }
+
+  public boolean isSinglePlayer() {
+    return isSinglePlayer;
+  }
+
+  public void setSinglePlayer(boolean isSinglePlayer) {
+    this.isSinglePlayer = isSinglePlayer;
+  }
+  
+}

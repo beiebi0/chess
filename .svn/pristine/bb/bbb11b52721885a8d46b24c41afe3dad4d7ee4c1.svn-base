@@ -1,0 +1,124 @@
+package org.ashishmanral.hw11;
+
+import java.io.Serializable;
+import java.util.Date;
+
+public class Message implements Serializable{
+	
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+	private Long matchId;
+	private GameType gameType;
+	private boolean yourTurn;
+	private String opponent;
+	private String state = "";
+	private String winner = "No Winner";
+	private Date dateStarted;
+	private int yourRankMin;
+	private int yourRankMax;
+	private int oppRankMin;
+	private int oppRankMax;
+	
+	public Message(){}
+	
+	public Message(Long matchId, GameType gameType){
+		this.matchId = matchId;
+		this.gameType = gameType;
+	}
+	
+	public Long getMatchId(){
+		return matchId;
+	}
+	
+	public GameType getGameType(){
+		return gameType;
+	}
+	
+	public boolean getYourTurn(){
+		return yourTurn;
+	}
+	
+	public String getState(){
+		return state;
+	}
+	
+	public String getOpponent(){
+		return opponent;
+	}
+	
+	public String getWinner(){
+		return winner;
+	}
+	
+	public Date getDateStarted(){
+		return dateStarted;
+	}
+	
+	public int getYourRankMin(){
+		return yourRankMin;
+	}
+	
+	public int getOppRankMin(){
+		return oppRankMin;
+	}
+	
+	public int getYourRankMax(){
+		return yourRankMax;
+	}
+	
+	public int getOppRankMax(){
+		return oppRankMax;
+	}
+	
+	public void setMatchId(Long matchId){
+		this.matchId = matchId;
+	}
+	
+	public void setGameType(GameType gameType){
+		this.gameType = gameType;
+	}
+	
+	public void setYourTurn(boolean yourTurn){
+		this.yourTurn = yourTurn;
+	}
+	
+	public void setOpponent(String opponent){
+		this.opponent = opponent;
+	}
+	
+	public void setState(String state){
+      this.state = state;
+	}
+	
+	public void setWinner(String winner){
+	  this.winner = winner;
+	}
+	
+	public void setDateStarted(Date dateStarted){
+		this.dateStarted = dateStarted;
+	}
+	
+	public void setYourRankMin(double yourRankMin){
+		this.yourRankMin = (int)yourRankMin;
+	}
+	
+	public void setOppRankMin(double oppRankMin){
+		this.oppRankMin = (int)oppRankMin;
+	}
+	
+	public void setYourRankMax(double yourRankMax){
+		this.yourRankMax = (int)yourRankMax;
+	}
+	
+	public void setOppRankMax(double oppRankMax){
+		this.oppRankMax = (int)oppRankMax;
+	}
+	
+	@Override
+	public String toString(){
+		return matchId + "%" + gameType + "%" + yourTurn + "%" + opponent + "%" + state + "%" + winner + "%" + dateStarted.getTime() + "%" + yourRankMin + "%" + yourRankMax + "%" + oppRankMin + "%" + oppRankMax;
+	}
+	
+}

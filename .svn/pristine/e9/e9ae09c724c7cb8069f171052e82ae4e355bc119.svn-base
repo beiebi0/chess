@@ -1,0 +1,5 @@
+matchTime = 比赛开始时间: {0,date,medium} {0,time,medium}
+userName = 用户名: {0}
+emailAddress = 电邮: {0}
+opponentName = 对手: {0}
+userRank = 排名: {0}

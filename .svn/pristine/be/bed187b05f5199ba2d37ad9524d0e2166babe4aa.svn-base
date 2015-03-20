@@ -1,0 +1,46 @@
+package org.paulsultan.hw3;
+
+import com.google.gwt.resources.client.ClientBundle;
+import com.google.gwt.resources.client.ImageResource;
+
+public interface GameImages extends ClientBundle {
+  @Source("tile_b.png")
+  ImageResource blackTile();
+  @Source("tile_w.png")
+  ImageResource whiteTile();
+
+  @Source("rook_b.png")
+  ImageResource blackRook();
+  @Source("queen_b.png")
+  ImageResource blackQueen();
+  @Source("pawn_b.png")
+  ImageResource blackPawn();
+  @Source("knight_b.png")
+  ImageResource blackKnight();
+  @Source("king_b.png")
+  ImageResource blackKing();
+  @Source("bishop_b.png")
+  ImageResource blackBishop();
+  
+  @Source("rook_w.png")
+  ImageResource whiteRook();
+  @Source("queen_w.png")
+  ImageResource whiteQueen();
+  @Source("pawn_w.png")
+  ImageResource whitePawn();
+  @Source("knight_w.png")
+  ImageResource whiteKnight();
+  @Source("king_w.png")
+  ImageResource whiteKing();
+  @Source("bishop_w.png")
+  ImageResource whiteBishop();
+  
+  @Source("rook_g.png")
+  ImageResource goldRook();
+  @Source("queen_g.png")
+  ImageResource goldQueen();
+  @Source("knight_g.png")
+  ImageResource goldKnight();
+  @Source("bishop_g.png")
+  ImageResource goldBishop();
+}

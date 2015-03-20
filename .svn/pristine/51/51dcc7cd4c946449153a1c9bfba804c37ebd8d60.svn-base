@@ -1,0 +1,23 @@
+package org.sanjana.hw7;
+
+import org.sanjana.hw6.LoginDetails;
+import org.shared.chess.Color;
+
+import com.google.gwt.user.client.rpc.AsyncCallback;
+
+@SuppressWarnings("rawtypes")
+public interface MultiplayerChessServiceAsync
+{
+	void removeMatch(Long matchID,AsyncCallback Async);
+	void sendMove(Long matchID, String moveString,AsyncCallback Async);
+	void automatch(AsyncCallback<String> async);
+	void cancelAutoMatch(AsyncCallback Async);
+	void emailMatch(String email,AsyncCallback Async);
+	void loadAllMatches(LoginDetails user,AsyncCallback Async);
+	void getMatch(Long matchId,AsyncCallback Async);
+	void match(AsyncCallback<String> async);
+	void UpdateRank(Long matchID, String stateString,AsyncCallback Async);
+	void addToken(String token,AsyncCallback Async);
+	void AIMatch(Color whichColor,AsyncCallback<String> Async);
+	void makeAIMove(Long matchID,String state,AsyncCallback<String> async);
+}

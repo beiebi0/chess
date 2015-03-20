@@ -1,0 +1,10 @@
+userInformation=ログイン中{0}（{1}、{2}のランク）
+opponentInformation=対戦相手：{0}（{1}、{2}のランク）
+matchInformation=試合数：{0}（{1}を始めた）
+
+currentTurn={0}（{1}）のターン
+
+checkmate=チェックメイト。勝者：{0}
+
+fullMatchInfo={0}（＃{1}）：{2}
+shortCheckmate={0}の勝ち！

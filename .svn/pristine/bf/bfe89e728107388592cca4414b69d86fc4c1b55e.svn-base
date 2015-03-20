@@ -1,0 +1,211 @@
+package org.sanjana.hw5;
+
+import org.shared.chess.Color;
+import org.shared.chess.GameResult;
+import org.shared.chess.GameResultReason;
+import org.shared.chess.Piece;
+import org.shared.chess.PieceKind;
+import org.shared.chess.Position;
+import org.shared.chess.State;
+import static org.shared.chess.Color.BLACK;
+import static org.shared.chess.Color.WHITE;
+import static org.shared.chess.State.COLS;
+import static org.shared.chess.State.ROWS;
+import static org.shared.chess.GameResultReason.CHECKMATE;
+import static org.shared.chess.GameResultReason.FIFTY_MOVE_RULE;
+import static org.shared.chess.GameResultReason.STALEMATE;
+
+public class StateSerializer 
+{
+	public static String serialize(State state) 
+	{
+		StringBuffer str = new StringBuffer();
+
+		String castleState = "";
+
+		castleState += state.isCanCastleKingSide(WHITE) ? "T" : "F";
+		castleState += state.isCanCastleQueenSide(WHITE) ? "T" : "F";
+		castleState += state.isCanCastleKingSide(BLACK) ? "T" : "F";
+		castleState += state.isCanCastleQueenSide(BLACK) ? "T" : "F";
+
+		str.append("Castle=");
+		str.append(castleState);
+
+		str.append("-numberOfMovesWithoutCaptureNorPawnMoved="
+				+ state.getNumberOfMovesWithoutCaptureNorPawnMoved());
+
+		if (state.getEnpassantPosition() != null) 
+			str.append("-Enpassant=" + state.getEnpassantPosition().getRow()
+					+ state.getEnpassantPosition().getCol());
+
+
+		if (state.getGameResult() != null) 
+		{
+			str.append("-Winner=" + state.getGameResult().getWinner());
+			str.append("-Reason=" + state.getGameResult().getGameResultReason());
+		}
+
+		str.append("-Turn=" + state.getTurn());
+
+		StringBuffer helper = new StringBuffer();
+
+		for (int i = 0; i < ROWS; i++) 
+		{
+			for (int j = 0; j <COLS; j++) 
+			{
+				Piece piece = state.getPiece(i, j);
+
+				if (piece != null) 
+				{
+					helper.append(i + "" + j + ":" + piece.getColor());
+					helper.append(getCharForKind(piece.getKind()) + ",");
+				}
+			}
+		}
+
+		str.append("-Board=" + helper.toString());
+		return str.toString();	
+	}
+
+	private static String getCharForKind(PieceKind kind) 
+	{
+		switch (kind) 
+		{
+		case BISHOP:
+			return "B";
+		case KING:
+			return "K";
+		case KNIGHT:
+			return "N";
+		case PAWN:
+			return "P";
+		case QUEEN:
+			return "Q";
+		case ROOK:
+			return "R";
+		}
+		return "";
+	}
+
+	public static State deserialize(String str) 
+	{
+		Piece[][] board = null;
+		boolean canWhiteCastleKingSide = false;
+		boolean canWhiteCastleQueenSide = false;
+		boolean canBlackCastleKingSide = false;
+		boolean canBlackCastleQueenSide = false;
+		Position enpassant = null;
+		Color color = WHITE;
+		int numberOfMovesWithoutCaptureNorPawnMoved = 0;
+		Color winner = null;
+		GameResultReason reason = null;
+		GameResult result = null;
+
+		for (String keyValue : str.split("-")) 
+		{
+			String[] keyValueArr = keyValue.split("=");
+
+			String key = keyValueArr[0];
+			String value = keyValueArr[1];
+
+			if (key.equals("Board")) 
+				board = helper(value);
+
+			else if (key.equals("Castle")) 
+			{
+				canWhiteCastleKingSide = value.charAt(0) == 'T';
+				canWhiteCastleQueenSide = value.charAt(1) == 'T';
+				canBlackCastleKingSide = value.charAt(2) == 'T';
+				canBlackCastleQueenSide = value.charAt(3) == 'T';
+			}
+
+			else if (key.equals("Enpassant")) 
+			{
+				int row = Integer.parseInt(String.valueOf(value.charAt(0)));
+				int col = Integer.parseInt(String.valueOf(value.charAt(1)));
+				enpassant = new Position(row, col);
+			} 
+
+			else if (key.equals("Turn"))
+				color = value.equals("W") ? WHITE : BLACK;
+
+			else if (key.equals("numberOfMovesWithoutCaptureNorPawnMoved")) 
+				numberOfMovesWithoutCaptureNorPawnMoved = Integer.parseInt(value);
+
+			else if (key.equals("Winner")) 
+				winner = value.equals("W") ? WHITE : BLACK;
+
+			else if (key.equals("Reason")) 
+			{
+				if (value.equals("CHECKMATE")) 
+					reason = CHECKMATE;
+
+				else if (value.equals("FIFTY_MOVE_RULE")) 
+					reason = FIFTY_MOVE_RULE;
+
+				else if (value.equals("STALEMATE")) 
+					reason = STALEMATE;
+			}
+		}
+
+		if(reason != null) 
+			result = new GameResult(winner, reason);
+
+		State state =new State(color, board, new boolean[] { canWhiteCastleKingSide, canBlackCastleKingSide },
+				new boolean[] { canWhiteCastleQueenSide, canBlackCastleQueenSide }, enpassant,
+				numberOfMovesWithoutCaptureNorPawnMoved, result);
+
+		return state;
+	}
+
+	private static Piece[][] helper(String value) 
+	{	
+		Piece[][] board = new Piece[ROWS][COLS];
+
+		for (String piece : value.split(",")) 
+		{
+			String[] token = piece.split(":");
+
+			String pos = token[0];
+			String colorKind = token[1];
+
+			int row = Integer.parseInt(String.valueOf(pos.charAt(0)));
+			int col = Integer.parseInt(String.valueOf(pos.charAt(1)));
+
+			Color color = colorKind.charAt(0) == 'W' ? WHITE : BLACK;
+
+			char kindChar = colorKind.charAt(1);
+
+			PieceKind kind = null;
+
+			switch(kindChar)
+			{
+			case 'K': 
+				kind = PieceKind.KING;
+			break;
+
+			case 'N':
+				kind = PieceKind.KNIGHT;
+				break;
+				
+			case 'B':
+				kind = PieceKind.BISHOP;
+				break;
+				
+			case 'R':
+				kind = PieceKind.ROOK;
+				break;
+				
+			case 'Q':
+				kind = PieceKind.QUEEN;
+				break;
+				
+			case 'P':
+				kind = PieceKind.PAWN;
+				break;				
+			}
+			board[row][col] = new Piece(color, kind);
+		}
+		return board;
+	}
+}

@@ -1,0 +1,154 @@
+package org.vorasahil.hw8;
+
+public class ChessConstantsString {
+	ChessConstantsString(){}
+	
+	String connectionError() {
+		return "Error: Could not connect to server.";
+	}
+
+	String currentMatch() {
+		return "Current Match:";
+	}
+
+	String loggedInAs() {
+		return "Logged in as:";
+	}
+
+	String rank() {
+		return "Rating:";
+	}
+
+	String challenge() {
+		return "Challenge!";
+	}
+
+	String invalidEmailID() {
+		return "Email ID is invalid!";
+	}
+
+	String challengePosted() {
+		return "Challenge published, make your move!";
+	}
+
+	String deleteGame() {
+		return "Delete Game";
+	}
+
+	String deleteFailed() {
+		return "Delete Failed";
+	}
+
+	String deleteSuccessful() {
+		return "Delete Successful";
+	}
+
+	String reloadGameList() {
+		return "Reload Game-List";
+	}
+
+	String reloaded() {
+		return "Reloaded";
+	}
+
+	String loadGame() {
+		return "Load Game";
+	}
+
+	String autoMatch() {
+		return "Automatch";
+	}
+
+	String findingOpponent() {
+		return "Finding an opponent, please be patient";
+	}
+
+	String autoMatchComplete() {
+		return "Automatch complete, begin game";
+	}
+
+	String welcome() {
+		return "Welcome, ";
+	}
+
+	String addedToList() {
+		return "added to the list of games.";
+	}
+
+	String match() {
+		return "Match:";
+	}
+
+	String changed() {
+		return "changed, check it out";
+	}
+
+	String error() {
+		return "error!";
+	}
+
+	String channelClosed() {
+		return "channelClosed!";
+	}
+
+	String yourTurn() {
+		return "It is your turn.";
+	}
+
+	String playingWhite() {
+		return "You are playing with White";
+	}
+
+	String playingBlack() {
+		return "You are playing with Black";
+	}
+
+	String startedOn() {
+		return "Started on:";
+	}
+
+	String fiftyMove() {
+		return "Match Drawn(FIFTY MOVE RULE)";
+	}
+
+	String stalemate() {
+		return "Match Drawn(Stalemate)";
+	}
+
+	String threefold() {
+		return "Match Drawn(Threefold Repition Rule)";
+	}
+
+	String youWon() {
+		return "You won";
+	}
+
+	String youLost() {
+		return "You lost";
+	}
+
+	String gameOver() {
+		return "Game Over";
+	}
+
+	String white() {
+		return "Current Turn:White";
+	}
+
+	String black() {
+		return "Current Turn:Black";
+	}
+
+	String updated() {
+		return "Updated";
+	}
+
+	String singlePlayerWhite() {
+		return "New Single player game as White";
+	}
+
+	String singlePlayerBlack() {
+		return "New Single Player game as Black";
+	}
+
+}

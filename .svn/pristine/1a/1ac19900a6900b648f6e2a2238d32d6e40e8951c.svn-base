@@ -1,0 +1,197 @@
+package org.mengyanhuang.hw3;
+
+import org.mengyanhuang.hw3.Presenter;
+import org.junit.Before;
+import org.junit.Test;
+import org.mockito.Mockito;
+import org.shared.chess.Color;
+import org.shared.chess.GameResult;
+import org.shared.chess.GameResultReason;
+import org.shared.chess.Piece;
+import org.shared.chess.PieceKind;
+import org.shared.chess.Position;
+import org.shared.chess.State;
+
+public class PresenterTest {
+
+	Presenter presenter;
+	Presenter.View view;
+
+	@Before
+	public void setup() {
+		presenter = new Presenter();
+		view = Mockito.mock(Presenter.View.class);
+		presenter.setView(view);
+	}
+	
+	@Test
+	public void testSetInitialState() {
+		State state = new State();
+		presenter.setState(state);
+		
+		Mockito.verify(view).setWhoseTurn(Color.WHITE);
+		Mockito.verify(view).setGameResult(null);
+		Mockito.verify(view).setPiece(0, 0, new Piece(Color.WHITE, PieceKind.ROOK));
+		Mockito.verify(view).setPiece(4, 6, null);
+	}
+
+	@Test
+	public void testPawnMove() {
+	    presenter.selectImage(1, 5, false);
+	    presenter.selectImage(3, 5, false);
+	    
+	    Mockito.verify(view).setWhoseTurn(Color.BLACK);
+	    Mockito.verify(view).setGameResult(null);
+	    Mockito.verify(view).setPiece(1, 5, null);
+	    Mockito.verify(view).setPiece(3, 5, new Piece(Color.WHITE, PieceKind.PAWN));
+	}
+	
+	
+	@Test
+	public void testKnightMove() {
+		presenter.selectImage(0, 6, false);
+	    presenter.selectImage(2, 5, false);
+	    
+	    Mockito.verify(view).setWhoseTurn(Color.BLACK);
+	    Mockito.verify(view).setGameResult(null);
+	    Mockito.verify(view).setPiece(0, 6, null);
+	    Mockito.verify(view).setPiece(2, 5, new Piece(Color.WHITE, PieceKind.KNIGHT));
+	}
+	
+	@Test
+	public void testHighlightePossibleMoveForPawn() {
+		State state = new State();
+		presenter.setState(state);
+		
+		presenter.selectPiece(new Position(1, 1));
+
+		Mockito.verify(view).setHighlighted(1, 1, true);
+		Mockito.verify(view).setHighlighted(2, 1, true);
+		Mockito.verify(view).setHighlighted(3, 1, true);
+	}
+	
+	@Test
+	public void testHighlightePossibleMoveForKnight() {
+		State state = new State();
+		presenter.setState(state);
+		//presenter.selectImage(7, 6, false);
+		presenter.selectPiece(new Position(7, 6));
+
+		Mockito.verify(view).setHighlighted(7, 6, true);
+		Mockito.verify(view).setHighlighted(5, 7, true);
+		Mockito.verify(view).setHighlighted(5, 5, true);
+	}
+	/*
+	@Test
+	public void testHighlightePossibleMoveForBishop() {
+		State state = new State();
+		state.setPiece(1, 4, null);
+		presenter.setState(state);
+		//presenter.selectImage(7, 5, false);
+		presenter.selectPiece(new Position(7, 5));
+
+		Mockito.verify(view).setHighlighted(7, 5, true);
+		Mockito.verify(view).setHighlighted(6, 4, true);
+		Mockito.verify(view).setHighlighted(5, 3, true);
+		Mockito.verify(view).setHighlighted(4, 2, true);
+		Mockito.verify(view).setHighlighted(3, 1, true);
+	}*/
+	
+	@Test
+	  public void testSelectCell1(){
+		  State state = new State();
+		  presenter.setState(state);
+		  presenter.selectImage(1, 2, false);
+		  presenter.selectImage(2, 2, false);
+		 
+		//  Mockito.verify(view).setGameResult(null);
+		  Mockito.verify(view).setWhoseTurn(Color.WHITE);
+	  }
+	
+	@Test
+	  public void testSelectCell2(){
+		  State state = new State();
+		  presenter.setState(state);
+		  presenter.selectImage(6, 2, false);
+		  presenter.selectImage(5, 2, false);
+		 
+		//  Mockito.verify(view).setGameResult(null);
+		  Mockito.verify(view).setWhoseTurn(Color.WHITE);
+	  }
+	/*
+	@Test
+	public void testCapture_ByQueen() {
+		State state = new State();
+
+		state.setTurn(Color.BLACK);
+		state.setPiece(new Position(7, 3), null);
+		state.setPiece(new Position(6, 3), null);
+		state.setPiece(new Position(1, 7), null);
+		state.setPiece(new Position(5, 7), new Piece(Color.BLACK, PieceKind.QUEEN));
+
+		presenter.setState(state);
+	    presenter.selectImage(5, 7, false);
+	    presenter.selectImage(0, 7, false);
+	    
+		Mockito.verify(view).setWhoseTurn(Color.WHITE);
+		Mockito.verify(view).setGameResult(null);
+		Mockito.verify(view).setPiece(0, 7, new Piece(Color.BLACK, PieceKind.QUEEN));
+		Mockito.verify(view).setPiece(5, 7, null);
+	}*/
+	
+	@Test
+	public void testEndOfGmae_CheckMate() {
+		State state = new State();
+		state.setGameResult(new GameResult(null, GameResultReason.CHECKMATE));
+
+		presenter.setState(state);
+
+		Mockito.verify(view).setGameResult(new GameResult(null, GameResultReason.CHECKMATE));
+		/*
+	    State start = new State();
+	    start.setTurn(Color.BLACK);
+	    start.setPiece(new Position(2, 4), new Piece(Color.BLACK, PieceKind.PAWN));
+	    start.setPiece(new Position(3, 3), new Piece(Color.BLACK, PieceKind.QUEEN));
+	    start.setPiece(new Position(2, 6), new Piece(Color.BLACK, PieceKind.KNIGHT));
+	    
+	    start.setPiece(new Position(6, 4), null);
+	    start.setPiece(new Position(6, 2), null);
+	    start.setPiece(new Position(0, 3), null);
+	    start.setPiece(new Position(0, 2), null);
+	    start.setPiece(new Position(0, 1), null);
+	    start.setPiece(new Position(7, 1), null);
+	    start.setPiece(new Position(1, 4), null);
+	    start.setPiece(new Position(1, 5), null);
+	    start.setPiece(new Position(0, 5), null);
+	    
+	    presenter.setState(start);
+	    presenter.selectImage(3, 3, false);
+	    presenter.selectImage(1, 3, false);
+	    Mockito.verify(view).setWhoseTurn(Color.WHITE);
+	    Mockito.verify(view).setGameResult(new GameResult(Color.BLACK, GameResultReason.CHECKMATE));
+	    Mockito.verify(view).setPiece(3, 3, null);
+	    Mockito.verify(view).setPiece(1, 3, new Piece(Color.BLACK, PieceKind.QUEEN));
+	*/
+	}
+	
+	@Test
+	public void testEndOfGmae_FiftyMoveRule() {
+		State state = new State();
+		state.setGameResult(new GameResult(null, GameResultReason.FIFTY_MOVE_RULE));
+
+		presenter.setState(state);
+
+		Mockito.verify(view).setGameResult(new GameResult(null, GameResultReason.FIFTY_MOVE_RULE));
+	}
+	
+	@Test
+	public void testEndOfGmae_StaleMate() {
+		State state = new State();
+		state.setGameResult(new GameResult(null, GameResultReason.STALEMATE));
+
+		presenter.setState(state);
+
+		Mockito.verify(view).setGameResult(new GameResult(null, GameResultReason.STALEMATE));
+	}
+
+}

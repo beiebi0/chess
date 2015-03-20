@@ -1,0 +1,157 @@
+package org.sanjana.hw8;
+
+import java.util.Date;
+
+import com.google.gwt.i18n.client.Messages;
+import com.google.gwt.i18n.client.LocalizableResource.DefaultLocale;
+import com.google.gwt.i18n.client.LocalizableResource.Generate;
+import com.google.gwt.i18n.client.Messages.DefaultMessage;
+
+@Generate(format = "com.google.gwt.i18n.rebind.format.PropertiesFormat")
+@DefaultLocale("en")
+public interface ChessMessages extends Messages{
+
+	@DefaultMessage("Hello")
+	String hello();
+	
+	@DefaultMessage("Please Sign in, in order to play the Game of Chess.!")
+	String needSingIn();
+
+	@DefaultMessage("Sign in")
+	String signIn();
+
+	@DefaultMessage("Sign out")
+	String signOut();
+
+	@DefaultMessage("Enter Opponent Players Email ID")
+	String enterID();
+
+	@DefaultMessage("Random Buddy Match")
+	String pleaseWaitForAutoMatch();
+
+	@DefaultMessage("Invalid Email Address!")
+	String invalidEmail();
+
+	@DefaultMessage("Play")
+	String playMatch();
+
+	@DefaultMessage("Play against Computer")
+	String playWithAI();
+
+	@DefaultMessage("Select Match")
+	String matchList();
+
+	@DefaultMessage("Delete")
+	String delete();
+
+	@DefaultMessage("Random Buddy Match")
+	String autoGameButton();
+	
+	@DefaultMessage("Cancel Random Match")
+	String cancelAutoButton();
+	
+	@DefaultMessage("Disable Animation")
+	String disableAnimation();
+
+	@DefaultMessage("Disable Sound")
+	String disableSound();
+
+	@DefaultMessage("Black")
+	String black();
+
+	@DefaultMessage("White")
+	String white();
+
+	@DefaultMessage("The current turn in the Game is of ")
+	String turn();
+	
+	@DefaultMessage("You are playing as ")
+	String you();
+
+	@DefaultMessage("Opponent is playing as ")
+	String opponent();
+
+	@DefaultMessage("Saved Games")
+	String saved();
+	
+	@DefaultMessage("Start a new Game")
+	String restart();
+
+	@DefaultMessage("Waiting For Opponent")
+	String waitingForOpponent();
+
+	@DefaultMessage("Failed to join the game.")
+	String failToJoin();
+
+	@DefaultMessage("Failed to delete the game.")
+	String failToDelete();
+
+	@DefaultMessage("Failed to Update Opponent List.")
+	String failToUpdate();
+
+	@DefaultMessage("Failed to load the game.")
+	String failToLoad();
+
+	@DefaultMessage("This game has already been deleted by the opponent.")
+	String hasBeenDeleted();
+
+	@DefaultMessage("CHECKMATE")
+	String checkmate();
+
+	@DefaultMessage("FIFTY_MOVE_RULE")
+	String fiftymoverule();
+
+	@DefaultMessage("THREEFOLD_REPETITION_RULE")
+	String threefoldrepet();
+
+	@DefaultMessage("STALEMATE")
+	String stalemate();
+
+	@DefaultMessage("Welcome back {0}!")
+	String loggInAs(String UID);
+
+	@DefaultMessage("Successfully created a match with {0}!")
+	String createMatchWith(String UID);
+
+	@DefaultMessage("Starting Date of the match {0}")
+	String startDate(String date);
+
+	@DefaultMessage("Rating: {0}, RD: {1}")
+	String rating(double r, double RD);
+
+	@DefaultMessage("This Winner of this Game is {0} because of ")
+	String gameresult(String winner);
+
+	@DefaultMessage("No one Wins it is a Draw due to ")
+	String gamedraw();
+
+	@DefaultMessage("Match ID: {0} Opponent: {1} Started On:")
+	String matchInfo(Long id,String opponent);
+	
+	@DefaultMessage("Save")
+	String save();
+	
+	@DefaultMessage("Enter the name of Saved Game")
+	String saveText();
+	
+	@DefaultMessage("Load Saved Game")
+	String load();
+	
+	@DefaultMessage("Clear All")
+	String clearAll();
+	
+	@DefaultMessage("Error")
+	String error();
+	
+	@DefaultMessage("Start Date {0,date} {0,time}")
+	String time(Date timestamp);
+	
+	@DefaultMessage("Play with Computer(White)")
+	String AIWhite();
+	
+	@DefaultMessage("Play with Computer(Black)")
+	String AIBlack();
+	
+	@DefaultMessage("It is turn of Computer")
+	String comp();
+}

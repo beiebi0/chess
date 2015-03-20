@@ -1,0 +1,36 @@
+package org.ashishmanral.hw6.server;
+
+import org.ashishmanral.hw6.client.UpdateStateService;
+import org.ashishmanral.hw6.client.UpdateState;
+import org.shared.chess.Color;
+
+import com.google.appengine.api.channel.ChannelMessage;
+import com.google.appengine.api.channel.ChannelService;
+import com.google.appengine.api.channel.ChannelServiceFactory;
+import com.google.gwt.user.server.rpc.RemoteServiceServlet;
+
+/**
+ * UpdateStateServiceImpl.java
+ * @author Ashish
+ * This class is used to pass the updation of states to the other player.
+ */
+@SuppressWarnings("serial")
+public class UpdateStateServiceImpl extends RemoteServiceServlet implements UpdateStateService {
+  
+  @Override
+  public Integer getUpdate(UpdateState update) {
+    try{
+	  int boardId = update.getBoardId();
+      String stateStr = update.getState();
+      BoardDetails board = BoardManager.getBoard(boardId);
+      ChannelService channelService = ChannelServiceFactory.getChannelService();
+      String otherPlayerId = (update.getTurn()==Color.WHITE) ? board.getPlayer1Id() : board.getPlayer2Id();
+      channelService.sendMessage(new ChannelMessage(otherPlayerId, stateStr));
+      return new Integer(1);	
+    }
+    catch(Exception e){
+      return new Integer(0);
+    }
+  }
+  
+}

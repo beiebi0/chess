@@ -1,0 +1,131 @@
+package org.corinnetaylor.hw2_5;
+
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.Set;
+
+import static org.shared.chess.Color.BLACK;
+import static org.shared.chess.Color.WHITE;
+import static org.shared.chess.PieceKind.BISHOP;
+import static org.shared.chess.PieceKind.KNIGHT;
+import static org.shared.chess.PieceKind.QUEEN;
+import static org.shared.chess.PieceKind.ROOK;
+import static org.shared.chess.PieceKind.PAWN;
+
+import org.kuangchelee.hw2.StateChangerImpl;
+import org.shared.chess.Color;
+import org.shared.chess.IllegalMove;
+import org.shared.chess.Move;
+import org.shared.chess.Position;
+import org.shared.chess.State;
+import org.shared.chess.StateExplorer;
+import org.shared.chess.PieceKind;
+
+public class StateExplorerImpl implements StateExplorer {
+
+          @Override
+          public Set<Move> getPossibleMoves(State state) {
+                  Set<Move> moves = new HashSet<Move>();                  
+                        //Check each Position for a piece of the correct color
+                  for(int i = 0; i < 8; i++)
+                        for(int j = 0; j < 8; j++){
+                                Position current = new Position(i, j);
+                                if(state.getPiece(current)!=null
+                                                && state.getPiece(current).getColor() == state.getTurn())
+                                        moves.addAll(getPossibleMovesFromPosition(state, current));
+                        }
+                    return moves;
+          }
+
+          @Override
+          public Set<Move> getPossibleMovesFromPosition(State state, Position start) {
+                  //Double check that a position with a piece has been passed
+                  if(state.getPiece(start) == null){
+                                return null;
+                        }
+                  Set<Move> possibleMoves = new HashSet<Move>();
+                  Color color = state.getTurn();
+                  int row = start.getRow();
+                  int col = start.getCol();
+                  State copy = state.copy();
+                  StateChangerImpl statechanger = new StateChangerImpl();
+                  PieceKind pieceKind = state.getPiece(row, col).getKind();
+                 
+                  //Check the special case of Pawns, which can promote to other pieces
+                  if (pieceKind == PAWN){
+                          PieceKind possiblePromotes[] = {ROOK, KNIGHT, BISHOP, QUEEN};
+                          for (int i = 0; i < State.ROWS; i++){
+                                  for (int j = 0; j < State.COLS; j++){
+                                          if (color == WHITE && row == 6 && i == 7){
+                                                  for (int k = 0; k < possiblePromotes.length; k++){
+                                                          try {
+                                                                        statechanger.makeMove(copy, new Move(new Position(row, col), new Position(i, j), possiblePromotes[k]));
+                                                                        }
+                                                          catch (IllegalMove illegalmove) {
+                                                                  copy = state.copy();
+                                                                  continue;
+                                                                        }
+                                                          possibleMoves.add(new Move(new Position(row, col), new Position(i, j), possiblePromotes[k]));
+                                                          copy = state.copy();
+                                                                }
+                                                  }
+                                          else if (color == BLACK && row == 1 && i == 0){
+                                                  for (int k = 0; k < possiblePromotes.length; k++){
+                                                          try {
+                                                                  statechanger.makeMove(copy, new Move(new Position(row, col), new Position(i, j), possiblePromotes[k]));
+                                                                  }
+                                                          catch (IllegalMove illegalmove) {
+                                                                  copy = state.copy();
+                                                                  continue;
+                                                                  }
+                                                          possibleMoves.add(new Move(new Position(row, col), new Position(i, j), possiblePromotes[k]));
+                                                          copy = state.copy();
+                                                                }                                                
+                                                  }
+                                          else{
+                                                  try {
+                                                          statechanger.makeMove(copy, new Move(new Position(row, col), new Position(i, j), null));
+                                                  }
+                                                  catch (IllegalMove illegalmove){
+                                                          copy = state.copy();
+                                                          continue;                                                      
+                                                          }
+                                                  possibleMoves.add(new Move(new Position(row, col), new Position(i, j), null));
+                                                  copy = state.copy();
+                                                        }
+                                          }
+                                  }
+                         
+                  }
+                  else {
+                          for (int i = 0; i < State.ROWS; i++){
+                                  for (int j = 0; j < State.COLS; j++){
+                                          try {
+                                                  statechanger.makeMove(copy, new Move(new Position(row, col), new Position(i, j), null));
+                                          }
+                                          catch (IllegalMove illegalmove){
+                                                  copy = state.copy();
+                                                  continue;                                                      
+                                                  }
+                                          possibleMoves.add(new Move(new Position(row, col), new Position(i, j), null));
+                                          copy = state.copy();
+                                          }
+                                  }
+                          }
+                 
+            return possibleMoves;
+          }
+
+          @Override
+          public Set<Position> getPossibleStartPositions(State state) {
+                  Set<Position> startPositions = new HashSet<Position>();
+                  Set<Move> moves = new HashSet<Move>();
+                  moves = getPossibleMoves(state);
+                  Iterator<Move> i = moves.iterator();
+                  while(i.hasNext()){
+                          startPositions.add(i.next().getFrom());
+                  }                      
+                  return startPositions;
+          }
+       
+}

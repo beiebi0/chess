@@ -1,0 +1,219 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?><web-app xmlns="http://java.sun.com/xml/ns/javaee" version="2.5">
+  <!--
+  <servlet>
+    <servlet-name>yoavzibinServlet</servlet-name>
+    <servlet-class>org.yoavzibin.hw6.server.BlaServiceImpl</servlet-class>
+  </servlet>
+  <servlet-mapping>
+    <servlet-name>yoavzibinServlet</servlet-name>
+    <url-pattern>/yoavzibin</url-pattern>
+  </servlet-mapping>
+  -->
+ <servlet>
+    <servlet-name>vorasahilMessageServlet</servlet-name>
+    <servlet-class>org.vorasahil.hw6.server.MessageServiceImpl</servlet-class>
+  </servlet>
+  <servlet-mapping>
+    <servlet-name>vorasahilMessageServlet</servlet-name>
+    <url-pattern>/vorasahil/message</url-pattern>
+  </servlet-mapping>
+ 
+   <servlet>
+    <servlet-name>vorasahilUpdateServlet</servlet-name>
+    <servlet-class>org.vorasahil.hw6.server.UpdateServiceImpl</servlet-class>
+  </servlet>
+  <servlet-mapping>
+    <servlet-name>vorasahilUpdateServlet</servlet-name>
+    <url-pattern>/vorasahil/update</url-pattern>
+  </servlet-mapping>
+ 
+  
+ <servlet>
+    <servlet-name>vorasahilLoginServlet</servlet-name>
+    <servlet-class>org.vorasahil.hw6.server.LoginServiceImpl</servlet-class>
+  </servlet>
+  <servlet-mapping>
+    <servlet-name>vorasahilLoginServlet</servlet-name>
+    <url-pattern>/vorasahil/login</url-pattern>
+  </servlet-mapping>
+   
+  <servlet>
+    <servlet-name>SystemServiceServlet</servlet-name>
+    <servlet-class>com.google.api.server.spi.SystemServiceServlet</servlet-class>
+    <init-param>
+      <param-name>services</param-name>
+      <param-value/>
+    </init-param>
+  </servlet>
+
+  <servlet-mapping>
+    <servlet-name>SystemServiceServlet</servlet-name>
+    <url-pattern>/_ah/spi/*</url-pattern>
+  </servlet-mapping>
+
+   <servlet>
+    <servlet-name>ChessServiceImpl</servlet-name>
+    <servlet-class>org.sanjana.hw6.server.ChessServiceImpl</servlet-class>
+  </servlet>
+
+  <servlet-mapping>
+    <servlet-name>ChessServiceImpl</servlet-name>
+    <url-pattern>/sanjana/ChessService</url-pattern>
+  </servlet-mapping>
+  
+    <servlet>
+    <servlet-name>loginService</servlet-name>
+    <servlet-class>org.sanjana.hw6.server.LoginServiceImpl</servlet-class>
+  </servlet>
+
+  <servlet-mapping>
+    <servlet-name>loginService</servlet-name>
+    <url-pattern>/sanjana/login</url-pattern>
+  </servlet-mapping>
+  
+  <servlet>
+    <servlet-name>loginService</servlet-name>
+    <servlet-class>org.karthikmahadevan.hw6.server.LoginServiceImpl</servlet-class>
+  </servlet>
+  
+  <servlet>
+    <servlet-name>gameService</servlet-name>
+    <servlet-class>org.karthikmahadevan.hw6.server.GameServiceImpl</servlet-class>
+  </servlet>
+
+  <servlet-mapping>
+    <servlet-name>loginService</servlet-name>
+    <url-pattern>/karthikmahadevan/login</url-pattern>
+  </servlet-mapping>
+  
+  <servlet-mapping>
+    <servlet-name>gameService</servlet-name>
+    <url-pattern>/karthikmahadevan/playGame</url-pattern>
+  </servlet-mapping>
+  
+   <servlet>
+    <servlet-name>longjuntanServlet</servlet-name>
+    <servlet-class>org.longjuntan.hw6.server.GameServiceImpl</servlet-class>
+  </servlet>
+  <servlet-mapping>
+    <servlet-name>longjuntanServlet</servlet-name>
+    <url-pattern>/longjuntan/move</url-pattern>
+  </servlet-mapping>
+  
+  <servlet>
+    <servlet-name>loginService</servlet-name>
+    <servlet-class>org.alishah.hw6.server.LoginServiceImpl</servlet-class>
+  </servlet>
+  <servlet-mapping>
+    <servlet-name>loginService</servlet-name>
+    <url-pattern>/alishah/login</url-pattern>
+  </servlet-mapping>
+  
+  <servlet>
+    <servlet-name>chessGameService</servlet-name>
+    <servlet-class>org.alishah.hw6.server.ChessGameServiceImpl</servlet-class>
+  </servlet>
+  <servlet-mapping>
+    <servlet-name>chessGameService</servlet-name>
+    <url-pattern>/alishah/service</url-pattern>
+  </servlet-mapping>
+  
+  <servlet>
+    <servlet-name>loginService</servlet-name>
+    <servlet-class>org.longjuntan.hw6.server.LoginServiceImpl</servlet-class>
+  </servlet>
+
+  <servlet-mapping>
+    <servlet-name>loginService</servlet-name>
+    <url-pattern>/longjuntan/login</url-pattern>
+  </servlet-mapping>
+  
+  
+    <welcome-file-list>
+    <welcome-file>mengyanhuang.html</welcome-file>
+  </welcome-file-list>
+  
+   <servlet>
+    <servlet-name>ChessMoveServiceImpl</servlet-name>
+    <servlet-class>org.mengyanhuang.hw6.ChessMoveServiceImpl</servlet-class>
+  </servlet>
+
+  <servlet-mapping>
+    <servlet-name>ChessMoveServiceImpl</servlet-name>
+    <url-pattern>/mengyanhuang/ChessMoveService</url-pattern>
+  </servlet-mapping>
+  
+  
+  
+  <servlet>
+    <servlet-name>ChessPlatformServiceImpl</servlet-name>
+    <servlet-class>org.shihweihuangserver.hw6.server.ChessPlatformServiceImpl</servlet-class>
+  </servlet>
+  <servlet-mapping>
+    <servlet-name>ChessPlatformServiceImpl</servlet-name>
+    <url-pattern>/shihweihuang/ChessPlatform</url-pattern>
+  </servlet-mapping>
+  <servlet>
+    <servlet-name>loginService</servlet-name>
+    <servlet-class>org.shihweihuangserver.hw6.server.LoginServiceImpl</servlet-class>
+  </servlet>
+  <servlet-mapping>
+    <servlet-name>loginService</servlet-name>
+    <url-pattern>/shihweihuang/login</url-pattern>
+  </servlet-mapping>
+  <servlet>
+    <servlet-name>SystemServiceServlet</servlet-name>
+    <servlet-class>com.google.api.server.spi.SystemServiceServlet</servlet-class>
+    <init-param>
+      <param-name>services</param-name>
+      <param-value/>
+    </init-param>
+  </servlet>
+
+  <servlet-mapping>
+    <servlet-name>SystemServiceServlet</servlet-name>
+    <url-pattern>/_ah/spi/*</url-pattern>
+  </servlet-mapping>
+  
+ <servlet>
+    <servlet-name>alexanderoskotskyService</servlet-name>
+    <servlet-class>org.alexanderoskotsky.hw6.ChessServiceImpl</servlet-class>
+  </servlet>
+  <servlet-mapping>
+    <servlet-name>alexanderoskotskyService</servlet-name>
+
+    <url-pattern>/alexanderoskotsky/service</url-pattern>
+  </servlet-mapping>	
+	
+	<security-constraint>
+		<web-resource-collection>
+			<url-pattern>/alexanderoskotsky.html</url-pattern>
+			<url-pattern>/alexanderoskotsky/*</url-pattern>
+		</web-resource-collection>
+		<auth-constraint>
+			<role-name>*</role-name>
+		</auth-constraint>
+	</security-constraint>
+	
+		<servlet>
+		<servlet-name>ChessServiceImpl</servlet-name>
+		<servlet-class>org.leozis.hw6.server.ChessServiceImpl</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>ChessServiceImpl</servlet-name>
+		<url-pattern>/leozis/chess</url-pattern>
+	</servlet-mapping>
+
+	<security-constraint>
+		<web-resource-collection>
+			<url-pattern>/leozis.html</url-pattern>
+			<url-pattern>/leozis/*</url-pattern>
+
+		</web-resource-collection>
+		<auth-constraint>
+			<role-name>*</role-name>
+		</auth-constraint>
+	</security-constraint>
+	  
+
+</web-app>

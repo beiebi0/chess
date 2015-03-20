@@ -1,0 +1,30 @@
+userInfo:Connecté en tant que {0} ({1})
+signOut:Déconnexion
+yourTurn:À vous la parole!
+theirTurn:Leur tour
+matchDrawn:Match nul!
+youWon:Vous avez gagné!
+youLost:Vous avez perdu :(
+checkMate:Echec et mat
+fiftyMoveRule:Cinquante-move règle
+threefoldRepetitionRule:Règle de triple répétition
+stalemate:Impasse
+matchListItem:Match ID: {0} ({1}) - {2}
+matchListItemSelectMatch:--Choisir un match--
+serverError:Erreur serveur!
+matchId:Match ID: {0}
+loadMatchesError:Erreur lors du chargement matchs!
+matchIdYourTurn:Match ID: {0}; Votre tour
+white:Blanc
+black:Noir
+matchDeleteError:Erreur lors de la suppression du match!
+matchLoadError:Match erreur de chargement!
+userNotFound:Utilisateur non trouvé!
+invalidEmail:Adresse email invalide!
+waitingForOpponent:En attendant adversaire
+gameOver:Game Over! Gagnant: {0} ({1})
+noOpponent:Aucun adversaire
+notBegun:Pas Commencé
+rating:Classement: [{0},{1}]
+started:Correspondre a commencé le: {0}
+playingAgainstAI:Jouer contre le AI

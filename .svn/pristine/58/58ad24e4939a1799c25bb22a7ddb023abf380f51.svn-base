@@ -1,0 +1,182 @@
+package org.peigenyou.hw2_5;
+import static org.junit.Assert.assertEquals;
+import static org.shared.chess.Color.BLACK;
+import static org.shared.chess.Color.WHITE;
+import static org.shared.chess.PieceKind.*;
+
+import java.util.Set;
+
+import org.junit.Test;
+import org.shared.chess.AbstractStateExplorerTest;
+import org.shared.chess.Color;
+import org.shared.chess.Move;
+import org.shared.chess.Piece;
+import org.shared.chess.PieceKind;
+import org.shared.chess.Position;
+import org.shared.chess.State;
+import org.shared.chess.StateExplorer;
+
+import com.google.common.collect.Sets;
+
+public class StateExplorerTest extends AbstractStateExplorerTest {
+  @Override
+  public StateExplorer getStateExplorer() {
+    return new StateExplorerImpl();
+  }
+  
+  
+  /*
+   * Begin Tests by Peigen You <fusubacon@gmail.com>
+   */
+  
+  public void initForPeigenYou(State state)
+	 {
+	  start = new State();
+		for (int c = 0; c < 8; c++) {
+			for (int r = 0; r < 8; r++) {
+				start.setPiece(r, c, null);
+			}
+		}
+		start.setPiece(0, 4,new Piece(WHITE,KING));
+		start.setTurn(BLACK);
+  }
+  
+  @Test
+  public void testForOnlyKingAndKnightNoCheck() {
+    Set<Position> expectedPositions = Sets.newHashSet();
+    initForPeigenYou(start);
+    start.setPiece(7, 4,new Piece(BLACK, KING));
+    start.setPiece(7, 2, new Piece(BLACK,KNIGHT));
+    expectedPositions.add(new Position(7, 4));
+    expectedPositions.add(new Position(7, 2));
+    
+    assertEquals(expectedPositions,
+        stateExplorer.getPossibleStartPositions(start));
+  }
+  @Test
+  public void testForOnlyKingAndRookSolveCheck() {
+    Set<Position> expectedPositions = Sets.newHashSet();
+    initForPeigenYou(start);
+    start.setPiece(7, 4,new Piece(BLACK, KING));
+    start.setPiece(6, 3, new Piece(BLACK,ROOK));
+    start.setPiece(6,4,new Piece(WHITE,QUEEN));
+    expectedPositions.add(new Position(7, 4));
+    expectedPositions.add(new Position(6, 3));
+    
+    assertEquals(expectedPositions,
+        stateExplorer.getPossibleStartPositions(start));
+  }
+  @Test
+  public void testForBishopSolveCheck() {
+    Set<Position> expectedPositions = Sets.newHashSet();
+    initForPeigenYou(start);
+    start.setPiece(7, 4,new Piece(BLACK, KING));
+    start.setPiece(6, 3, new Piece(BLACK,BISHOP));
+    start.setPiece(4,4,new Piece(WHITE,QUEEN));
+    expectedPositions.add(new Position(7, 4));
+    expectedPositions.add(new Position(6, 3));
+    
+    assertEquals(expectedPositions,
+        stateExplorer.getPossibleStartPositions(start));
+  }
+  @Test
+  public void testPawnSolveCheck() {
+    Set<Position> expectedPositions = Sets.newHashSet();
+    initForPeigenYou(start);
+    start.setPiece(7, 4,new Piece(BLACK, KING));
+    start.setPiece(6, 4, new Piece(BLACK,PAWN));
+    start.setPiece(5,3,new Piece(WHITE,KNIGHT));
+    expectedPositions.add(new Position(7, 4));
+    expectedPositions.add(new Position(6, 4));
+    
+    assertEquals(expectedPositions,
+        stateExplorer.getPossibleStartPositions(start));
+  }
+  @Test
+  public void testPawnSolveCheck2() {
+    Set<Position> expectedPositions = Sets.newHashSet();
+    initForPeigenYou(start);
+    start.setPiece(7, 5,new Piece(BLACK, KING));
+    start.setPiece(6, 2, new Piece(BLACK,PAWN));
+    start.setPiece(3,1,new Piece(WHITE,QUEEN));
+    expectedPositions.add(new Position(7, 5));
+    expectedPositions.add(new Position(6, 2));
+    
+    assertEquals(expectedPositions,
+        stateExplorer.getPossibleStartPositions(start));
+  }
+  @Test
+  public void testStalemate() {
+    Set<Position> expectedPositions = Sets.newHashSet();
+    initForPeigenYou(start);
+    start.setPiece(7, 7,new Piece(BLACK, KING));
+    start.setPiece(6, 6, new Piece(WHITE,ROOK));
+    start.setPiece(5,5,new Piece(WHITE,QUEEN));
+    assertEquals(expectedPositions,
+        stateExplorer.getPossibleStartPositions(start));
+  }
+  @Test
+  public void testCheckmate() {
+    Set<Position> expectedPositions = Sets.newHashSet();
+    initForPeigenYou(start);
+    start.setPiece(7, 7,new Piece(BLACK, KING));
+    start.setPiece(6, 6, new Piece(WHITE,QUEEN));
+    start.setPiece(5,5,new Piece(WHITE,PAWN));
+    assertEquals(expectedPositions,
+        stateExplorer.getPossibleStartPositions(start));
+  }
+  @Test
+  public void testStalemate2() {
+    Set<Position> expectedPositions = Sets.newHashSet();
+    initForPeigenYou(start);
+    start.setPiece(7, 7,new Piece(BLACK, KING));
+    start.setPiece(7, 0, new Piece(WHITE,ROOK));
+    start.setPiece(5,6,new Piece(WHITE,QUEEN));
+    start.setPiece(7,6,new Piece(BLACK,BISHOP));
+    assertEquals(expectedPositions,
+        stateExplorer.getPossibleStartPositions(start));
+  }
+  @Test
+  public void testCastle() {
+    Set<Move> expectedPositions = Sets.newHashSet();
+    initForPeigenYou(start);
+    Position startPos=new Position(7,4);
+    start.setPiece(7, 4,new Piece(BLACK, KING));
+    start.setPiece(7, 0, new Piece(BLACK,ROOK));
+    start.setPiece(6, 0, new Piece(BLACK,PAWN));
+    start.setPiece(6, 3, new Piece(BLACK,PAWN));
+    start.setPiece(6, 5, new Piece(BLACK,PAWN));
+    
+    start.setPiece(6,4,new Piece(BLACK,PAWN));
+    start.setCanCastleKingSide(BLACK,false);
+    expectedPositions.add(new Move(startPos,new Position(7,3),null));
+    expectedPositions.add(new Move(startPos,new Position(7,2),null));
+    expectedPositions.add(new Move(startPos,new Position(7,5),null));
+    
+    
+    assertEquals(expectedPositions,
+        stateExplorer.getPossibleMovesFromPosition(start, new Position(7,4)));
+  }
+  @Test
+  public void testcantCastle() {
+    Set<Move> expectedPositions = Sets.newHashSet();
+    initForPeigenYou(start);
+    Position startPos=new Position(7,4);
+    start.setPiece(7, 4,new Piece(BLACK, KING));
+    start.setPiece(7, 0, new Piece(BLACK,ROOK));
+    start.setPiece(6, 0, new Piece(BLACK,PAWN));
+    start.setPiece(6, 5, new Piece(BLACK,PAWN));
+    start.setPiece(4, 3, new Piece(WHITE,ROOK));
+    
+    start.setPiece(6,4,new Piece(BLACK,PAWN));
+    start.setCanCastleKingSide(BLACK,false);
+    expectedPositions.add(new Move(startPos,new Position(7,5),null));
+    
+    
+    assertEquals(expectedPositions,
+        stateExplorer.getPossibleMovesFromPosition(start, new Position(7,4)));
+  }
+  /**
+   * end test of Peigen You <fusubacon@gmail.com>
+   */
+}

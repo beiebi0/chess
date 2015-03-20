@@ -1,0 +1,43 @@
+package org.yuehlinchung.hw5;
+
+import com.google.gwt.resources.client.ClientBundle;
+import com.google.gwt.resources.client.ImageResource;
+
+
+public interface GameImages extends ClientBundle {   	
+  @Source("BBishop.png")
+  ImageResource blackBishop();
+  
+  @Source("BKing.png")
+  ImageResource blackKing();
+  
+  @Source("BKnight.png")
+  ImageResource blackKnight();
+  
+  @Source("BPawn.png")
+  ImageResource blackPawn();
+  
+  @Source("BQueen.png")
+  ImageResource blackQueen();
+  
+  @Source("BRook.png")
+  ImageResource blackRook();
+  
+  @Source("WBishop.png")
+  ImageResource whiteBishop();
+  
+  @Source("WKing.png")
+  ImageResource whiteKing();
+  
+  @Source("WKnight.png")
+  ImageResource whiteKnight();
+  
+  @Source("WPawn.png")
+  ImageResource whitePawn();
+  
+  @Source("WQueen.png")
+  ImageResource whiteQueen();
+  
+  @Source("WRook.png")
+  ImageResource whiteRook();
+}

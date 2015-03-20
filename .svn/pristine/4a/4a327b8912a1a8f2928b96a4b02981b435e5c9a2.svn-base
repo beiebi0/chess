@@ -1,0 +1,20 @@
+package org.bohuang.hw6.client;
+
+import java.util.LinkedList;
+
+import org.bohuang.hw7.Match;
+
+import com.google.gwt.user.client.rpc.RemoteService;
+import com.google.gwt.user.client.rpc.RemoteServiceRelativePath;
+
+@RemoteServiceRelativePath("chess")
+public interface ChessService extends RemoteService {
+  public LoginInfo login(String requestUri);
+  public LinkedList<Match> LoadMatch(String UserToken);  
+  public Match LoadMatchById(Long id);
+  public Match SearchGame(String userId);
+  public Match PlayWith(String userId,String opponent);
+  public Match MakeMove(String state,String userId,Long gameId);
+  public String Delete(String userId,Long gameId);
+  public Double getRank(String userId);
+}

@@ -1,0 +1,27 @@
+package org.sanjana.hw6.server;
+
+import org.sanjana.hw6.ChessService;
+import org.sanjana.hw6.StateManager;
+import org.shared.chess.Color;
+
+import com.google.appengine.api.channel.ChannelMessage;
+import com.google.appengine.api.channel.ChannelService;
+import com.google.appengine.api.channel.ChannelServiceFactory;
+import com.google.gwt.user.server.rpc.RemoteServiceServlet;
+
+public class ChessServiceImpl extends RemoteServiceServlet implements ChessService
+{
+	private static final long serialVersionUID = 1L;
+
+	@Override
+	public void update(StateManager updateState)
+	{
+		int Id=updateState.getGameId();
+		String state=updateState.getState();
+		GameDetails game=MatchedPlayers.getmatchedPlayers(Id);
+		ChannelService channelService = ChannelServiceFactory.getChannelService();
+		String otherPlayer=(updateState.getTurn()==Color.WHITE) ? game.getPlayer1() : game.getPlayer2();
+		channelService.sendMessage(new ChannelMessage(otherPlayer, state));
+	}
+
+}

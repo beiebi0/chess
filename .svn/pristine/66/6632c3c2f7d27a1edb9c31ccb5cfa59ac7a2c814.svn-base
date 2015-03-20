@@ -1,0 +1,291 @@
+package org.hoffcamp.hw1;
+
+import static org.junit.Assert.assertEquals;
+
+import org.junit.Test;
+import org.shared.chess.AbstractStateChangerTest;
+import org.shared.chess.Move;
+import org.shared.chess.PieceKind;
+import org.shared.chess.Position;
+import org.shared.chess.State;
+import org.shared.chess.Color;
+import org.shared.chess.Piece;
+
+public abstract class AbstractStateChangerBlackInCheckTest extends AbstractStateChangerTest {
+	
+	protected State blankStartState(){
+		State s = new State(Color.BLACK,
+			new Piece[State.ROWS][State.COLS],
+			new boolean[]{false,false},
+			new boolean[]{false,false},
+			null,
+			0,
+			null
+			);	
+
+		return s;
+	}
+	
+	
+	
+	public void testLegalCheckResponseKingMoves(PieceKind whitePiece, Position whitePiecePosition, Position blackKingStart, Position blackKingEnd){
+		
+		boolean capture = (whitePiecePosition.equals(blackKingEnd));
+		
+		start = blankStartState();
+		start.setPiece(0, 5, new Piece(Color.WHITE,PieceKind.KING));
+		start.setPiece(whitePiecePosition, new Piece(Color.WHITE, whitePiece));
+		start.setPiece(blackKingStart, new Piece(Color.BLACK, PieceKind.KING));
+		
+		Move move = new Move(blackKingStart, blackKingEnd, null);
+		
+		State expected = start.copy();
+		expected.setTurn(Color.WHITE);
+		expected.setPiece(blackKingStart, null);
+		expected.setPiece(blackKingEnd, new Piece(Color.BLACK, PieceKind.KING));
+		expected.setNumberOfMovesWithoutCaptureNorPawnMoved(capture ? 1 : 0);
+		
+		stateChanger.makeMove(start, move);
+	    
+		assertEquals(expected, start);
+	}
+	
+	public void testLegalCheckResponseOtherMoves(PieceKind whitePiece, Position whitePiecePosition, PieceKind blackPiece, Position blackPieceStart, Position blackPieceEnd, Position blackKingPosition){
+		
+		boolean capture = (whitePiecePosition.equals(blackPieceEnd));
+		
+		start = blankStartState();
+		start.setPiece(0, 5, new Piece(Color.WHITE,PieceKind.KING));
+		start.setPiece(whitePiecePosition, new Piece(Color.WHITE, whitePiece));
+		start.setPiece(blackKingPosition, new Piece(Color.BLACK, PieceKind.KING));
+		start.setPiece(blackPieceStart, new Piece(Color.BLACK, blackPiece));
+		
+		Move move = new Move(blackPieceStart, blackPieceEnd, null);
+		
+		State expected = start.copy();
+		expected.setTurn(Color.WHITE);
+		expected.setPiece(blackPieceStart, null);
+		expected.setPiece(blackPieceEnd, new Piece(Color.BLACK, blackPiece));
+		expected.setNumberOfMovesWithoutCaptureNorPawnMoved((capture || blackPiece == PieceKind.PAWN) ? 1 : 0);
+		
+		stateChanger.makeMove(start, move);
+	    
+		assertEquals(expected, start);
+	}
+	
+	/*** BISHOP ***/
+	
+	@Test
+	public void testLegalCheckResponseToBishop1(){
+		testLegalCheckResponseKingMoves(
+				PieceKind.BISHOP, 
+				new Position(4,2), 
+				new Position(5,3), 
+				new Position(5,4));
+	}
+	
+	@Test
+	public void testLegalCheckResponseToBishop2(){
+		testLegalCheckResponseKingMoves(
+				PieceKind.BISHOP, 
+				new Position(5,2), 
+				new Position(7,0), 
+				new Position(7,1));
+	}
+	
+	@Test
+	public void testLegalCheckResponseToBishop3(){
+		testLegalCheckResponseOtherMoves(
+				PieceKind.BISHOP, 
+				new Position(3,3),
+				PieceKind.PAWN, 
+				new Position(6,5), 
+				new Position(5,5), 
+				new Position(7,7));
+	}
+	
+	@Test
+	public void testLegalCheckResponseToBishop4(){
+		testLegalCheckResponseOtherMoves(
+				PieceKind.BISHOP, 
+				new Position(3,2),
+				PieceKind.KNIGHT, 
+				new Position(5,1), 
+				new Position(3,2), 
+				new Position(5,4));
+	}
+	
+	@Test
+	public void testLegalCheckResponseToBishop5(){
+		testLegalCheckResponseKingMoves(
+				PieceKind.BISHOP, 
+				new Position(3,2), 
+				new Position(4,3), 
+				new Position(3,2));
+	}
+	
+	/*** ROOK ***/
+	
+	@Test
+	public void testLegalCheckResponseToRook1(){
+		testLegalCheckResponseKingMoves(
+				PieceKind.ROOK, 
+				new Position(1,1), 
+				new Position(4,1), 
+				new Position(4,2));
+	}
+	
+	@Test
+	public void testLegalCheckResponseToRook2(){
+		testLegalCheckResponseKingMoves(
+				PieceKind.ROOK, 
+				new Position(7,1), 
+				new Position(7,5), 
+				new Position(6,5));
+	}
+	
+	@Test
+	public void testLegalCheckResponseToRook3(){
+		testLegalCheckResponseOtherMoves(
+				PieceKind.ROOK, 
+				new Position(4,7),
+				PieceKind.KNIGHT, 
+				new Position(6,5), 
+				new Position(5,7), 
+				new Position(6,7));
+	}
+	
+	@Test
+	public void testLegalCheckResponseToRook4(){
+		testLegalCheckResponseOtherMoves(
+				PieceKind.ROOK, 
+				new Position(4,3),
+				PieceKind.BISHOP, 
+				new Position(6,1), 
+				new Position(4,3), 
+				new Position(6,3));
+	}
+	
+	@Test
+	public void testLegalCheckResponseToRook5(){
+		testLegalCheckResponseKingMoves(
+				PieceKind.ROOK, 
+				new Position(4,3), 
+				new Position(5,3), 
+				new Position(4,3));
+	}
+	
+	/*** KNIGHT ***/
+	
+	@Test
+	public void testLegalCheckResponseToKnight1(){
+		testLegalCheckResponseKingMoves(
+				PieceKind.KNIGHT, 
+				new Position(4,2), 
+				new Position(6,3), 
+				new Position(5,3));
+	}
+	
+	@Test
+	public void testLegalCheckResponseToKnight2(){
+		testLegalCheckResponseKingMoves(
+				PieceKind.KNIGHT, 
+				new Position(5,1), 
+				new Position(7,0), 
+				new Position(7,1));
+	}
+	
+	@Test
+	public void testLegalCheckResponseToKnight3(){
+		testLegalCheckResponseOtherMoves(
+				PieceKind.KNIGHT, 
+				new Position(4,2),
+				PieceKind.ROOK, 
+				new Position(6,2), 
+				new Position(4,2), 
+				new Position(6,3));
+	}
+	
+	/*** QUEEN ***/
+	
+	@Test
+	public void testLegalCheckResponseToQueen1(){
+		testLegalCheckResponseKingMoves(
+				PieceKind.QUEEN, 
+				new Position(4,2), 
+				new Position(7,5), 
+				new Position(6,5));
+	}
+	
+	@Test
+	public void testLegalCheckResponseToQueen2(){
+		testLegalCheckResponseKingMoves(
+				PieceKind.QUEEN, 
+				new Position(7,2),
+				new Position(7,5), 
+				new Position(6,5));
+	}
+	
+	@Test
+	public void testLegalCheckResponseToQueen3(){
+		testLegalCheckResponseOtherMoves(
+				PieceKind.QUEEN, 
+				new Position(3,5),
+				PieceKind.PAWN, 
+				new Position(6,3), 
+				new Position(5,3), 
+				new Position(6,2));
+	}
+	
+	@Test
+	public void testLegalCheckResponseToQueen4(){
+		testLegalCheckResponseOtherMoves(
+				PieceKind.QUEEN, 
+				new Position(3,4),
+				PieceKind.KNIGHT, 
+				new Position(5,5), 
+				new Position(3,4), 
+				new Position(6,4));
+	}
+	
+	/*** PAWN ***/
+	
+	@Test
+	public void testLegalCheckResponseToPawn1(){
+		testLegalCheckResponseKingMoves(
+				PieceKind.PAWN, 
+				new Position(6,3), 
+				new Position(7,4), 
+				new Position(6,4));
+	}
+	
+	@Test
+	public void testLegalCheckResponseToPawn2(){
+		testLegalCheckResponseKingMoves(
+				PieceKind.PAWN, 
+				new Position(6,6), 
+				new Position(7,7), 
+				new Position(7,6));
+	}
+	
+	@Test
+	public void testLegalCheckResponseToPawn3(){
+		testLegalCheckResponseOtherMoves(
+				PieceKind.PAWN, 
+				new Position(5,4),
+				PieceKind.BISHOP, 
+				new Position(3,2), 
+				new Position(5,4), 
+				new Position(6,5));
+	}
+	
+	@Test
+	public void testLegalCheckResponseToPawn4(){
+		testLegalCheckResponseKingMoves(
+				PieceKind.PAWN, 
+				new Position(6,4), 
+				new Position(7,3), 
+				new Position(6,4));
+	}
+	
+}

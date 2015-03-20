@@ -1,0 +1,407 @@
+package org.adamjackrel.hw1;
+
+import static org.shared.chess.Color.BLACK;
+import static org.shared.chess.Color.WHITE;
+import static org.junit.Assert.assertEquals;
+
+import static org.shared.chess.Color.BLACK;
+import static org.shared.chess.Color.WHITE;
+import org.junit.Test;
+import org.shared.chess.AbstractStateChangerTest;
+import org.shared.chess.GameResult;
+import org.shared.chess.GameResultReason;
+import org.shared.chess.Move;
+import org.shared.chess.Piece;
+import org.shared.chess.PieceKind;
+import org.shared.chess.Position;
+import org.shared.chess.State;
+import org.shared.chess.IllegalMove;
+
+public abstract class AbstractStateChangerAllTest extends AbstractStateChangerTest {
+	
+	@Test (expected = IllegalMove.class)
+	
+	
+	//illegal move when player tries to move the king when it is already in check
+	public void AbstractIllegalLeavingKingInCheck() 
+	{ 
+		 
+        State expected = start.copy();
+        
+        Piece whiteRook=new Piece(WHITE,PieceKind.ROOK); 
+        start.setPiece(0,2,whiteRook);  
+		
+		Piece blackRook=new Piece(BLACK,PieceKind.ROOK); 
+        start.setPiece(6,2,blackRook); 
+		
+		Piece blackKing=new Piece(BLACK,PieceKind.KING); 
+        start.setPiece(7,2,blackKing); 
+		
+        Move move = new Move(new Position(6,2), new Position(6,1), null); 
+		
+		
+        expected.setTurn(WHITE); 
+        expected.setPiece(6,2, blackRook); 
+        expected.setPiece(6,1, null); 
+	
+        stateChanger.makeMove(start, move); 
+        assertEquals(expected, start);
+	} 
+	
+	@Test
+    //If White pawn tries to capture a Black pawn
+	public void AbstractBlackKingIllegalWhenCheckedByWhiteRook() 
+	{ 
+		 
+        Move move = new Move(new Position(4,3), new Position(5,4), null); 
+        State state = start.copy(); 
+
+        Piece whiteRook=new Piece(WHITE,PieceKind.ROOK); 
+        start.setPiece(0,2,whiteRook); 
+        Piece blackPawn= new Piece(BLACK, PieceKind.PAWN); 
+        start.setPiece(6,1,blackPawn); 
+		Piece blackKing= new Piece(BLACK, PieceKind.KING); 
+        start.setPiece(7,2,blackKing); 
+		Piece whiteBishop= new Piece(BLACK, PieceKind.BISHOP); 
+        start.setPiece(4,3,whiteBishop); 
+
+        state.setTurn(BLACK); 
+        state.setPiece(6,2, blackKing); 
+        state.setPiece(6,1, null); 
+        state.setNumberOfMovesWithoutCaptureNorPawnMoved(0); 
+        stateChanger.makeMove(start, move); 
+	} 
+	
+	@Test
+//If White pawn tries to capture a Black pawn
+    
+    public void AbstractBlackKingLegalCaptureByWhiteRook() { 
+ 
+                    Move move = new Move(new Position(4,3), new Position(5,4), null); 
+                    State state = start.copy(); 
+ 
+                    Piece whiteRook=new Piece(WHITE,PieceKind.ROOK); 
+                    start.setPiece(0,2,whiteRook); 
+                
+					Piece blackKing= new Piece(BLACK, PieceKind.KING); 
+                    start.setPiece(7,2,blackKing); 
+					
+ 
+                    state.setTurn(WHITE); 
+                    state.setPiece(7,2, whiteRook); 
+                    state.setPiece(0,2, null); 
+                    state.setNumberOfMovesWithoutCaptureNorPawnMoved(0); 
+                    stateChanger.makeMove(start, move); 
+  } 
+	
+	@Test
+ //If White pawn tries to capture a Black pawn
+    
+    public void AbstractBlackPawnWhiteLegalCapture() { 
+ 
+                    Move move = new Move(new Position(4,3), new Position(5,4), null); 
+                    State state = start.copy(); 
+ 
+                    Piece whitePawn=new Piece(WHITE,PieceKind.PAWN); 
+                    start.setPiece(4,3,whitePawn); 
+                    Piece blackPawn= new Piece(BLACK, PieceKind.PAWN); 
+                    start.setPiece(5,4,blackPawn); 
+ 
+                    state.setTurn(WHITE); 
+                    state.setPiece(4,3, whitePawn); 
+                    state.setPiece(5,4, null); 
+                    state.setNumberOfMovesWithoutCaptureNorPawnMoved(0); 
+                    stateChanger.makeMove(start, move); 
+  } 
+	
+	@Test
+//If White pawn tries to capture a Black pawn
+    
+    public void AbstractWhitePawnIllegalSideCapture1() { 
+ 
+                    Move move = new Move(new Position(3,3), new Position(3,4), null); 
+                    State state = start.copy(); 
+ 
+                    Piece whiteBishop=new Piece(WHITE,PieceKind.BISHOP); 
+                    start.setPiece(3,3,whiteBishop); 
+					Piece blackPawn=new Piece(BLACK,PieceKind.PAWN); 
+                    start.setPiece(3,4,blackPawn); 
+					
+                    state.setTurn(WHITE); 
+                    state.setPiece(3,4, whiteBishop); 
+                    state.setPiece(3,3, null); 
+					
+                    state.setNumberOfMovesWithoutCaptureNorPawnMoved(0); 
+                    stateChanger.makeMove(start, move); 
+  } 
+	
+	@Test
+//If White bishop tries to move in an illegal horzontal direction
+    
+    public void AbstractWhiteBishopIllegalSideMove() { 
+ 
+                    Move move = new Move(new Position(3,3), new Position(3,4), null); 
+                    State state = start.copy(); 
+ 
+                    Piece whiteBishop=new Piece(WHITE,PieceKind.BISHOP); 
+                    start.setPiece(3,3,whiteBishop);  
+					
+                    state.setTurn(WHITE); 
+                    state.setPiece(3,4, whiteBishop); 
+                    state.setPiece(3,3, null); 
+				
+                    stateChanger.makeMove(start, move); 
+  } 
+	
+	@Test
+//If White pawn tries to capture a Black pawn
+    
+    public void AbstractWhiteKingIllegalCapture() { 
+ 
+                    Move move = new Move(new Position(0,2), new Position(7,2), null); 
+                    State state = start.copy(); 
+ 
+                    Piece whiteKing=new Piece(WHITE,PieceKind.KING); 
+                    start.setPiece(0,2,whiteKing); 
+					Piece blackKing=new Piece(BLACK,PieceKind.KING); 
+                    start.setPiece(7,2,blackKing); 
+					
+                    state.setTurn(WHITE); 
+                    state.setPiece(0,2, whiteKing); 
+                    state.setPiece(7,2, null); 
+					
+                    state.setNumberOfMovesWithoutCaptureNorPawnMoved(0); 
+                    stateChanger.makeMove(start, move); 
+  } 
+	
+	@Test
+//If White king tries to move more than one space in vertical direction (x-axis)
+    
+    public void AbstractWhiteKingIllegalMove() { 
+ 
+                    Move move = new Move(new Position(2,2), new Position(7,2), null); 
+                    State state = start.copy(); 
+ 
+                    Piece whiteKing=new Piece(WHITE,PieceKind.KING); 
+                    start.setPiece(2,2,whiteKing);  
+					
+                    state.setTurn(WHITE); 
+                    state.setPiece(0,2, whiteKing); 
+                    state.setPiece(7,2, null); 
+					
+                    state.setNumberOfMovesWithoutCaptureNorPawnMoved(0); 
+                    stateChanger.makeMove(start, move); 
+  } 
+	
+	@Test
+	//Player(white) moves a piece after the game has already ended
+
+    public void AbstractWhiteMovesAfterGameEnds() { 
+						start.setTurn(WHITE);
+						start.setGameResult(new GameResult(BLACK, GameResultReason.CHECKMATE));
+
+						Move move = new Move(new Position(1, 1), new Position(2, 2), null);
+						stateChanger.makeMove(start, move);
+
+						
+                   
+        } 
+	
+	@Test
+	//Player(white) moves a piece after the game has already ended
+
+    public void AbstractWhiteMovesFromEmptySquare() { 
+						start.setTurn(WHITE);
+						Move move = new Move(new Position(3, 1), new Position(2, 2), null); 
+						stateChanger.makeMove(start, move);
+
+						
+                   
+        } 
+	
+	@Test
+	//Player(white) moves a piece after the game has already ended
+
+    public void AbstractWhiteMovesWhenBlacksTurn() { 
+						start.setTurn(BLACK);
+						Move move = new Move(new Position(1, 1), new Position(2, 2), null); 
+						stateChanger.makeMove(start, move);
+
+              
+        } 
+	
+	@Test
+	//Player(white) moves the wrong color pawn piece
+
+    public void WhiteMovesWrongColorPawnIllegalMove() { 
+						start.setTurn(WHITE);
+						Move move = new Move(new Position(1, 1), new Position(2, 2), null); 
+						stateChanger.makeMove(start, move);
+                   
+        } 
+	
+	@Test
+  //If White pawn tries to capture a Black pawn
+    
+    public void AbstractPawnLegalCapture() { 
+ 
+                    Move move = new Move(new Position(4,3), new Position(5,4), null); 
+                    State state = start.copy(); 
+ 
+                    Piece whitePawn=new Piece(WHITE,PieceKind.PAWN); 
+                    start.setPiece(4,3,whitePawn); 
+                    Piece blackPawn= new Piece(BLACK, PieceKind.PAWN); 
+                    start.setPiece(5,4,blackPawn); 
+ 
+                    state.setTurn(WHITE); 
+                    state.setPiece(4,3, null); 
+                    state.setPiece(5,4, whitePawn); 
+                    state.setNumberOfMovesWithoutCaptureNorPawnMoved(0); 
+                    stateChanger.makeMove(start, move); 
+  } 
+	
+	@Test
+ //If White rook tries to get promoted when it reaches the 7th rank
+    
+    public void AbstractWhitePawnIllegalPromotion() { 
+ 
+                    Move move = new Move(new Position(5,0), new Position(6,0), PieceKind.QUEEN); 
+                    State state = start.copy(); 
+ 
+                    Piece whitePawn=new Piece(WHITE,PieceKind.PAWN); 
+                    start.setPiece(5,0,whitePawn);  
+					
+                    state.setTurn(WHITE); 
+                    state.setPiece(6,0, whitePawn); 
+                    state.setPiece(5,0, null); 
+					
+                    state.setNumberOfMovesWithoutCaptureNorPawnMoved(0); 
+                    stateChanger.makeMove(start, move); 
+  }
+	
+	@Test
+//if white pawn tries to capture a black pawn that is behind the white pawn
+    
+    public void AbstractWhitePawnIllegalReverseCapture() { 
+ 
+                    Move move = new Move(new Position(4,4), new Position(3,3), null); 
+                    State state = start.copy(); 
+ 
+                    Piece whitePawn=new Piece(WHITE,PieceKind.PAWN); 
+                    start.setPiece(4,4,whitePawn);  
+					
+					Piece blackPawn=new Piece(BLACK,PieceKind.PAWN); 
+                    start.setPiece(3,3,blackPawn);  
+					
+                    state.setTurn(WHITE); 
+                    state.setPiece(3,3, whitePawn); 
+                    state.setPiece(4,4, null); 
+					
+                    state.setNumberOfMovesWithoutCaptureNorPawnMoved(0); 
+                    stateChanger.makeMove(start, move); 
+  } 
+	
+	@Test
+ //if white pawn tries to move in an illegal reverse direction
+    
+    public void AbstractWhitePawnIllegalReverseMove() { 
+ 
+                    Move move = new Move(new Position(4,4), new Position(3,4), null); 
+                    State state = start.copy(); 
+ 
+                    Piece whitePawn=new Piece(WHITE,PieceKind.PAWN); 
+                    start.setPiece(4,4,whitePawn);  
+					
+                    state.setTurn(WHITE); 
+                    state.setPiece(3,4, whitePawn); 
+                    state.setPiece(4,4, null); 
+					
+                    state.setNumberOfMovesWithoutCaptureNorPawnMoved(0); 
+                    stateChanger.makeMove(start, move); 
+  } 
+	
+	@Test
+//If White pawn tries to capture a Black pawn
+    
+    public void AbstractWhitePawnIllegalSideCapture() { 
+ 
+                    Move move = new Move(new Position(3,3), new Position(3,4), null); 
+                    State state = start.copy(); 
+ 
+                    Piece whitePawn=new Piece(WHITE,PieceKind.PAWN); 
+                    start.setPiece(3,3,whitePawn); 
+					Piece blackPawn=new Piece(BLACK,PieceKind.PAWN); 
+                    start.setPiece(3,4,blackPawn); 
+					
+                    state.setTurn(WHITE); 
+                    state.setPiece(3,4, whitePawn); 
+                    state.setPiece(3,3, null); 
+					
+                    state.setNumberOfMovesWithoutCaptureNorPawnMoved(0); 
+                    stateChanger.makeMove(start, move); 
+  } 
+	
+	@Test
+//if white pawn tries to move two spaces after being moved off the starting (ie initial) position
+    
+    public void AbstractWhitePawnIllegalTwoSpaceMove() { 
+ 
+                    Move move = new Move(new Position(3,3), new Position(5,3), null); 
+                    State state = start.copy(); 
+ 
+                    Piece whitePawn=new Piece(WHITE,PieceKind.PAWN); 
+                    start.setPiece(3,3,whitePawn);  
+					
+                    state.setTurn(WHITE); 
+                    state.setPiece(5,3, whitePawn); 
+                    state.setPiece(3,3, null); 
+					
+                    state.setNumberOfMovesWithoutCaptureNorPawnMoved(0); 
+                    stateChanger.makeMove(start, move); 
+  } 
+	
+	@Test
+//if white pawn tries to capture one of their own pieces
+    
+    public void AbstractWhiteRookIllegalCaptureOfWhitePawn() { 
+ 
+                    Move move = new Move(new Position(3,3), new Position(3,4), null); 
+                    State state = start.copy(); 
+ 
+                    Piece whiteRook=new Piece(WHITE,PieceKind.ROOK); 
+                    start.setPiece(3,3,whiteRook);  
+					
+					Piece whitePawn=new Piece(WHITE,PieceKind.PAWN); 
+                    start.setPiece(3,4,whitePawn);  
+					
+                    state.setTurn(WHITE); 
+                    state.setPiece(3,4, whiteRook); 
+                    state.setPiece(3,3, null); 
+					
+                    state.setNumberOfMovesWithoutCaptureNorPawnMoved(0); 
+                    stateChanger.makeMove(start, move); 
+  } 
+	
+	@Test
+//If White rook tries to get promoted when it reaches the 8th rank
+    
+    public void AbstractWhiteRookIllegalPromotion() { 
+ 
+                    Move move = new Move(new Position(6,0), new Position(7,0), PieceKind.QUEEN); 
+                    State state = start.copy(); 
+ 
+                    Piece whiteRook=new Piece(WHITE,PieceKind.ROOK); 
+                    start.setPiece(6,0,whiteRook);  
+					
+                    state.setTurn(WHITE); 
+                    state.setPiece(7,0, whiteRook); 
+                    state.setPiece(6,0, null); 
+					
+                    state.setNumberOfMovesWithoutCaptureNorPawnMoved(0); 
+                    stateChanger.makeMove(start, move); 
+  } 
+	
+	
+
+
+}

@@ -1,0 +1,88 @@
+<!DOCTYPE ui:UiBinder SYSTEM "http://dl.google.com/gwt/DTD/xhtml.ent">
+<ui:UiBinder xmlns:ui="urn:ui:com.google.gwt.uibinder"
+	xmlns:g="urn:import:com.google.gwt.user.client.ui">
+	<ui:style field="css" type="org.longjuntan.hw3.GameCss">
+		.highlighted {
+		outline: dotted red
+		2px;
+		}
+
+		.blacktile {
+		background-color: #CCCCCC;
+		width: 50px;
+		height: 50px;
+		}
+
+		x
+		.whitetile {
+		background-color: #FFFFFF;
+		width: 50px;
+		height: 50px;
+		}
+
+		.possible {
+		outline: dotted orange 2px;
+		}
+
+		td img {
+		display: block
+		}
+	</ui:style>
+	<g:HTMLPanel>
+
+		<g:Label ui:field="gameStatus" />
+		<g:Label ui:field="colorStatus" />
+		<tr>
+			<td>
+				<g:ListBox ui:field="matchList">
+					<g:item value=''>
+						[
+						Select one      <!-- <ui:text from='{res.selectMatch}' /> -->
+						]
+					</g:item>
+				</g:ListBox>
+			</td>
+
+			<td>
+				<g:Button ui:field="autoMatch">
+				</g:Button>
+			</td>
+		</tr>
+		<tr>
+			<td>
+				<g:FlowPanel ui:field="suggestPanel" />
+			</td>
+
+			<td>
+				<g:Button ui:field="inviteButton"></g:Button>
+			</td>
+
+		</tr>
+
+		<tr>
+
+			<g:Grid ui:field="gameGrid" />
+
+			<g:HTMLPanel>
+
+				<g:VerticalPanel ui:field="myInfo" />
+
+				<g:VerticalPanel ui:field="gameInfo" />
+
+				<g:VerticalPanel ui:field="opponentInfo" />
+
+			</g:HTMLPanel>
+
+		</tr>
+
+		<!-- <tr> <td> <g:Button ui:field="restart" text="Join" /> </td> <td> <g:Button 
+			ui:field="save" text="Save" /> </td> <td> <g:Button ui:field="load" text="Load" 
+			/> </td> </tr> -->
+		<tr>
+			<g:Button ui:field="delete" />
+			<g:Button ui:field="aiPlay" />
+		</tr>
+
+		<g:Grid ui:field="promoteGrid" />
+	</g:HTMLPanel>
+</ui:UiBinder> 

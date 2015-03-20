@@ -1,0 +1,17 @@
+package org.peigenyou.hw3;
+
+import com.google.gwt.user.client.rpc.AsyncCallback;
+
+/**
+ * The async counterpart of <code>GreetingService</code>.
+ */
+public interface GreetingServiceAsync {
+  void greetServer(String input, AsyncCallback<String> callback);
+  void autoMatch(String player,String newState, AsyncCallback<String> callback);
+  void submitMove(String email,String name,String state, AsyncCallback callback);
+  void loadMatch(String ID, AsyncCallback<String> callback);
+  void creatMatch(String blackID,String whiteID,String state, AsyncCallback callback);
+  void delMatch(String ID, AsyncCallback callback);
+  void updatePlayer(String email,AsyncCallback<String> callback);
+  void sendResult(String match,String result,AsyncCallback callback);
+}

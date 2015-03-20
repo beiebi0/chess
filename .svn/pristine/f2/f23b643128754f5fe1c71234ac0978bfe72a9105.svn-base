@@ -1,0 +1,60 @@
+package org.vorasahil.hw6.client;
+
+import java.io.Serializable;
+/**
+ * Update Object used to update other players.
+ * @author Sahil Vora
+ *
+ */
+public class Update implements Serializable {
+
+	private static final long serialVersionUID = 42L;
+	private String state;
+	private int gameId;
+	private String player;
+	private int playerId;
+	
+	
+	public Update() {
+	}
+
+	public Update(String state,int gameId,String player,int playerId){
+		this.state=state;
+		this.gameId=gameId;
+		this.player=player;
+		this.playerId=playerId;
+	}
+	
+	public String getState() {
+		return state;
+	}
+
+	public void setState(String state) {
+		this.state = state;
+	}
+
+	public int getGameId() {
+		return gameId;
+	}
+
+	public void setGameId(int gameId) {
+		this.gameId = gameId;
+	}
+
+	public int getPlayerId() {
+		return playerId;
+	}
+
+	public void setPlayerId(int playerId) {
+		this.playerId = playerId;
+	}
+
+	public String getPlayer() {
+		return player;
+	}
+
+	public void setPlayer(String player) {
+		this.player = player;
+	};
+
+}

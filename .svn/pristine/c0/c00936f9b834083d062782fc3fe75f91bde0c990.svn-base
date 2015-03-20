@@ -1,0 +1,45 @@
+<!DOCTYPE ui:UiBinder SYSTEM "http://dl.google.com/gwt/DTD/xhtml.ent">
+<ui:UiBinder xmlns:ui="urn:ui:com.google.gwt.uibinder"
+	xmlns:g="urn:import:com.google.gwt.user.client.ui">
+	<ui:style field="css" type="org.wenjiechen.hw3.GameCss">
+		.highlighted {
+			outline: dotted green 2px;
+		}
+		
+		.lastmove {
+			outline: solid red 2px;
+		}
+		
+		td img {
+			display: block
+		}
+	</ui:style>
+	<g:HTMLPanel>
+	    <div style="border:1px solid red">
+			<g:Label ui:field="userStatus" text="No User" />
+			<g:Label ui:field="opponentStatus" text="No opponent" />
+			<g:Button ui:field ="autoMatch" text="Auto Match" />
+			<g:Button ui:field ="DeleteMatch" text="delete match" />		
+			<g:Anchor ui:field ="logOutLink" text="Logout" />								
+		</div>
+		<g:Label ui:field="space" text=" " />
+		<div style="border:1px solid green">
+			<g:Label ui:field="gameStatus" text="Status" />
+			<g:Label ui:field="gameTurn" text="Turn" />
+			<g:Label ui:field="gameResult" text="Result" />
+			<!-- <g:TextBox ui:field="inputEmail"></g:TextBox>  -->	
+			<g:SuggestBox ui:field="emailMatchSuggestBox"></g:SuggestBox>	
+		 	<g:Button ui:field ="emailMatch" text="Invite Player" />
+			<g:ListBox ui:field="matchList"></g:ListBox>
+			<g:Button ui:field ="loadMatch" text="Load Match" />
+			<g:Button ui:field ="PlayWithAI" text="Play With Computer" />
+		</div>
+		<g:Label ui:field="space2" text=" " />
+		<div align="center">
+			<g:Grid ui:field="gameGrid" /> 
+			<g:Grid ui:field="promotionGrid" />
+			<g:Label ui:field="promotionPromt" text="promotionPromt" />
+			<g:VerticalPanel ui:field = "boardPanel" />		
+		</div>
+	</g:HTMLPanel>
+</ui:UiBinder> 

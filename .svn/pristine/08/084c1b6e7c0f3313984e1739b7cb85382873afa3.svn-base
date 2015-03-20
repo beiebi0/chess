@@ -1,0 +1,1730 @@
+package org.sanjana.hw2;
+
+import java.util.ArrayList;
+import java.util.Set;
+import org.shared.chess.Color;
+import org.shared.chess.GameResult;
+import org.shared.chess.GameResultReason;
+import org.shared.chess.IllegalMove;
+import org.shared.chess.Move;
+import org.shared.chess.Piece;
+import org.shared.chess.Position;
+import org.shared.chess.State;
+import org.shared.chess.StateChanger;
+
+import com.google.common.collect.Sets;
+
+import static org.shared.chess.Color.BLACK;
+import static org.shared.chess.Color.WHITE;
+import static org.shared.chess.GameResultReason.STALEMATE;
+import static org.shared.chess.PieceKind.KING;
+import static org.shared.chess.PieceKind.PAWN;
+import static org.shared.chess.PieceKind.ROOK;
+import static org.shared.chess.PieceKind.BISHOP;
+import static org.shared.chess.PieceKind.KNIGHT;
+import static org.shared.chess.State.COLS;
+import static org.shared.chess.State.ROWS;
+
+public class StateChangerImpl implements StateChanger 
+{
+	public void makeMove(State state, Move move) throws IllegalMove 
+	{
+		//Checks for any anomalies like from position is null or to position is null,etc
+		if (state.getPiece(move.getFrom()) == null) 
+		{		  		  
+			// Nothing to move!      
+			throw new IllegalMove();	
+		}	
+
+		if(state.getNumberOfMovesWithoutCaptureNorPawnMoved()==100)
+		{
+			throw new IllegalMove();
+		}
+
+		if (state.getGameResult() != null) 
+		{
+			throw new IllegalMove();
+		}
+
+		if(move.getTo()==null)
+		{
+			//to position is null i.e. no TO position
+			throw new IllegalMove();
+		}
+
+		Position from = move.getFrom();
+		Position to = move.getTo();
+		if(from.equals(to))
+		{
+			//tries to move into the same from position
+			throw new IllegalMove();
+		}
+
+		Piece FromPiece = state.getPiece(move.getFrom());
+		Color FromColor = FromPiece.getColor();
+		if(FromColor!=state.getTurn()) 
+		{
+			// Wrong player moves!
+			throw new IllegalMove();
+		}
+
+		int x=from.getRow();
+		int y=from.getCol();
+		int xx=to.getRow();
+		int yy=to.getCol();
+
+		if (xx< 0||xx>ROWS||yy< 0||yy >COLS||x< 0||x>ROWS||y< 0||y>COLS) 
+		{
+			throw new IllegalMove();
+		}
+
+		//*******PROMOTION******
+		//Checks for promotion whether the right piece at right position is being promoted
+		if(move.getPromoteToPiece()!= null)
+		{
+			if (FromPiece.getKind()!=PAWN) 
+			{
+				throw new IllegalMove();
+			}
+
+			if(move.getPromoteToPiece()==PAWN || move.getPromoteToPiece()==KING)
+			{
+				throw new IllegalMove();
+			}
+
+			if(FromColor==WHITE && xx!=7)
+			{
+				//trying to promote when not on final rank
+				throw new IllegalMove();
+			}
+			if(FromColor==BLACK && xx!=0)
+			{
+				//trying to promote when not on final rank
+				throw new IllegalMove();
+			}
+		}
+		else if((xx==0 || xx==7) && FromPiece.getKind()==PAWN && move.getPromoteToPiece()== null)
+			throw new IllegalMove();
+
+
+		//		boolean RookPath=true,BishopPath=true;
+		boolean canCastle=true,canEnpassant=true;
+		int rowDistance=xx-x;
+		int colDistance=yy-y;
+		int dirX,enpassant;
+
+		Piece ToPiece = state.getPiece(move.getTo());
+		if (ToPiece!=null && ToPiece.getKind()==KING) 
+		{
+			throw new IllegalMove();
+		}
+
+		State original=state.copy();		
+		Position kingpos= WhereIsKing(state,FromColor);
+
+		//Moves for All the Pieces
+		switch(FromPiece.getKind())
+		{
+
+		//*********************PAWN***************
+		case PAWN:
+		{
+			//If its a PAWN
+			dirX = (FromColor==WHITE) ? 1 : -1;
+			enpassant= (FromColor==WHITE) ? 2: -2;
+			int row = (FromColor==WHITE) ? 1 : 6;
+
+			if(ToPiece!=null 
+					&& ToPiece.getColor()==FromPiece.getColor())
+			{
+				//Same Colored Pieces
+				throw new IllegalMove();
+			}
+
+			if(colDistance==0)
+			{
+				if(Math.abs(rowDistance)==2  && x==row)
+				{
+					if(state.getPiece(x+dirX, y)!=null)
+						throw new IllegalMove();
+					if(x==1 && enpassant==-2)
+						throw new IllegalMove();
+					if(x==6 && enpassant==2)
+						throw new IllegalMove();
+					else
+					{
+						PawnMove(from,to,state,move);
+						state.setEnpassantPosition(to);
+					}
+				}
+
+				else if(Math.abs(rowDistance)==1)
+				{
+					if(state.getPiece(to)!=null)
+						throw new IllegalMove();
+					if(FromColor==WHITE && to.getRow()<from.getRow())
+						throw new IllegalMove();
+					if(FromColor==BLACK && to.getRow()>from.getRow())
+						throw new IllegalMove();
+
+					else
+						PawnMove(from,to,state,move);			
+				}
+				else 
+					throw new IllegalMove();
+			}
+
+			else if(Math.abs(colDistance)==1 && Math.abs(rowDistance)==1)
+			{
+				if(state.getPiece(to)==null)
+				{
+					//Enpassant Capture
+					if(FromColor==WHITE)
+						canEnpassant=(x==4) ? true :false;
+					else
+						canEnpassant=(x==3) ? true:false;
+
+					if(!canEnpassant)
+						throw new IllegalMove();	
+
+					if(state.getEnpassantPosition()==null)
+						throw new IllegalMove();
+
+					if(Math.abs(state.getEnpassantPosition().getCol()-y)!=1)
+						throw new IllegalMove();
+
+					if(Math.abs(state.getEnpassantPosition().getCol())!=yy)
+						throw new IllegalMove();
+
+					if(FromColor==WHITE && to.getRow()<from.getRow())
+						throw new IllegalMove();
+
+					if(FromColor==BLACK && to.getRow()>from.getRow())
+						throw new IllegalMove();
+
+					state.setPiece(state.getEnpassantPosition(),null);
+					PawnMove(from,to,state,move);
+				}
+
+				else if(state.getPiece(to)!=null)
+				{
+					//Normal Capture
+					if(FromColor==ToPiece.getColor())
+						throw new IllegalMove();
+					if(FromColor==WHITE && to.getRow()<from.getRow())
+						throw new IllegalMove();
+					if(FromColor==BLACK && to.getRow()>from.getRow())
+						throw new IllegalMove();
+					else
+						PawnMove(from,to,state,move);	
+				}
+				else
+					throw new IllegalMove();
+			}
+			else 
+				throw new IllegalMove();
+
+			break;
+		}
+
+		//*********************ROOK***************
+		case ROOK:
+		{
+			if(ToPiece!=null 
+					&& ToPiece.getColor()==FromPiece.getColor())
+			{
+				//Same Colored Pieces
+				throw new IllegalMove();
+			}
+
+			int row = (FromColor==WHITE) ? 0 :7;
+			if((Math.abs(colDistance)==0 || Math.abs(rowDistance)==0))
+			{
+				if(CheckIfRookPathNotBlocked(x,y,xx,yy,state)==true)
+				{			
+					MakingAMove(from,to,state);
+					if(ToPiece==null)
+						state.setNumberOfMovesWithoutCaptureNorPawnMoved(state.getNumberOfMovesWithoutCaptureNorPawnMoved()+1);
+					else
+						state.setNumberOfMovesWithoutCaptureNorPawnMoved(0);
+
+					if(row==0)
+					{
+						//White Rook
+						if(y==7)
+							state.setCanCastleKingSide(WHITE, false);
+						if(y==0)
+							state.setCanCastleQueenSide(WHITE, false);
+					}
+					else if(row==7)
+					{						
+						if(y==7)
+							state.setCanCastleKingSide(BLACK, false);
+						if(y==0)
+							state.setCanCastleQueenSide(BLACK, false);
+					}
+				}
+				else
+					throw new IllegalMove();
+			}
+			else	//if illegal move
+				throw new IllegalMove();
+
+			break;
+		}
+
+		//*********************KNIGHT***************
+		case KNIGHT:
+		{
+			if(ToPiece!=null 
+					&& ToPiece.getColor()==FromPiece.getColor())
+			{
+				//Same Colored Pieces
+				throw new IllegalMove();
+			}
+
+			if ((Math.abs(rowDistance) == 2 && Math.abs(colDistance) == 1) ||
+					(Math.abs(rowDistance) == 1 && Math.abs(colDistance) == 2))
+			{
+				MakingAMove(from,to,state);
+				if(ToPiece==null)
+					state.setNumberOfMovesWithoutCaptureNorPawnMoved(state.getNumberOfMovesWithoutCaptureNorPawnMoved()+1);
+				else
+					state.setNumberOfMovesWithoutCaptureNorPawnMoved(0);
+			}
+
+			else
+				throw new IllegalMove();
+
+			break;
+		}
+
+		//*********************BISHOP***************
+		case BISHOP:
+		{
+			if(ToPiece!=null 
+					&& ToPiece.getColor()==FromPiece.getColor())
+			{
+				//Same Colored Pieces
+				throw new IllegalMove();
+			}
+
+			if(Math.abs(colDistance)==Math.abs(rowDistance))
+			{
+				if(CheckIfBishopPathNotBlocked(x,y,xx,yy,state)==false)
+					throw new IllegalMove();
+
+				else
+				{	
+					MakingAMove(from,to,state);
+					if(ToPiece==null)
+						state.setNumberOfMovesWithoutCaptureNorPawnMoved(state.getNumberOfMovesWithoutCaptureNorPawnMoved()+1);
+					else
+						state.setNumberOfMovesWithoutCaptureNorPawnMoved(0);
+				}
+			}
+			else
+				throw new IllegalMove();
+
+			break;
+		}
+
+		//*********************KING***************
+		case KING:
+		{						
+			if(ToPiece!=null 
+					&& ToPiece.getColor()==FromPiece.getColor())
+			{
+				//Same Colored Pieces
+				throw new IllegalMove();
+			}
+
+			if(Math.abs(rowDistance) <= 1 && Math.abs(colDistance) <= 1 ||
+					(Math.abs(colDistance)==2 && rowDistance==0))
+			{
+				if(Math.abs(colDistance)==2 && rowDistance==0)
+				{
+					if(!state.isCanCastleKingSide(FromColor) && !state.isCanCastleQueenSide(FromColor))
+						throw new IllegalMove();
+
+					//CASTLING
+					canCastle=CheckForCastling(to,from,FromColor,state);
+					int row =(FromColor==WHITE) ? 0 :7;
+
+					if(canCastle==false)
+						throw new IllegalMove();
+
+					else
+					{
+						if(xx==row)
+						{
+							if(yy==6)
+							{
+								state.setPiece(row, 7, null);
+								state.setPiece(row,5,new Piece(FromColor,ROOK));
+							}
+							if(yy==2)
+							{
+								state.setPiece(row,0,null);
+								state.setPiece(row,3,new Piece(FromColor,ROOK));
+							}
+						}
+					}
+				}
+				MakingAMove(from,to,state);
+
+				if(ToPiece==null)
+					state.setNumberOfMovesWithoutCaptureNorPawnMoved(state.getNumberOfMovesWithoutCaptureNorPawnMoved()+1);
+				else
+					state.setNumberOfMovesWithoutCaptureNorPawnMoved(0);
+
+				state.setCanCastleKingSide(FromColor, false);
+				state.setCanCastleQueenSide(FromColor, false);
+			}
+
+			else
+				throw new IllegalMove();
+
+			break;
+		}
+
+		//*********************QUEEN***************
+		case QUEEN:
+		{
+			if(ToPiece!=null 
+					&& ToPiece.getColor()==FromPiece.getColor())
+			{
+				//Same Colored Pieces
+				throw new IllegalMove();
+			}
+
+			if((Math.abs(yy-y)==Math.abs(xx-x)) || (Math.abs(colDistance)==0 || Math.abs(rowDistance)==0))
+			{
+				if(Math.abs(colDistance)==Math.abs(rowDistance) && 
+						CheckIfBishopPathNotBlocked(x,y,xx,yy,state)==false)
+					throw new IllegalMove();
+
+				else if((Math.abs(colDistance)==0 || Math.abs(rowDistance)==0) && 
+						CheckIfRookPathNotBlocked(x,y,xx,yy,state)==false)
+					throw new IllegalMove();
+				else
+				{	
+					MakingAMove(from,to,state);
+					if(ToPiece==null)
+						state.setNumberOfMovesWithoutCaptureNorPawnMoved(state.getNumberOfMovesWithoutCaptureNorPawnMoved()+1);
+					else
+						state.setNumberOfMovesWithoutCaptureNorPawnMoved(0);
+				}
+			}
+			else
+				throw new IllegalMove();
+			break;
+		}
+
+		default: 	throw new IllegalMove();		//Illegal Piece
+
+		}//end of switch
+
+		if(state.getNumberOfMovesWithoutCaptureNorPawnMoved() >= 100)
+			state.setGameResult(new GameResult(null, GameResultReason.FIFTY_MOVE_RULE));
+
+		kingpos=WhereIsKing(state,FromColor);
+		if(IsKingInCheck(state,FromColor,kingpos))
+		{
+			state=original;
+			throw new IllegalMove();
+		}
+
+		//Check for CHECKMATE/STALEMATE
+		//turn is already changed
+		kingpos=WhereIsKing(state,state.getTurn());
+		if(!AreThereAnyMovesLeftForKing(state,kingpos))
+		{
+			if(IsKingInCheck(state,state.getTurn(),kingpos))
+				if(!CanCheckingPathBeBlocked(state,state.getTurn(),kingpos))
+					state.setGameResult(new GameResult(state.getTurn().getOpposite(), GameResultReason.CHECKMATE));
+			if(!IsKingInCheck(state,state.getTurn(),kingpos))
+				if(!AreThereAnyLegalMovesLeft(state,state.getTurn())) 
+					state.setGameResult(new GameResult(null, STALEMATE));
+		}
+	}
+
+	//******************FUNCTIONS*************
+	/**
+	 * @param state
+	 * @param FromColor
+	 * @return position of king
+	 */
+	public Position WhereIsKing(State state, Color FromColor)
+	{
+		for(int i=0;i<ROWS;i++)
+			for(int j=0;j<COLS;j++)
+			{	
+				Piece kingPiece=state.getPiece(i, j);
+				if(kingPiece!=null)
+					if(kingPiece.getKind()==KING)
+						if(kingPiece.getColor()==FromColor)
+							return new Position(i,j);					
+			}
+		return null;
+	}
+
+	/**
+	 * @param state
+	 * @param FromColor
+	 * @param king position
+	 * @return true if king is in check uses helper function
+	 */
+	public boolean IsKingInCheck(State state,Color FromColor, Position kingpos)
+	{
+		for(int i=0;i<ROWS;i++)
+		{
+			for(int j=0;j<COLS;j++)
+			{	
+				Piece checkingPiece=state.getPiece(i, j);
+				Position pos= new Position(i,j);
+				if(checkingPiece!=null)
+					if(checkingPiece.getColor()!=FromColor)
+						if(isCheck(state,FromColor,kingpos,checkingPiece,pos))
+							return true;
+			}
+		}
+		return false;
+	}
+	
+	/**
+	 * @param state
+	 * @param FromColor
+	 * @param king position
+	 * @param checkingPiece : piece checking the king
+	 * @param checkPos: position of checkingPiece
+	 * @return returns true if king is in check by the given piece
+	 */
+	boolean isCheck(State state, Color FromColor, Position kingpos, Piece checkingPiece,Position checkPos)
+	{
+		int p=kingpos.getRow();
+		int q=kingpos.getCol();
+		int r=checkPos.getRow();
+		int s=checkPos.getCol();
+
+		switch(checkingPiece.getKind())
+		{
+		case PAWN:	
+			if(Math.abs(q-s)==1)
+			{
+				if(FromColor==WHITE && p-r==-1)
+					return true;
+				else if(FromColor==BLACK && p-r==1)
+					return true;
+			}
+			break;
+
+		case KING:
+			if (Math.abs(p-r)<2 && Math.abs(q-s)<2) 
+				return true;
+			break;
+
+		case QUEEN:
+			if ((Math.abs(r-p) == 0 || Math.abs(q-s) ==0) &&
+					CheckIfRookPathNotBlocked(p,q,r,s,state))
+				return true;
+
+			else if(Math.abs(r-p) == Math.abs(q-s) &&
+					CheckIfBishopPathNotBlocked(p,q,r,s,state))
+				return true;
+
+			break;
+
+		case ROOK:
+			if ((Math.abs(r-p) == 0 || Math.abs(q-s) ==0))
+				if(CheckIfRookPathNotBlocked(p,q,r,s,state))
+					return true;
+			break;
+
+		case KNIGHT:
+			if ((Math.abs(r-p) == 2 && Math.abs(q-s) == 1) ||
+					(Math.abs(r-p) == 1 && Math.abs(q-s) == 2))
+				return true;
+			break;
+
+		case BISHOP:
+			if(Math.abs(r-p) == Math.abs(q-s))
+				if(CheckIfBishopPathNotBlocked(p,q,r,s,state))
+					return true;
+			break;
+
+		default:
+			break;
+		}
+		return false;
+	}
+
+	/**
+	 * @param state
+	 * @param FromColor
+	 * @return returns true if there are more legal moves left on board, uses helper function
+	 */
+	public boolean AreThereAnyLegalMovesLeft(State state,Color FromColor)
+	{
+		for(int i=0;i<ROWS;i++)
+		{
+			for(int j=0;j<COLS;j++)
+			{	
+				Piece checkingPiece=state.getPiece(i, j);
+				Position pos= new Position(i,j);
+				if(checkingPiece!=null)
+					if(checkingPiece.getColor()==FromColor)
+						if(isLegalMoveHelper(state,pos,FromColor))
+							return true;
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * @param state
+	 * @param FromColor
+	 * @param pos
+	 * @return returns true if more legal moves left, it is a helper function
+	 */
+	private boolean isLegalMoveHelper(State state, Position pos,Color FromColor) 
+	{
+		Piece piece=state.getPiece(pos);
+		switch(piece.getKind())
+		{
+		case PAWN:
+			if(AreThereAnyPawnMovesLeft(state,FromColor))
+				return true;
+			break;
+
+		case BISHOP:
+			if(AreThereAnyBishopMovesLeft(state,FromColor))
+				return true;
+			break;
+
+		case ROOK:
+			if(AreThereAnyRookMovesLeft(state,FromColor))
+				return true;
+			break;
+		case KNIGHT:
+			if(AreThereAnyKnightMovesLeft(state,FromColor))
+				return true;
+			break;
+		case QUEEN:
+			if(AreThereAnyRookMovesLeft(state,FromColor) || AreThereAnyBishopMovesLeft(state,FromColor))
+				return true;
+			break;	
+		default:
+			break;
+		}
+		return false;
+	}
+
+	/**
+	 * @param state
+	 * @param FromColor
+	 * @return returns true if legal rook moves left, finds rook and calls helper function
+	 */
+	public boolean AreThereAnyRookMovesLeft(State state,Color FromColor)
+	{
+		for(int i=0;i<ROWS;i++)
+		{
+			for(int j=0;j<COLS;j++)
+			{	
+				Piece checkingPiece=state.getPiece(i, j);
+				Position pos= new Position(i,j);
+				if(checkingPiece!=null)
+					if(checkingPiece.getColor()==FromColor)
+						if(checkingPiece.getKind()==ROOK)
+							if(isLegalRookMovehelper(state,pos,FromColor))
+								return true;
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * @param state
+	 * @param FromColor
+	 * @return returns true if legal rook moves left, helper function
+	 */
+	private boolean isLegalRookMovehelper(State state, Position pos,Color FromColor) 
+	{
+		Position kingpos=WhereIsKing(state,FromColor);
+		State original = state.copy();
+
+		for(int i=0;i<ROWS;i++)
+		{
+			for(int j=0;j<COLS;j++)
+			{
+				Position newPos=new Position(i,j);
+				if(isLegalRookMove(state,pos,newPos))
+				{
+					original.setPiece(newPos,state.getPiece(pos));
+					original.setPiece(pos,null);
+					if(!IsKingInCheck(original,FromColor,kingpos))
+						return true;
+				}
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * @param state
+	 * @param FromColor
+	 * @return returns true if legal bishop moves left, finds bishop and calls helper function
+	 */
+	public boolean AreThereAnyBishopMovesLeft(State state,Color FromColor)
+	{
+		for(int i=0;i<ROWS;i++)
+		{
+			for(int j=0;j<COLS;j++)
+			{	
+				Piece checkingPiece=state.getPiece(i, j);
+				Position pos= new Position(i,j);
+				if(checkingPiece!=null)
+					if(checkingPiece.getColor()==FromColor)
+						if(checkingPiece.getKind()==BISHOP)
+							if(isLegalBishopMovehelper(state,pos,FromColor))
+								return true;
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * @param state
+	 * @param FromColor
+	 * @return returns true if legal bishop moves left, helper function
+	 */
+	private boolean isLegalBishopMovehelper(State state, Position pos,Color FromColor) 
+	{
+		Position kingpos=WhereIsKing(state,FromColor);
+		State original = state.copy();
+
+		for(int i=0;i<ROWS;i++)
+		{
+			for(int j=0;j<COLS;j++)
+			{
+				Position newPos=new Position(i,j);
+				if(isLegalBishopMove(state,pos,newPos))
+				{
+					original.setPiece(newPos,state.getPiece(pos));
+					original.setPiece(pos,null);
+					if(!IsKingInCheck(original,FromColor,kingpos))
+						return true;
+				}
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * @param state
+	 * @param FromColor
+	 * @return returns true if legal knight moves left, finds knight and calls helper function
+	 */
+	public boolean AreThereAnyKnightMovesLeft(State state,Color FromColor)
+	{
+		for(int i=0;i<ROWS;i++)
+		{
+			for(int j=0;j<COLS;j++)
+			{	
+				Piece checkingPiece=state.getPiece(i, j);
+				Position pos= new Position(i,j);
+				if(checkingPiece!=null)
+					if(checkingPiece.getColor()==FromColor)
+						if(checkingPiece.getKind()==KNIGHT)
+							if(isLegalKnightMovehelper(state,pos,FromColor))
+								return true;
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * @param state
+	 * @param FromColor
+	 * @return returns true if legal knight moves left,helper function
+	 */
+	private boolean isLegalKnightMovehelper(State state, Position pos,Color FromColor) 
+	{
+		Position kingpos=WhereIsKing(state,FromColor);
+		State original = state.copy();
+
+		for(int i=0;i<ROWS;i++)
+		{
+			for(int j=0;j<COLS;j++)
+			{
+				Position newPos=new Position(i,j);
+				if(isLegalKnightMove(state,pos,newPos))
+				{
+					original.setPiece(newPos,state.getPiece(pos));
+					original.setPiece(pos,null);
+					if(!IsKingInCheck(original,FromColor,kingpos))
+						return true;
+				}
+			}
+		}
+		return false;
+	}
+	
+	/**
+	 * @param state
+	 * @param FromColor
+	 * @return returns true if legal pawn moves left, finds pawn and calls helper function
+	 */
+	public boolean AreThereAnyPawnMovesLeft(State state,Color FromColor)
+	{
+		for(int i=0;i<ROWS;i++)
+		{
+			for(int j=0;j<COLS;j++)
+			{	
+				Piece checkingPiece=state.getPiece(i, j);
+				Position pos= new Position(i,j);
+				if(checkingPiece!=null)
+					if(checkingPiece.getColor()==FromColor)
+						if(checkingPiece.getKind()==PAWN)
+							if(isLegalPawnMovehelper(state,pos,FromColor))
+								return true;
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * @param state
+	 * @param pos
+	 * @param FromColor
+	 * @return returns true if legal pawn moves left, checks for all valid pawn moves, helper function
+	 */
+	private boolean isLegalPawnMovehelper(State state, Position pos,Color FromColor) 
+	{
+		int x=pos.getRow();
+		int y=pos.getCol();
+
+		Position N=new Position(x+1,y);
+		Position NW=new Position(x+1,y-1);
+		Position NE=new Position(x+1,y+1);
+		Position S=new Position(x-1,y);
+		Position SW=new Position(x-1,y-1);
+		Position SE=new Position(x-1,y+1);
+		Position NA =new Position(x+2,y);
+		Position SA=new Position(x-2,y);
+
+		if(FromColor==WHITE)
+		{
+			if(withinboard(N) && isLegalPawnMove(state,new Move(pos,N,null)))
+				return true;
+			if(withinboard(NW) && isLegalPawnMove(state,new Move(pos,NW,null)))
+				return true;
+			if(withinboard(NE) && isLegalPawnMove(state,new Move(pos,NE,null)))
+				return true;
+			if(withinboard(NA) && isLegalPawnMove(state,new Move(pos,NA,null)))
+				return true;
+		}
+		else if(FromColor==BLACK)
+		{
+			if(withinboard(S) && isLegalPawnMove(state,new Move(pos,S,null)))
+				return true;
+			if(withinboard(SW) && isLegalPawnMove(state,new Move(pos,SW,null)))
+				return true;
+			if(withinboard(SE) && isLegalPawnMove(state,new Move(pos,SE,null)))
+				return true;
+			if(withinboard(SA) && isLegalPawnMove(state,new Move(pos,SA,null)))
+				return true;
+		}
+		return false;
+	}
+
+	/**
+	 * @param state
+	 * @param FromColor
+	 * @return returns true if a given move is a legal pawn move
+	 */
+	public boolean isLegalPawnMove(State state,Move move)
+	{
+		Position from=move.getFrom();
+		Position to=move.getTo();
+		Piece FromPiece = state.getPiece(from);
+		Piece ToPiece = state.getPiece(to);
+		Color FromColor=FromPiece.getColor();	
+		int x=from.getRow();
+		int y=from.getCol();
+		int xx=to.getRow();
+		int yy=to.getCol();
+		int rowDistance=xx-x;
+		int colDistance=yy-y;
+		int dirX = (FromColor==WHITE) ? 1 : -1;
+		int enpassant= (FromColor==WHITE) ? 2: -2;
+		int row = (FromColor==WHITE) ? 1 : 6;
+		boolean canEnpassant=true;
+
+		if(ToPiece!=null 
+				&& ToPiece.getColor()==FromPiece.getColor())
+			return false;
+
+		if(colDistance==0)
+		{
+			if(Math.abs(rowDistance)==2  && x==row)
+			{
+				if(state.getPiece(x+dirX, y)!=null)
+					return false;
+				if(state.getPiece(x+enpassant, y)!=null)
+					return false;
+				if(x==1 && enpassant==-2)
+					return false;
+				if(x==6 && enpassant==2)
+					return false;
+				else
+					return true;
+			}
+
+			else if(Math.abs(rowDistance)==1)
+			{
+				if(state.getPiece(to)!=null)
+					return false;
+				if(FromColor==WHITE && to.getRow()-from.getRow()<0)
+					return false;
+				if(FromColor==BLACK && to.getRow()-from.getRow()>0)
+					return false;
+				if(FromColor==BLACK && to.getRow()==0 && move.getPromoteToPiece()==null)
+					return false;
+				if(FromColor==WHITE && to.getRow()==7 && move.getPromoteToPiece()==null)
+					return false;
+				else
+					return true;		
+			}
+			else 
+				return false;
+		}
+
+		else if(Math.abs(colDistance)==1 && Math.abs(rowDistance)==1)
+		{
+			if(state.getPiece(to)==null)
+			{
+				//Enpassant Capture
+				if(FromColor==WHITE)
+					canEnpassant=(x==4) ? true :false;
+				else
+					canEnpassant=(x==3) ? true:false;
+
+				if(!canEnpassant)
+					return false;
+				if(FromColor==WHITE && to.getRow()-from.getRow()<0)
+					return false;
+				if(FromColor==BLACK && to.getRow()-from.getRow()>0)
+					return false;
+				if(state.getEnpassantPosition()==null)
+					return false;
+				if(Math.abs(state.getEnpassantPosition().getCol()-y)!=1)
+					return false;
+				if(Math.abs(state.getEnpassantPosition().getCol())!=yy)
+					return false;
+
+				return true;
+			}
+
+			else if(state.getPiece(to)!=null)
+			{
+				//Normal Capture
+				if(FromColor==ToPiece.getColor())
+					return false;
+				if(FromColor==WHITE && to.getRow()-from.getRow()<0)
+					return false;
+				if(FromColor==BLACK && to.getRow()-from.getRow()>0)
+					return false;
+				if(FromColor==BLACK && to.getRow()==0 && move.getPromoteToPiece()==null)
+					return false;
+				if(FromColor==WHITE && to.getRow()==7 && move.getPromoteToPiece()==null)
+					return false;
+				else
+					return true;
+			}
+			else
+				return false;
+		}
+		return false;
+	}
+
+	/**
+	 * @param state
+	 * @param kingpos
+	 * @return returns true if king has more legal moves
+	 */
+	boolean AreThereAnyMovesLeftForKing(State state, Position kingpos)
+	{
+		int x=kingpos.getRow();
+		int y=kingpos.getCol();
+
+		Position P1=new Position(x+1,y);
+		Position P2=new Position(x+1,y-1);
+		Position P3=new Position(x+1,y+1);
+		Position P4=new Position(x,y+1);
+		Position P5=new Position(x,y-1);
+		Position P6=new Position(x-1,y);
+		Position P7=new Position(x-1,y-1);
+		Position P8=new Position(x-1,y+1);
+
+		if(withinboard(P1) && IsLegalKingMove(state,kingpos,P1))
+			return true;
+		if(withinboard(P2) && IsLegalKingMove(state,kingpos,P2))
+			return true;
+		if(withinboard(P3) && IsLegalKingMove(state,kingpos,P3))
+			return true;
+		if(withinboard(P4) && IsLegalKingMove(state,kingpos,P4))
+			return true;
+		if(withinboard(P5) && IsLegalKingMove(state,kingpos,P5))
+			return true;
+		if(withinboard(P6) && IsLegalKingMove(state,kingpos,P6))
+			return true;
+		if(withinboard(P7) && IsLegalKingMove(state,kingpos,P7))
+			return true;
+		if(withinboard(P8) && IsLegalKingMove(state,kingpos,P8))
+			return true;
+
+		return false;
+	}
+
+	/**
+	 * @param position p
+	 * @param FromColor
+	 * @return returns true if within board
+	 */
+	public boolean withinboard(Position p)
+	{
+		int f=p.getRow();
+		int g=p.getCol();
+
+		if(f<0 || f>=ROWS || g<0 || g>=COLS)
+			return false;
+		else
+			return true;		
+	}
+
+	/**
+	 * @param state
+	 * @param from
+	 * @param to
+	 * @return returns true if a given move is a legal king move
+	 */
+	public boolean IsLegalKingMove(State state, Position from, Position to)
+	{
+		Piece FromPiece = state.getPiece(from);
+		Piece ToPiece = state.getPiece(to);
+		Color FromColor=FromPiece.getColor();
+		int rowDistance=from.getRow()-to.getRow();
+		int colDistance=from.getCol()-to.getCol();
+
+		if(!withinboard(to))
+			return false;
+
+		if(ToPiece!=null 
+				&& ToPiece.getColor()==FromPiece.getColor())
+			return false;
+
+		if(Math.abs(rowDistance) <= 1 && Math.abs(colDistance) <= 1 ||
+				(Math.abs(colDistance)==2 && rowDistance==0))
+		{
+			if(Math.abs(colDistance)==2 && rowDistance==0)
+			{
+				if(FromColor==BLACK && from.getRow()==0)
+					return false;
+				if(FromColor==WHITE && from.getRow()==7)
+					return false;
+				if(!state.isCanCastleKingSide(FromColor) && !state.isCanCastleQueenSide(FromColor))
+					return false;
+				//CASTLING
+				if(!CheckForCastling(to,from,FromColor,state))
+					return false;
+				else
+					return true;
+			}
+
+			if(ToPiece!=null && ToPiece.getColor()!=FromPiece.getColor())
+				if(PieceCheckingKing(state,FromColor,from,to))
+					return true;
+
+			if(!PieceCheckingKing(state,FromColor,from,to))  //no check
+				return false;
+
+			return true;
+		}
+		return false;
+	}
+
+	/**
+	 * @param state
+	 * @param FromColor
+	 * @param kingpos
+	 * @param from
+	 * @return returns true if king is in check after moving piece
+	 */
+	boolean PieceCheckingKing(State state,Color FromColor, Position from,Position kingpos)
+	{
+		State original=state.copy();
+		original.setPiece(kingpos,state.getPiece(from));
+		original.setPiece(from, null);
+		original.setTurn(FromColor.getOpposite());
+
+		for(int i=0;i<ROWS;i++)
+		{
+			for(int j=0;j<COLS;j++)
+			{	
+				Piece checkingPiece=original.getPiece(i, j);
+				Position pos= new Position(i,j);
+				if(checkingPiece!=null)
+					if(checkingPiece.getColor()!=FromColor)
+						if(isCheck(original,FromColor,kingpos,checkingPiece,pos))
+						{
+							if(state.getTurn()!=checkingPiece.getColor())
+							{
+								if(Math.abs(i-from.getRow()) <2 && Math.abs(j-from.getCol()) <2)
+								{
+									if(checkingPiece.getColor()==original.getTurn())
+									{	
+										if(!CanCheckingPieceBeCaptured(original,FromColor,checkingPiece,pos))
+											return false;
+									}
+									else 
+										return true;
+								}
+								else
+									return false;
+							}
+						}
+			}
+		}
+		return true;
+	}
+	
+	/**
+	 * @param state
+	 * @param FromColor
+	 * @param checkingPiece
+	 * @param checkPos
+	 * @return returns true if piece checking the king can be captured, calls helper funciton
+	 */
+	private boolean CanCheckingPieceBeCaptured(State state, Color FromColor,Piece checkingPiece,Position checkPos)
+	{	
+		for(int i=0;i<ROWS;i++)
+			for(int j=0;j<COLS;j++)
+			{
+				Piece savingPiece=state.getPiece(i, j);
+				Position savePos= new Position(i,j);
+				if(savingPiece!=null)
+					if(savingPiece.getColor()==FromColor)
+						if(CanKingBeSaved(state,FromColor,checkingPiece,checkPos,savingPiece,savePos))
+							return true;
+			}
+		return false;
+	}
+	
+	/**
+	 * @param state
+	 * @param FromColor
+	 * @param checkingPiece
+	 * @param savingPiece
+	 * @param savePos
+	 * @param checkPos
+	 * @return returns true if piece checking the king can be captured by the saving piece
+	 */
+	private boolean CanKingBeSaved(State state, Color FromColor,Piece checkingPiece,Position checkPos,Piece savingPiece,Position savePos)
+	{
+		int r=checkPos.getRow();
+		int s=checkPos.getCol();
+		int p=savePos.getRow();
+		int q=savePos.getCol();
+
+		switch(savingPiece.getKind())
+		{
+		case PAWN:	
+			if(Math.abs(q-s)==1)
+			{
+				if(FromColor==WHITE && p-r==-1)
+					return true;
+				else if(FromColor==BLACK && p-r==1)
+					return true;
+			}
+			break;
+
+		case KING:
+			if (Math.abs(p-r)<2 && Math.abs(q-s)<2) 
+				return true;
+			break;
+
+		case QUEEN:
+			if ((Math.abs(r-p) == 0 || Math.abs(q-s) ==0) &&
+					CheckIfRookPathNotBlocked(p,q,r,s,state))
+				return true;
+
+			else if(Math.abs(r-p) == Math.abs(q-s) &&
+					CheckIfBishopPathNotBlocked(p,q,r,s,state))
+				return true;
+
+			break;
+
+		case ROOK:
+			if ((Math.abs(r-p) == 0 || Math.abs(q-s) ==0))
+				if(CheckIfRookPathNotBlocked(p,q,r,s,state))
+					return true;
+			break;
+
+		case KNIGHT:
+			if ((Math.abs(r-p) == 2 && Math.abs(q-s) == 1) ||
+					(Math.abs(r-p) == 1 && Math.abs(q-s) == 2))
+				return true;
+			break;
+
+		case BISHOP:
+			if(Math.abs(r-p) == Math.abs(q-s))
+				if(CheckIfBishopPathNotBlocked(p,q,r,s,state))
+					return true;
+			break;
+
+		default:
+			break;
+		}
+		return false;
+	}
+	
+	/**
+	 * @param state
+	 * @param FromColor
+	 * @param kingpos
+	 * @return returns true if the path between checking piece and checked king can be blocked
+	 */
+	private boolean CanCheckingPathBeBlocked(State state, Color FromColor,Position kingpos) 
+	{
+		Set<Position> positions=Sets.newHashSet();
+		Set<Position> pos=Sets.newHashSet();
+
+		for(int i=0;i<ROWS;i++)
+		{
+			for(int j=0;j<COLS;j++)
+			{	
+				Piece checkingPiece=state.getPiece(i, j);
+				Position checkpos= new Position(i,j);
+				if(checkingPiece!=null)
+					if(checkingPiece.getColor()!=FromColor)
+						if(isCheck(state,FromColor,kingpos,checkingPiece,checkpos))
+						{
+							switch(checkingPiece.getKind())
+							{
+							case ROOK:
+								positions=getRookPath(checkpos,kingpos);
+								break;
+
+							case BISHOP:
+								positions=getBishopPath(checkpos,kingpos);
+								break;
+
+							case QUEEN:
+								positions=getBishopPath(checkpos,kingpos);
+								pos=getRookPath(checkpos,kingpos);
+								break;
+
+							default:
+								break;
+							}
+
+							if(CanCheckingPathBeBlockedHelper(state,FromColor,positions))
+								return true;
+							else if(CanCheckingPathBeBlockedHelper(state,FromColor,pos))
+								return true;
+						}
+			}
+		}
+		return false;
+	}
+	
+	/**
+	 * @param original
+	 * @param FromColor
+	 * @param set<position>
+	 * @return returns true if the checked king path can be blocked by a same colored piece
+	 */
+	private boolean CanCheckingPathBeBlockedHelper(State original,
+			Color fromColor, Set<Position> positions) 
+	{
+		for(int i=0;i<ROWS;i++)
+		{
+			for(int j=0;j<COLS;j++)
+			{
+				Piece savingPiece=original.getPiece(i, j);
+				Position savePos= new Position(i,j);
+				if(savingPiece!=null)
+					if(savingPiece.getColor()==fromColor)
+					{
+						switch(savingPiece.getKind())				
+						{
+						case ROOK: 
+							for(Position pathpos: positions)
+								if(isLegalRookMove(original,savePos,pathpos))
+									return true;
+
+						case BISHOP:
+							for(Position pathpos: positions)
+								if(isLegalBishopMove(original,savePos,pathpos))
+									return true;
+
+						case QUEEN:
+							for(Position pathpos: positions)
+								if(isLegalRookMove(original,savePos,pathpos) || isLegalBishopMove(original,savePos,pathpos))
+									return true;
+						default:
+							break;
+						}
+					}
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * @param kingpos
+	 * @param checkPos
+	 * @return returns a set of positions along the checked path for rook and bishop
+	 */
+	private Set<Position> getBishopPath(Position checkpos, Position kingpos) 
+	{
+		Set<Position> bishop=Sets.newHashSet();
+		int p=checkpos.getRow();
+		int q=checkpos.getCol();
+		int r=kingpos.getRow();
+		int s=kingpos.getCol();
+		int i=1;
+		int dirX = r>p ? 1 : -1;
+		int dirY = s>q ? 1 : -1;
+
+		for(i=1;i<=Math.abs(p-q);++i)
+		{
+			int aa=p+i*dirX;
+			int bb=q+i*dirY;
+			bishop.add(new Position(aa,bb));
+		}
+		return bishop;
+	}
+
+	private Set<Position> getRookPath(Position checkpos, Position kingpos) 
+	{
+		Set<Position> rookpositions=Sets.newHashSet();
+		int p=checkpos.getRow();
+		int q=checkpos.getCol();
+		int r=kingpos.getRow();
+		int s=kingpos.getCol();
+		int i=0;
+		if(p==r)
+		{
+			i=q;
+			if(q<s)
+				while(q!=s)
+					rookpositions.add(new Position(p,i+1));
+			else
+				while(q!=s)
+					rookpositions.add(new Position(p,i-1));
+			return rookpositions;
+		}
+
+		if(q==s)
+		{
+			i=p;
+			if(p<r)
+				while(p!=r)
+					rookpositions.add(new Position(i+1,q));
+			else
+				while(p!=r)
+					rookpositions.add(new Position(i-1,q));
+			return rookpositions;
+		}				
+		else return null;
+	}
+	
+	/**
+	 * @param state
+	 * @param from
+	 * @param to
+	 * @return returns true if legal rook move
+	 */
+	public boolean isLegalRookMove(State state, Position from, Position to)
+	{
+		Piece FromPiece = state.getPiece(from);
+		Piece ToPiece = state.getPiece(to);
+		int x=from.getRow();
+		int y=from.getCol();
+		int xx=to.getRow();
+		int yy=to.getCol();
+		int rowDistance=xx-x;
+		int colDistance=yy-y;
+
+		if(ToPiece!=null 
+				&& ToPiece.getColor()==FromPiece.getColor())
+			return false;
+
+		if((Math.abs(colDistance)==0 || Math.abs(rowDistance)==0))
+		{
+			if(CheckIfRookPathNotBlocked(x,y,xx,yy,state)==true)
+				return true;
+			else
+				return false;
+		}
+		return false;
+	}
+
+	/**
+	 * @param state
+	 * @param from
+	 * @param to
+	 * @return returns true if legal bishop move
+	 */
+	public boolean isLegalBishopMove(State state, Position from, Position to)
+	{
+		Piece FromPiece = state.getPiece(from);
+		Piece ToPiece = state.getPiece(to);
+		int x=from.getRow();
+		int y=from.getCol();
+		int xx=to.getRow();
+		int yy=to.getCol();
+		int rowDistance=xx-x;
+		int colDistance=yy-y;	
+
+		if(ToPiece!=null 
+				&& ToPiece.getColor()==FromPiece.getColor())
+			return false;
+
+		if(Math.abs(colDistance)==Math.abs(rowDistance))
+		{
+			if(CheckIfBishopPathNotBlocked(x,y,xx,yy,state)==false)
+				return false;
+			else
+				return true;
+		}
+		return false;
+	}
+
+	/**
+	 * @param state
+	 * @param from
+	 * @param to
+	 * @return returns true if legal knight move
+	 */
+	public boolean isLegalKnightMove(State state, Position from, Position to)
+	{
+		Piece FromPiece = state.getPiece(from);
+		Piece ToPiece = state.getPiece(to);
+		int x=from.getRow();
+		int y=from.getCol();
+		int xx=to.getRow();
+		int yy=to.getCol();
+		int rowDistance=xx-x;
+		int colDistance=yy-y;
+
+		if(ToPiece!=null 
+				&& ToPiece.getColor()==FromPiece.getColor())
+			return false;
+
+		if ((Math.abs(rowDistance) == 2 && Math.abs(colDistance) == 1) ||
+				(Math.abs(rowDistance) == 1 && Math.abs(colDistance) == 2))
+			return true;
+
+		return false;
+	}
+
+	/**
+	 * @param state
+	 * @param move
+	 * @param from
+	 * @param to
+	 * makes a pawn move
+	 */
+	public void PawnMove(Position from, Position to,State state,Move move)
+	{
+		Piece FromPiece = state.getPiece(from);
+		Color FromColor = FromPiece.getColor();
+
+		state.setNumberOfMovesWithoutCaptureNorPawnMoved(0);
+		state.setEnpassantPosition(null);
+		state.setTurn(FromColor.getOpposite());
+		state.setPiece(from, null);
+
+		if(state.getPiece(to)!=null && state.getPiece(to).getKind()==ROOK)
+			RookIsCapturedPiece(to,state);
+
+		if(move.getPromoteToPiece()!=null)
+		{
+			Piece newPiece=new Piece(FromColor,move.getPromoteToPiece());
+			state.setPiece(to,newPiece);
+		}
+		else
+			state.setPiece(to,FromPiece);
+	}
+
+	/**
+	 * @param state
+	 * @param move
+	 * @param from
+	 * @param to
+	 * makes a normal move
+	 */
+	public void MakingAMove(Position from,Position to, State state)
+	{
+		Piece FromPiece = state.getPiece(from);
+		Color FromColor = FromPiece.getColor();
+
+		if(state.getPiece(to)!=null && state.getPiece(to).getKind()==ROOK)
+			RookIsCapturedPiece(to,state);
+
+		state.setTurn(FromColor.getOpposite());
+		state.setPiece(from,null);
+		state.setPiece(to, FromPiece);
+		state.setEnpassantPosition(null);
+	}
+
+	/**
+	 * @param state
+	 * @param to
+	 * if rook is captured piece sets the booleans
+	 */
+	public void RookIsCapturedPiece(Position to, State state)
+	{
+		int xx= to.getRow();
+		int yy= to.getCol();
+
+		if(xx==0)
+		{
+			//White Rook
+			if(yy==7)
+				state.setCanCastleKingSide(WHITE, false);
+			if(yy==0)
+				state.setCanCastleQueenSide(WHITE, false);
+		}
+		else if(xx==7)
+		{						
+			if(yy==7)
+				state.setCanCastleKingSide(BLACK, false);
+			if(yy==0)
+				state.setCanCastleQueenSide(BLACK, false);
+		}		
+	}
+
+	//Function to check if Rook's path is blocked or not
+	public boolean CheckIfRookPathNotBlocked(int x,int y, int xx, int yy, State state)
+	{
+		int XDir= (x>xx) ? -1: 1;
+		int YDir= (y>yy) ? -1: 1;
+		int i=x+XDir;
+		int j=y+YDir;
+
+		if(x==xx)
+		{
+			while(j!=yy)
+			{
+				if(state.getPiece(x,j)!=null)
+					return false;
+				j+=YDir;
+			}
+		}
+
+		if(y==yy)
+		{
+			while(i!=xx)
+			{
+				if(state.getPiece(i,y)!=null)
+					return false;
+				i+=XDir;
+			}
+		}
+		return true;
+	}
+
+	//Function to check if a bishop's path is blocked
+	public boolean CheckIfBishopPathNotBlocked(int x,int y,int xx,int yy, State state)
+	{
+		int dirX = xx>x ? 1 : -1;
+		int dirY = yy>y ? 1 : -1;
+
+		for (int i=1;i<=Math.abs(xx-x)-1;++i) 
+		{
+			int p=x+i*dirX;
+			int q=y+i*dirY;
+
+			if (state.getPiece(p,q)!=null)
+			{
+				return false;
+			}
+		}
+		return true;
+	}
+
+	/**
+	 * @param state
+	 * @param FromColor
+	 * @param from
+	 * @param to
+	 * @return true if castling possible
+	 */
+	public boolean CheckForCastling(Position to, Position from, Color FromColor, State state)
+	{
+		int row = (FromColor == WHITE) ? 0 : 7;
+		Position p1=new Position(row,6);
+		Position p2=new Position(row,2);
+		boolean blocked=false;
+
+		if(to.equals(p1))
+		{
+			blocked=CheckIfRookPathNotBlocked(from.getRow(),from.getCol(),to.getRow(),7,state);
+			//KingSideCastle
+			if(state.isCanCastleKingSide(FromColor) && blocked)
+			{	
+				if(IsKingInCheck(state,FromColor,from))
+					return false;
+				else if(IsKingInCheck(state,FromColor,new Position(from.getRow(),5)))
+					return false;
+				else if(IsKingInCheck(state,FromColor,new Position(from.getRow(),6)))
+					return false;
+				else 
+					return true;
+			}
+		}
+
+		else if(to.equals(p2))
+		{
+			//QueenSideCastle
+			blocked=CheckIfRookPathNotBlocked(from.getRow(),from.getCol(),to.getRow(),0,state);
+			if (state.isCanCastleQueenSide(FromColor) && blocked)
+			{
+				if(IsKingInCheck(state,FromColor,from))
+					return false;
+				else if(IsKingInCheck(state,FromColor,new Position(from.getRow(),3)))
+					return false;
+				else if(IsKingInCheck(state,FromColor,new Position(from.getRow(),2)))
+					return false;
+				else
+					return true;
+			}
+		}
+		return false;	  
+	}
+
+	/**
+	 * @param x,y
+	 * @return set of legal king moves
+	 */
+	public Set<Position> LegalKingMoves(int x,int y)
+	{
+		Set<Position> KingMoves = Sets.newHashSet();
+		Position P1=new Position(x+1,y);
+		Position P2=new Position(x+1,y-1);
+		Position P3=new Position(x+1,y+1);
+		Position P4=new Position(x,y+1);
+		Position P5=new Position(x,y-1);
+		Position P6=new Position(x-1,y);
+		Position P7=new Position(x-1,y-1);
+		Position P8=new Position(x-1,y+1);
+
+		if(x+1<ROWS)
+			KingMoves.add(P1);
+		if(x+1<ROWS && y-1>0)
+			KingMoves.add(P2);
+		if(x+1<ROWS && y+1<COLS)
+			KingMoves.add(P3);
+		if(y+1<COLS)
+			KingMoves.add(P4);
+		if(y-1>0)
+			KingMoves.add(P5);
+		if(x-1>0)
+			KingMoves.add(P6);
+		if(x-1>0 && y-1>0)
+			KingMoves.add(P7);
+		if(x-1>0 && y+1<COLS)
+			KingMoves.add(P8);
+
+		return KingMoves;
+	}
+
+	/**
+	 * @param x,y
+	 * @return arraylist of legal pawn moves
+	 */
+	public ArrayList<Position> LegalPawnMoves(int x,int y)
+	{
+		ArrayList<Position> PawnMoves=new ArrayList<Position>();
+
+		Position N=new Position(x+1,y);
+		Position NW=new Position(x+1,y-1);
+		Position NE=new Position(x+1,y+1);
+		Position S=new Position(x-1,y);
+		Position SW=new Position(x-1,y-1);
+		Position SE=new Position(x-1,y+1);
+
+		if(x+1<ROWS)
+			PawnMoves.add(N);
+		if(x+1<ROWS && y-1>0)
+			PawnMoves.add(NW);
+		if(x+1<ROWS && y+1<COLS)
+			PawnMoves.add(NE);
+		if(x-1>0)
+			PawnMoves.add(S);
+		if(x-1>0 && y-1>0)
+			PawnMoves.add(SW);	
+		if(x-1>0 && y+1<COLS)
+			PawnMoves.add(SE);
+
+		return PawnMoves;
+	}
+
+	/**
+	 * @param x,y
+	 * @return set of legal knight moves
+	 */
+	public Set<Position> LegalKnightMoves(int x,int y)
+	{
+		Set<Position> KnightMoves=Sets.newHashSet();
+
+		Position P1=new Position(x+1,y-2);
+		Position P2=new Position(x+1,y+2);
+		Position P3=new Position(x-1,y+2);
+		Position P4=new Position(x-1,y-2);
+		Position P5=new Position(x+2,y+1);
+		Position P6=new Position(x-2,y+1);
+		Position P7=new Position(x+2,y-1);
+		Position P8=new Position(x-2,y-1);
+
+		if(x+1<ROWS && y-2>0)
+			KnightMoves.add(P1);
+		if(x+1<ROWS && y+2<COLS)
+			KnightMoves.add(P2);
+		if(x-1>0 && y+2<COLS)
+			KnightMoves.add(P3);
+		if(x-1>0 && y-2>0)
+			KnightMoves.add(P4);
+		if(x+2<ROWS && y+1<COLS)
+			KnightMoves.add(P5);
+		if(x-2>0 && y+1<COLS)
+			KnightMoves.add(P6);
+		if(x+2<ROWS && y-1>0)
+			KnightMoves.add(P7);
+		if(x-2>0 && y-1>0)
+			KnightMoves.add(P8);
+
+		return KnightMoves;
+	}
+
+	/**
+	 * @param x,y
+	 * @return set of legal rook moves
+	 */
+	public ArrayList<Position> LegalRookMoves(int x,int y)
+	{
+		ArrayList<Position> RookMoves=new ArrayList<Position>();
+
+		for(int i=0;i<COLS;i++)
+			RookMoves.add(new Position(x,i));
+		for(int i=0;i<ROWS;i++)
+			RookMoves.add(new Position(i,y));
+
+		return RookMoves;
+	}
+
+}//end of StateImpl

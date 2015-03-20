@@ -1,0 +1,20 @@
+welcome=欢迎
+load=装载
+delete=删除
+playwith=对战
+quickmatch=匹配
+startdate=开始日期
+currentgames=现有游戏
+wturn=白色回合
+bturn=黑色回合
+gamestatus=游戏状态
+bwins=黑方赢
+wwins=白方赢
+stalemate=僵局
+fiftymove=五十步规则
+threefold=三步重复
+urw=你是白色
+urb=你是黑色
+op=对手 : ''{0}''
+rank=积分
+playwithai=挑战电脑

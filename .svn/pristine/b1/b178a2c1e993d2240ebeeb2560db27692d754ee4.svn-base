@@ -1,0 +1,54 @@
+# Messages from org.markanderson.hw8.ManderLocalizedStrings
+# Source Locale en_US
+
+gameOver=Spel över människan!
+	
+restartGame=Starta spel
+	
+restartGameNotYourTurnAlert=För att starta ditt spel, måste det vara din tur!
+	
+errorLoadingMatchAlert=Det gick inte att läsa matchen!
+	
+sendString=Skicka
+	
+deleteString=ta bort
+	
+inviteUserText=Skriv in en e-postadress och klicka på Skicka för att skicka ett spel inbjudan
+
+currentGameBeganString=Aktuell spelet började:
+
+whitePlayer=Spelare [W] =
+
+blackPlayer=Spelare [B] =
+
+turnString=Vrid = [
+
+gameID=GameID:
+
+whitesTurn=Det är vits tur
+
+blacksTurn=Det är svart tur
+
+checkmateString=Vinster av Checkmate!
+
+drawString=Det är oavgjort!
+
+stalemateString=Det är ett dödläge!
+
+threefoldString=Trefaldig Upprepning!
+
+pleaseSignInString=Logga in på ditt Google-konto för att spela schack!
+
+signInString=Logga in
+
+signOutString=Logga ut
+
+helloString=Hej,
+	
+getReadyToPlayString=Gör dig redo att spela!
+	
+singlePlayerModeString=Spela enspelarläget
+
+whitePlayerRank=WhiteRank:
+
+blackPlayerRank=BlackRank:

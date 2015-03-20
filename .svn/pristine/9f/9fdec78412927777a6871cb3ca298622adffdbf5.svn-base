@@ -1,0 +1,11 @@
+package org.sanjana.hw6;
+
+import org.sanjana.hw6.LoginDetails;
+
+import com.google.gwt.user.client.rpc.RemoteService;
+import com.google.gwt.user.client.rpc.RemoteServiceRelativePath;
+
+@RemoteServiceRelativePath("login")
+public interface LoginService extends RemoteService {
+  public LoginDetails login(String requestUri);
+}

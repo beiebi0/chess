@@ -1,0 +1,190 @@
+package org.corinnetaylor.hw1;
+
+import static org.shared.chess.Color.BLACK;
+import static org.shared.chess.Color.WHITE;
+import static org.shared.chess.PieceKind.PAWN;
+import static org.shared.chess.PieceKind.ROOK;
+import static org.shared.chess.PieceKind.KNIGHT;
+import static org.shared.chess.PieceKind.BISHOP;
+import static org.shared.chess.PieceKind.QUEEN;
+import static org.shared.chess.PieceKind.KING;
+
+import org.junit.Test;
+import org.shared.chess.AbstractStateChangerTest;
+import org.shared.chess.GameResult;
+import org.shared.chess.GameResultReason;
+import org.shared.chess.IllegalMove;
+import org.shared.chess.Move;
+import org.shared.chess.Piece;
+import org.shared.chess.Position;
+
+public abstract class AbstractStateChangerIllegalMovesTest extends AbstractStateChangerTest {
+	
+	//Provided in example
+	 @Test(expected = IllegalMove.class)
+	  public void testNoPieceToMove() {
+	    Move move = new Move(new Position(2, 0), new Position(3, 0), null);
+	    stateChanger.makeMove(start, move);
+	  }
+	 //Provided in example 
+	  @Test(expected = IllegalMove.class)
+	  public void testIllegalPawnMovement() {
+	    Move move = new Move(new Position(1, 0), new Position(2, 1), null);
+	    stateChanger.makeMove(start, move);
+	  }
+
+	  
+	  @Test(expected = IllegalMove.class)
+	  public void testIllegalPawnMovement2() {
+	    Move move = new Move(new Position(1, 0), new Position(4, 0), null);
+	    stateChanger.makeMove(start, move);
+	  }
+	  
+	  @Test(expected = IllegalMove.class)
+	  public void testIllegalRookMovement() {
+		  Move move = new Move(new Position(0, 0), new Position(2, 2), null);
+		  stateChanger.makeMove(start, move);
+	  }
+
+	  @Test(expected = IllegalMove.class)
+	  public void testIllegalKnightMovement() {
+		  Move move = new Move(new Position(0, 1), new Position(2, 1), null);
+		  stateChanger.makeMove(start, move);
+	  }
+	  
+	  @Test(expected = IllegalMove.class)
+	  public void testIllegalBishopMovement() {
+		  Move move = new Move(new Position(0, 2), new Position(2, 2), null);
+		  stateChanger.makeMove(start, move);
+	  }
+	  
+	  @Test(expected = IllegalMove.class)
+	  public void testIllegalQueenMovement() {
+		  Move move = new Move(new Position(0, 3), new Position(2, 4), null);
+		  stateChanger.makeMove(start, move);
+	  }
+	  
+	  @Test(expected = IllegalMove.class)
+	  public void testIllegalKingMovement() {
+		  Move move = new Move(new Position(0, 4), new Position(2, 2), null);
+		  stateChanger.makeMove(start, move);
+	  }  
+	  
+	  //Provided in Example
+	  @Test(expected = IllegalMove.class)
+	  public void testIllegalCastling() {
+	    Move move = new Move(new Position(0, 4), new Position(0, 6), null);
+	    stateChanger.makeMove(start, move);
+	  }
+
+	  @Test(expected = IllegalMove.class)
+	  public void testIllegalEnpassant() {
+		  Move move = new Move(new Position(4, 0), new Position(5, 1), null);
+		  start.setPiece(4, 0, new Piece(WHITE, PAWN));
+		  start.setPiece(4, 1, new Piece(BLACK, PAWN));
+		  start.setEnpassantPosition(null);
+		  stateChanger.makeMove(start, move);
+	  }
+
+	  @Test(expected = IllegalMove.class)
+	  public void testIllegalPawnCapture() {
+		  Move move = new Move(new Position(4, 0), new Position(4, 1), null);
+		  start.setPiece(4, 0, new Piece(WHITE, PAWN));
+		  start.setPiece(4, 1, new Piece(BLACK, PAWN));		  
+		  stateChanger.makeMove(start, move);
+	  }
+	  
+	  @Test(expected = IllegalMove.class)
+	  public void testIllegalRookCapture() {
+		  Move move = new Move(new Position(4, 0), new Position(5, 1), null);
+		  start.setPiece(4, 0, new Piece(WHITE, ROOK));
+		  start.setPiece(5, 1, new Piece(BLACK, PAWN));
+		  stateChanger.makeMove(start, move);
+	  }
+	  
+	  @Test(expected = IllegalMove.class)
+	  public void testIllegalKnightCapture() {
+		  Move move = new Move(new Position(2, 2), new Position(3, 1), null);
+		  start.setPiece(2, 2, new Piece(WHITE, KNIGHT));
+		  start.setPiece(3, 1, new Piece(BLACK, PAWN));		  
+		  stateChanger.makeMove(start, move);
+	  }
+	  
+	  @Test(expected = IllegalMove.class)
+	  public void testIllegalBishopCapture() {
+		  Move move = new Move(new Position(2, 2), new Position(4, 4), null);
+		  start.setPiece(2, 2, new Piece(WHITE, BISHOP));
+		  start.setPiece(3, 3, new Piece(BLACK, PAWN));
+		  start.setPiece(4, 4, new Piece(BLACK, PAWN));		  
+		  stateChanger.makeMove(start, move);
+	  }
+
+	  @Test(expected = IllegalMove.class)
+	  public void testIllegalPromoteWrongSide() {
+		  Move move = new Move(new Position(1, 0), new Position(0, 0), QUEEN);
+		    start.setPiece(0, 0, null);
+		    stateChanger.makeMove(start, move);
+	  }
+	  
+	  @Test(expected = IllegalMove.class)
+	  public void testIllegalPromoteNotPawn() {
+		  Move move = new Move(new Position(6, 0), new Position(7, 0), QUEEN);
+		  start.setPiece(6, 0, new Piece(WHITE, ROOK));
+		  stateChanger.makeMove(start, move);
+	  }
+
+	  @Test(expected = IllegalMove.class)
+	  public void testIllegalPromoteToKing() {
+		  Move move = new Move(new Position(6, 0), new Position(7, 0), KING);
+		  start.setPiece(6, 0, new Piece(WHITE, PAWN));
+		  start.setPiece(7, 0, null);
+		  stateChanger.makeMove(start, move);
+	  }
+
+	  
+	  @Test(expected = IllegalMove.class)
+	  public void testIllegalResponseToCheck() {
+		  Move move = new Move(new Position(2, 4), new Position(3, 4), null);
+		  start.setPiece(0, 4, null);
+		  start.setPiece(2, 4, new Piece(WHITE, KING));
+		  start.setPiece(4, 4, new Piece(BLACK, ROOK));
+		  stateChanger.makeMove(start, move);
+	  }
+	  
+	  @Test(expected = IllegalMove.class)
+	  public void testTargetSpaceOccupiedBySameColorPiece() {
+		  Move move = new Move(new Position(0, 0), new Position(1, 0), null);
+		  stateChanger.makeMove(start, move);
+	  }
+	  
+	  @Test(expected = IllegalMove.class)
+	  public void testTargetSpaceBlocked() {
+		  Move move = new Move(new Position(0, 0), new Position(0, 2), null);
+		  stateChanger.makeMove(start, move);
+	  }
+	  
+	  @Test(expected = IllegalMove.class)
+	  public void testTargetSpaceNotOnBoard() {
+		  Move move = new Move(new Position(0, 0), new Position(0, -1), null);
+		  stateChanger.makeMove(start, move);
+	  }
+	  
+
+	  //Provided in Example
+	  @Test(expected = IllegalMove.class)
+	  public void testGameAlreadyOver() {
+	    start.setGameResult(new GameResult(WHITE, GameResultReason.CHECKMATE));
+	    Move move = new Move(new Position(1, 0), new Position(3, 0), null);
+	    stateChanger.makeMove(start, move);
+	  }
+	  
+	  //Provided in Example
+	  @Test(expected = IllegalMove.class)
+	  public void testIllegalTurn() {
+	    start.setTurn(BLACK);
+	    // Trying to move a WHITE pawn when it is the BLACK's turn.
+	    Move move = new Move(new Position(1, 0), new Position(3, 0), null);
+	    stateChanger.makeMove(start, move);
+	  }
+
+}

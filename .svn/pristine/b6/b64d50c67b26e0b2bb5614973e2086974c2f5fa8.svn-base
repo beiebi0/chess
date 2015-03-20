@@ -1,0 +1,46 @@
+package org.karthikmahadevan.hw7;
+
+import org.shared.chess.Color;
+import org.shared.chess.State;
+
+
+
+
+public class MatchInfo {
+	private String MatchID;
+	private State matchState;
+	private Color myColor;
+	private String opponent;
+	private String startDate;
+	
+	public final String getMatchID() {
+		return MatchID;
+	}
+	public final void setMatchID(String matchID) {
+		MatchID = matchID;
+	}
+	public State getMatchState() {
+		return matchState;
+	}
+	public void setMatchState(State matchState) {
+		this.matchState = matchState;
+	}
+	public Color getMyColor() {
+		return myColor;
+	}
+	public void setMyColor(Color myColor) {
+		this.myColor = myColor;
+	}
+	public String getOpponent() {
+		return opponent;
+	}
+	public void setOpponent(String opponent) {
+		this.opponent = opponent;
+	}
+	public String getStartDate() {
+		return startDate;
+	}
+	public void setStartDate(String date) {
+		startDate = date;
+	}
+}

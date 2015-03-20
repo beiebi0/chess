@@ -1,0 +1,15 @@
+package org.mengyanhuang.hw6;
+
+import com.google.gwt.user.server.rpc.RemoteServiceServlet;
+
+@SuppressWarnings("serial")
+public class ChessMoveServiceImpl extends RemoteServiceServlet implements
+		ChessMoveService {
+
+	@Override
+	public String getCurrentState(String state) {
+		// TODO Auto-generated method stub
+		return state;
+	}
+
+}

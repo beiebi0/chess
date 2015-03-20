@@ -1,0 +1,10 @@
+package org.harshmehta.hw9;
+
+/**
+ * Timer interface
+ * @author Harsh
+ *
+ */
+public interface Timer {
+  boolean didTimeout();
+}

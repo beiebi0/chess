@@ -1,0 +1,20 @@
+package org.peigenyou.hw3;
+
+import com.google.gwt.user.client.rpc.RemoteService;
+import com.google.gwt.user.client.rpc.RemoteServiceRelativePath;
+
+/**
+ * The client side stub for the RPC service.
+ */
+@RemoteServiceRelativePath("service")
+public interface GreetingService extends RemoteService {
+  String greetServer(String name);
+  String autoMatch(String player,String newState);
+  void submitMove(String email,String name,String state);
+  String loadMatch(String ID);
+  void creatMatch(String blackID,String whiteID,String state);
+  void delMatch(String ID);
+  String updatePlayer(String email);
+  void sendResult(String match,String result);
+  
+}

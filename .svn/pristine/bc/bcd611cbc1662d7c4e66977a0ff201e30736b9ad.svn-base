@@ -1,0 +1,58 @@
+package org.shitianren.hw5;
+
+/**
+ * Although I wrote this animation class, it seems not work well. I think it may be due to the previous problems- I set
+ * the position without piece with resource of black/white tile. and when the piece image moves it get overlapped by the tile image.
+ * Another issue is that when I try to set the position of the image in onUpdate(), it seems that not the piece image is moving but the tile image is moving which is set there after makeMove.
+ * I try to do the animation first and then I do the makeMove, but how I can control this sequence?  
+ * I am trying to fix this for a long time such that I have no time for doing the local storage, and I still not fix it yet.
+ * I will update this hw5 soon when I get feedback about these problems.
+ */
+
+
+
+
+import com.google.gwt.animation.client.Animation;
+import com.google.gwt.user.client.ui.Image;
+
+public class MoveAnimation extends Animation{
+	private int fromTop;
+	private int fromLeft;
+	private int toTop;
+	private int toLeft;
+	private Image moveItem;
+	
+	public MoveAnimation(Image moveItem){
+		this.moveItem = moveItem;
+	}
+	
+	public void setMoveItem(Image moveItem){
+		this.moveItem = moveItem;
+	}
+	
+	public void setFromTop(int fromTop){
+		this.fromTop = fromTop;
+	}
+	
+	public void setFromLeft(int fromLeft){
+		this.fromLeft = fromLeft;
+	}
+	
+	public void setToTop(int toTop){
+		this.toTop = toTop;
+	}
+	
+	public void setToLeft(int toLeft){
+		this.toLeft = toLeft;
+	}
+	
+	@Override
+	protected void onUpdate(double progress) {
+		moveItem.setVisibleRect((int) ((fromLeft-toLeft)*progress), (int) ((fromTop-toTop)*progress), moveItem.getWidth(), moveItem.getHeight());
+	}
+	
+	
+	protected void onComplete(){
+		
+	}
+}

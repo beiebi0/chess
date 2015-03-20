@@ -1,0 +1,587 @@
+package org.mengyanhuang.hw3;
+
+import java.util.Date;
+
+import org.shared.chess.Color;
+import org.shared.chess.GameResult;
+import org.shared.chess.Move;
+import org.shared.chess.Piece;
+import org.shared.chess.PieceKind;
+import org.shared.chess.Position;
+import org.shared.chess.State;
+import org.mengyanhuang.hw3.Presenter.View;
+import org.mengyanhuang.hw5.MoveAnimation;
+import org.mengyanhuang.hw6.client.UserLoginService;
+import org.mengyanhuang.hw6.client.UserLoginServiceAsync;
+import org.mengyanhuang.hw7.Match;
+import org.mengyanhuang.hw8.MyMessages;
+
+import com.google.gwt.core.client.GWT;
+import com.google.gwt.dom.client.AudioElement;
+import com.google.gwt.media.client.Audio;
+import com.google.gwt.resources.client.ImageResource;
+import com.google.gwt.storage.client.Storage;
+import com.google.gwt.uibinder.client.UiBinder;
+import com.google.gwt.uibinder.client.UiField;
+import com.google.gwt.user.client.Element;
+import com.google.gwt.user.client.History;
+import com.google.gwt.user.client.Window;
+import com.google.gwt.user.client.ui.Button;
+import com.google.gwt.user.client.ui.Composite;
+import com.google.gwt.user.client.ui.FlowPanel;
+import com.google.gwt.user.client.ui.Grid;
+import com.google.gwt.user.client.ui.Image;
+import com.google.gwt.user.client.ui.Label;
+import com.google.gwt.user.client.ui.MultiWordSuggestOracle;
+import com.google.gwt.user.client.ui.VerticalPanel;
+import com.google.gwt.user.client.ui.ListBox;
+import com.google.gwt.user.client.ui.TextBox;
+import com.google.gwt.user.client.ui.Widget;
+import com.google.gwt.user.client.ui.SuggestBox;
+
+import com.google.gwt.event.dom.client.ClickEvent;
+import com.google.gwt.event.dom.client.ClickHandler;
+import com.google.gwt.event.dom.client.DragOverEvent;
+import com.google.gwt.event.dom.client.DragOverHandler;
+import com.google.gwt.event.dom.client.DragStartEvent;
+import com.google.gwt.event.dom.client.DragStartHandler;
+import com.google.gwt.event.dom.client.DropEvent;
+import com.google.gwt.event.dom.client.DropHandler;
+import com.google.gwt.user.client.rpc.AsyncCallback;
+
+public class Graphics extends Composite implements View {
+	private static final int DURATION = 800;
+	private static GameImages gameImages = GWT.create(GameImages.class);
+	private static GraphicsUiBinder uiBinder = GWT
+			.create(GraphicsUiBinder.class);
+	private final MyMessages mymessage = GWT.create(MyMessages.class);
+
+	interface GraphicsUiBinder extends UiBinder<Widget, Graphics> {
+	}
+
+	@UiField ImageResource background;
+	@UiField GameCss css;
+	@UiField Label gameStatus;
+	@UiField Label gameDate;
+	@UiField public static Grid gameGrid;
+	@UiField FlowPanel Buttons;
+	@UiField Button QueenButton;
+	@UiField Button RookButton;
+	@UiField Button KnightButton;
+	@UiField Button BishopButton;
+	@UiField FlowPanel LocalStorageButton;
+	@UiField VerticalPanel VerticalPanel1;
+	@UiField ListBox ListBox;
+	@UiField Button LoadButton;
+	@UiField Button DeleteButton;
+	@UiField VerticalPanel VerticalPanel2;
+	@UiField FlowPanel SuggestBoxPanel;
+	@UiField Button AutoMatchButton;
+	@UiField Button MatchButton;
+	@UiField Label ChooseGameBelow;
+	@UiField Label EnterOpponentEmail;
+	@UiField Label gameRank;
+	@UiField Button AgainstComputerButton;
+	
+	private Presenter presenter;
+	private Image[][] board = new Image[8][8];
+	//private Storage storedState = Storage.getLocalStorageIfSupported();
+	private UserLoginServiceAsync loginService = GWT.create(UserLoginService.class);
+	
+	public static String automatchid = "";
+	public static String matchbyemailid = "";
+
+	public static MultiWordSuggestOracle oracle = new MultiWordSuggestOracle();
+	
+	public Graphics() {
+		
+		initWidget(uiBinder.createAndBindUi(this));
+		gameGrid.resize(8, 8);
+		gameGrid.setCellPadding(0);
+		gameGrid.setCellSpacing(0);
+		gameGrid.setBorderWidth(0);
+		gameStatus.setWidth("450px");
+				
+		for (int row = 0; row < 8; row++) {
+			for (int col = 0; col < 8; col++) {
+				final Image image = new Image();
+				board[row][col] = image;
+				image.setWidth("100%");
+				final int row1 = row;
+				final int col1 = col;
+				
+				    image.addClickHandler(new ClickHandler() {
+				    	@Override
+				    	public void onClick(ClickEvent event) {
+				    		presenter.selectImage(row1, col1, false);
+				    	}
+				    });
+				gameGrid.setWidget(7 - row, col, board[row][col]);
+			}
+		}
+		
+		/**
+	     *  handle promotion buttons
+	     */
+	    Buttons.setVisible(false);
+	    QueenButton.addClickHandler(new ClickHandler() {
+					@Override
+					public void onClick(ClickEvent event) {
+						presenter.selectPromotionPiece(PieceKind.QUEEN);
+					}
+				});
+	    RookButton.addClickHandler(new ClickHandler() {
+			@Override
+			public void onClick(ClickEvent event) {
+				presenter.selectPromotionPiece(PieceKind.ROOK);
+			}
+		});
+	    KnightButton.addClickHandler(new ClickHandler() {
+			@Override
+			public void onClick(ClickEvent event) {
+				presenter.selectPromotionPiece(PieceKind.KNIGHT);
+			}
+		});
+	    BishopButton.addClickHandler(new ClickHandler() {
+			@Override
+			public void onClick(ClickEvent event) {
+				presenter.selectPromotionPiece(PieceKind.BISHOP);
+			}
+		});
+	    
+	    LocalStorageButton.setVisible(true);
+	    
+	    createOracle();
+	    final SuggestBox suggestbox= new SuggestBox(oracle);
+	    
+	    suggestbox.setWidth("200px");
+	    suggestbox.setHeight("14px");
+	    
+	    SuggestBoxPanel.add(suggestbox);
+	    
+	    ListBox.setWidth("200px");
+	    LoadButton.setWidth("100px");
+	    DeleteButton.setWidth("100px");
+	    MatchButton.setWidth("100px");
+	    LoadButton.setHeight("25px");
+	    DeleteButton.setHeight("25px");
+	    MatchButton.setHeight("25px");
+	    AutoMatchButton.setHeight("25px");
+	    AgainstComputerButton.setHeight("25px");
+	    
+	    LoadButton.setText(mymessage.load());
+	    MatchButton.setText(mymessage.match());
+	    AutoMatchButton.setText(mymessage.automatch());
+	    DeleteButton.setText(mymessage.delete());
+	    ChooseGameBelow.setText(mymessage.choosegame());
+	    EnterOpponentEmail.setText(mymessage.enteremail());
+	    AgainstComputerButton.setText(mymessage.againstcomputer());
+	    
+	    /**
+	     *  handle match
+	     */
+	    AutoMatchButton.addClickHandler(new ClickHandler(){
+	    	@Override
+	    	public void onClick(ClickEvent event){
+	    		gameGrid.setVisible(false);
+	    		
+	    		AsyncCallback<Match> callback = new AsyncCallback<Match>() {
+	    			public void onFailure(Throwable caught) {
+	    				Window.alert(mymessage.automatchfail()+caught);
+	    			}
+	    			
+	    			public void onSuccess(Match matchresult) {
+	    				//Window.alert(matchresult.toString());
+	    				//if(matchresult==null)
+	    					//setGameStatus(gameStatus.getText()+" It's white "+ChessEntryPoint.loginInfo.getEmailAddress()+"'s turn ");
+	    				//else setGameStatus(gameStatus.getText()+" It's white "+matchresult.getWhite()+"'s turn ");
+	    			}
+	    		};
+	    		loginService.AutoMatch(ChessEntryPoint.loginInfo.getEmailAddress(), callback);
+	    		
+	    	}
+	    });
+	    
+	    MatchButton.addClickHandler(new ClickHandler(){
+	    	@Override
+	    	public void onClick(ClickEvent event){
+	    		//gameGrid.setVisible(false);
+	    		
+	    		AsyncCallback<Match> callback = new AsyncCallback<Match>() {
+	    			public void onFailure(Throwable caught) {
+	    				Window.alert(mymessage.matchfail());
+	    			}
+	    			
+	    			public void onSuccess(Match match) {
+	    	
+	    			}
+	    		};
+	    		loginService.MatchbyEmail(ChessEntryPoint.loginInfo.getEmailAddress(),suggestbox.getText(), callback);
+	    	}
+	    });
+	    
+	    /**
+	     *  handle delete match
+	     */
+	    DeleteButton.addClickHandler(new ClickHandler(){
+	    	@Override
+	    	public void onClick(ClickEvent event){
+	    		
+	    		final int select = ListBox.getSelectedIndex();
+	    		String text = ListBox.getItemText(select);
+	    		
+	    		String[] temp=text.split(" ");
+	    		long id = (long) Long.parseLong(temp[1]);
+	    		
+	    		AsyncCallback<String> callback = new AsyncCallback<String>() {
+	    			public void onFailure(Throwable caught) {
+	    				Window.alert(mymessage.deletefail());
+	    			}
+	    			
+	    			public void onSuccess(String string) {
+	    				Window.alert(string);
+	    				ListBox.removeItem(select);				
+	    			}
+	    		};
+	    		loginService.Delete(ChessEntryPoint.loginInfo.getEmailAddress(), id, callback);
+	    	}
+	    });
+	    	
+	    /**
+		  *  handle load match
+		  */
+	    LoadButton.addClickHandler(new ClickHandler(){
+		    	@Override
+		    	public void onClick(ClickEvent event){
+		    		
+		    		final int select = ListBox.getSelectedIndex();
+		    		String text = ListBox.getItemText(select);
+		    		
+		    		String[] temp=text.split(" ");
+		    		final long id = (long) Long.parseLong(temp[1]);
+		    		String Uid = temp[0];
+		    		
+		    		AsyncCallback<Match> callback = new AsyncCallback<Match>() {
+		    			public void onFailure(Throwable caught) {
+		    				Window.alert(mymessage.loadfail());
+		    			}
+		    			
+		    			public void onSuccess(Match match) {
+		    				//Window.alert("Load succeed!");
+		    				Date date = match.getStartDate();
+		    				@SuppressWarnings("deprecation")
+							int year = date.getYear()+1900;
+		    				@SuppressWarnings("deprecation")
+							int month = date.getMonth();
+		    				@SuppressWarnings("deprecation")
+							int day = date.getDay();
+		    				@SuppressWarnings("deprecation")
+							int hour = date.getHours();
+		    				@SuppressWarnings("deprecation")
+							int minutes = date.getMinutes();
+		    				@SuppressWarnings("deprecation")
+							int seconds = date.getSeconds();
+		    				setGameDate(mymessage.startdate()+String.valueOf(month)+"/"+String.valueOf(day)+"/"+String.valueOf(year)
+		    						+" "+String.valueOf(hour)+":"+String.valueOf(minutes)+":"+String.valueOf(seconds));
+		    				presenter.setGameDate(date);
+		    				String datestr= String.valueOf(month)+"/"+String.valueOf(day)+"/"+String.valueOf(year)+" "+String.valueOf(hour)+":"+String.valueOf(minutes)+":"+String.valueOf(seconds);
+		    				
+		    				State state = Presenter.deserialize(match.getState());
+		    			    presenter.setState(state);
+		    			    presenter.setId(id);
+		    			    gameGrid.setVisible(true);
+		    			    if(match.getTurn().equals("White") && state.getGameResult()==null){
+		    			    	setGameStatus(mymessage.its()+ mymessage.white()+match.getWhite()+mymessage.turn()+mymessage.matchidis()+id);
+		    			        setGameDate(mymessage.startdate()+datestr);
+		    			        
+		    			    }else if(state.getGameResult()==null) {
+		    			    	setGameStatus(mymessage.its()+ mymessage.black()+match.getBlack()+mymessage.turn()+mymessage.matchidis()+id);
+		    			    	setGameDate(mymessage.startdate()+datestr);
+		    			    }
+		    			    Presenter.isAI = false;
+		    			}
+		    		};
+		    		loginService.loadMatch(Uid, id, callback);
+		    	}
+	    });
+	    	
+	    /**
+	     *  handle play with AI
+	     */
+	    AgainstComputerButton.addClickHandler(new ClickHandler(){
+	 	    	@Override
+	 	    	public void onClick(ClickEvent event){
+	 	    		presenter.setState(new State());
+	 	    		gameGrid.setVisible(true);
+	 	    		presenter.setUserId(ChessEntryPoint.loginInfo.getEmailAddress());
+	 	    		presenter.setUserColor(Color.WHITE);
+	 	    		setGameStatus(mymessage.yourturnis(mymessage.white())+mymessage.itsyourturn());
+	 	    		Presenter.isAI = true;
+	 	    	}
+	 	    });
+	    
+	    
+	    
+	    gameGrid.setVisible(false);
+	    
+		presenter = new Presenter();
+		this.setPresenter(presenter);
+		
+	}
+
+	@Override
+	public void setPresenter(Presenter presenter) {
+		this.presenter = presenter;
+		presenter.setView(this);
+	}
+	
+	@Override
+	public FlowPanel getButttons(){
+		  return Buttons;
+	 }
+	
+	@Override
+	public FlowPanel getLocalStorageButton(){
+		return LocalStorageButton;
+	}
+
+	@Override
+	public void setPiece(final int row, final int col, Piece piece) {
+		// TODO
+
+		if (piece == null) {
+			board[row][col].setResource(gameImages.empty());
+		}else{
+		switch (piece.getKind()) {
+		case PAWN:
+			if (piece.getColor() == Color.WHITE) {
+				board[row][col].setResource(gameImages.whitePawn());
+			} else {
+				board[row][col].setResource(gameImages.blackPawn());
+			}
+			break;
+		case ROOK:
+			if (piece.getColor().isWhite()) {
+				board[row][col].setResource(gameImages.whiteRook());
+			} else {
+				board[row][col].setResource(gameImages.blackRook());
+			}
+			break;
+		case BISHOP:
+			if (piece.getColor().isWhite()) {
+				board[row][col].setResource(gameImages.whiteBishop());
+			} else {
+				board[row][col].setResource(gameImages.blackBishop());
+			}
+			break;
+		case KNIGHT:
+			if (piece.getColor().isWhite()) {
+				board[row][col].setResource(gameImages.whiteKnight());
+			} else {
+				board[row][col].setResource(gameImages.blackKnight());
+			}
+			break;
+		case QUEEN:
+			if (piece.getColor().isWhite()) {
+				board[row][col].setResource(gameImages.whiteQueen());
+			} else {
+				board[row][col].setResource(gameImages.blackQueen());
+			}
+			break;
+		case KING:
+			if (piece.getColor().isWhite()) {
+				board[row][col].setResource(gameImages.whiteKing());
+			} else {
+				board[row][col].setResource(gameImages.blackKing());
+			}
+			break;
+		default:
+			break;
+		}
+		}
+		
+		/**
+	     *  handle drag and drop pieces
+	     */	
+		board[row][col].getElement().setDraggable(Element.DRAGGABLE_TRUE);	
+		board[row][col].addDragStartHandler(
+		   new DragStartHandler() {
+			public void onDragStart(DragStartEvent event) {
+				event.setData("text", "Hello World");
+				presenter.selectImage(row, col, true);
+				event.getDataTransfer().setDragImage(board[row][col].getElement(), 10, 10);
+			}
+		});
+		board[row][col].addDragOverHandler(
+        		new DragOverHandler(){
+        			public void onDragOver(DragOverEvent event) {
+	        	    
+        			}
+        	   });
+		board[row][col].addDropHandler(
+        		new DropHandler() {
+        			public void onDrop(DropEvent event) {
+        				presenter.selectImage(row, col, true);
+        			}
+        		});		
+		
+		
+	}
+
+	@Override
+	public void setHighlighted(int row, int col, boolean highlighted) {
+		Element element = board[row][col].getElement();
+		if (highlighted) {
+			element.setClassName(css.highlighted());
+		} else {
+			element.removeClassName(css.highlighted());
+		}
+	}
+
+	@Override
+	public void setWhoseTurn(Color color) {
+		// TODO
+		String str = color.toString();
+		gameStatus.setText("It's " + str + "'s turn!");
+	}
+
+	@Override
+	public void setGameResult(GameResult gameResult) {
+		// TODO
+		if (gameResult == null)
+			return;
+		String str = gameResult.toString();
+		gameStatus.setText("Game ends because of " + str);
+	}
+	
+	public void setAnimateImage(Image image, Piece piece){
+		if (piece == null) {
+			image.setResource(gameImages.empty());
+		}else{
+		switch (piece.getKind()) {
+		case PAWN:
+			if (piece.getColor() == Color.WHITE) {
+				image.setResource(gameImages.whitePawn());
+			} else {
+				image.setResource(gameImages.blackPawn());
+			}
+			break;
+		case ROOK:
+			if (piece.getColor().isWhite()) {
+				image.setResource(gameImages.whiteRook());
+			} else {
+				image.setResource(gameImages.blackRook());
+			}
+			break;
+		case BISHOP:
+			if (piece.getColor().isWhite()) {
+				image.setResource(gameImages.whiteBishop());
+			} else {
+				image.setResource(gameImages.blackBishop());
+			}
+			break;
+		case KNIGHT:
+			if (piece.getColor().isWhite()) {
+				image.setResource(gameImages.whiteKnight());
+			} else {
+				image.setResource(gameImages.blackKnight());
+			}
+			break;
+		case QUEEN:
+			if (piece.getColor().isWhite()) {
+				image.setResource(gameImages.whiteQueen());
+			} else {
+				image.setResource(gameImages.blackQueen());
+			}
+			break;
+		case KING:
+			if (piece.getColor().isWhite()) {
+				image.setResource(gameImages.whiteKing());
+			} else {
+				image.setResource(gameImages.blackKing());
+			}
+			break;
+		default:
+			break;
+		}
+		}
+	}
+	
+	public Audio createAudio() {
+		 Audio audio = Audio.createIfSupported();
+		 if (audio == null) {
+		      return null;
+		 }
+		 audio.addSource("mengyanhuang_audio/movement.mp3", AudioElement.TYPE_MP3);
+		 audio.addSource("mengyanhuang_audio/movement.wav", AudioElement.TYPE_WAV);
+		 // Show audio controls.
+		 audio.setControls(true);
+		 return audio;
+	}
+	
+	public void makeAnimation(PieceKind piecekind, Position selected, int row, int col){
+		  Move move = new Move(selected, new Position(row,col), piecekind);
+		  final Image image = new Image();
+		  setAnimateImage(image, presenter.getCurrentState().getPiece(selected));
+		  //Window.alert("before moveanimation!");
+		  MoveAnimation moveAnimation = new MoveAnimation(presenter.getCurrentState(), image, selected, row, col, move);
+		  //Window.alert("after moveanimation!");
+		  moveAnimation.run(DURATION);
+	}
+	
+	public void setHistoryItem(State state){
+		History.newItem(Presenter.serialize(state));
+	}
+
+	@Override
+	public void setGameStatus(String string) {
+		// TODO Auto-generated method stub
+		gameStatus.setText(string);
+	}
+	
+	@Override
+	public void setGameDate(String string) {
+		// TODO Auto-generated method stub
+		gameDate.setText(string);
+	}
+	
+	@Override
+	public String getGameStatus(){
+		return gameStatus.getText();
+	}
+	
+	public void addtoListBox(String string){
+		ListBox.addItem(string);
+	}
+	
+	@Override
+	public void setGameRank(String string) {
+		// TODO Auto-generated method stub
+		gameRank.setText(string);
+	}
+	
+	/**
+	 * add fake data to the suggestbox
+	 * @return
+	 */
+	public void createOracle()
+	{
+	    //MultiWordSuggestOracle oracle = new MultiWordSuggestOracle();
+
+	    oracle.add("aimeehwang90@gmail.com");
+	    oracle.add("aimee1990@gmail.com");
+	    oracle.add("bbbb10@gmail.com");
+	    oracle.add("cccc10@gmail.com");
+	    oracle.add("lizhihan1211@gmail.com");
+	    oracle.add("yoav10@gmail.com");
+	    oracle.add("kerrywang881122@gmail.com");
+	    oracle.add("longjuntan@gmail.com");
+	    oracle.add("kanppa@gmail.com");
+	    oracle.add("ji.chen1990@gmail.com");
+	    oracle.add("yzibin@google.com");
+	    oracle.add("jiayuan6311@gmail.com");
+	    oracle.add("henglinluo64@gmail.com");
+	    
+	    return;
+	}
+}

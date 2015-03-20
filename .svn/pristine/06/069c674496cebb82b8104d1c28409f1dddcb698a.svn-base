@@ -1,0 +1,323 @@
+package org.kuangchelee.hw3;
+
+import org.shared.chess.Color;
+import org.shared.chess.GameResult;
+import org.shared.chess.Piece;
+import org.shared.chess.PieceKind;
+import org.kuangchelee.hw3.Presenter.View;
+
+import com.google.gwt.core.client.GWT;
+import com.google.gwt.event.dom.client.ClickEvent;
+import com.google.gwt.event.dom.client.ClickHandler;
+import com.google.gwt.uibinder.client.UiBinder;
+import com.google.gwt.uibinder.client.UiField;
+import com.google.gwt.user.client.Command;
+import com.google.gwt.user.client.Element;
+import com.google.gwt.user.client.ui.CheckBox;
+import com.google.gwt.user.client.ui.Composite;
+import com.google.gwt.user.client.ui.FlowPanel;
+import com.google.gwt.user.client.ui.Grid;
+import com.google.gwt.user.client.ui.Image;
+import com.google.gwt.user.client.ui.Button;
+import com.google.gwt.user.client.ui.Label;
+import com.google.gwt.user.client.ui.MenuBar;
+import com.google.gwt.user.client.ui.MenuItem;
+import com.google.gwt.user.client.ui.Widget;
+
+public class Graphics extends Composite implements View {
+  private static GameImages gameImages = GWT.create(GameImages.class);
+  private static GraphicsUiBinder uiBinder = GWT.create(GraphicsUiBinder.class);
+
+  interface GraphicsUiBinder extends UiBinder<Widget, Graphics> {
+  }
+
+  @UiField GameCss css;
+  @UiField Label gameStatus;
+  @UiField Grid gameGrid;
+  @UiField Grid promotePanel;
+  @UiField Grid controlPanel;
+  private FlowPanel[][] flowPanels = new FlowPanel[8][8];
+  private Image[][] board = new Image[8][8];
+  private Image[][] promoteGrid = new Image[1][4];
+  public MenuBar load = new MenuBar();
+  public MenuBar popup = new MenuBar(true);
+  public Presenter presenter;
+  public Graphics(final Presenter presenter) {
+    initWidget(uiBinder.createAndBindUi(this));
+    gameGrid.resize(8, 8);
+    gameGrid.setCellPadding(0);
+    gameGrid.setCellSpacing(0);
+    gameGrid.setBorderWidth(1);
+    promotePanel.resize(1, 4);
+    promotePanel.setCellPadding(0);
+    promotePanel.setCellSpacing(0);
+    promotePanel.setBorderWidth(0);
+    controlPanel.resize(1, 5);
+    controlPanel.setCellPadding(0);
+    controlPanel.setCellSpacing(0);
+    controlPanel.setBorderWidth(0);
+    
+    initBoard();
+    initPromotePanel();
+    initControlPanel();
+    this.presenter = presenter;
+  }
+
+  @Override
+  public void setPiece(int row, int col, Piece piece) {
+	  Image image = board[row][col];
+	  if(piece == null){
+		  image.setResource(gameImages.blank());
+		  return;
+	  }
+	  else{
+		  Color color = piece.getColor();
+		  switch(piece.getKind()) {
+		  case KING:
+			  image.setResource(color == Color.WHITE ? 
+					  gameImages.whiteKing():gameImages.blackKing());
+			  break;
+		  case QUEEN:
+			  image.setResource(color == Color.WHITE ? 
+					  gameImages.whiteQueen():gameImages.blackQueen());
+			  break;
+		  case BISHOP:
+			  image.setResource(color == Color.WHITE ? 
+					  gameImages.whiteBishop():gameImages.blackBishop());
+			  break;
+		  case KNIGHT:
+			  image.setResource(color == Color.WHITE ? 
+					  gameImages.whiteKnight():gameImages.blackKnight());
+			  break;
+		  case ROOK:
+			  image.setResource(color == Color.WHITE ? 
+					  gameImages.whiteRook():gameImages.blackRook());
+			  break;
+		  case PAWN:
+			  image.setResource(color == Color.WHITE ? 
+					  gameImages.whitePawn():gameImages.blackPawn());
+			  break;
+			  // NULL
+		  default:
+			  image.setResource(gameImages.blank());
+			  break;
+		  }
+	  }
+  }
+  @Override
+  public void setHighlighted(int row, int col, boolean highlighted) {
+    Element element = flowPanels[row][col].getElement();
+    if (highlighted) {
+      element.setClassName(css.highlighted());
+    } else {
+      element.removeClassName(css.highlighted());
+    }
+  }
+  @Override
+  public void setDragHighlighted(int row, int col, boolean highlighted) {
+    Element element = flowPanels[row][col].getElement();
+    if (highlighted) {
+      element.setClassName(css.draghighlighted());
+    } else {
+      element.removeClassName(css.draghighlighted());
+    }
+  }
+  @Override
+  public void setBackground(int row, int col) {
+	  Element element = flowPanels[row][col].getElement();
+	  if (row % 2 == 0 && col % 2 == 1 || row % 2 == 1 && col % 2 == 0){
+		  element.setClassName(css.greybackground());
+	  }else{
+		  element.setClassName(css.whitebackground());
+	  }
+  }
+  @Override
+  public void setBackground() {
+	  Element element;
+	  for(int i = 0; i < 8; i++){
+		  for(int j = 0; j < 8; j++){
+			  element = flowPanels[i][j].getElement();
+			  if (i % 2 == 0 && j % 2 == 1 || i % 2 == 1 && j % 2 == 0){
+				  element.setClassName(css.greybackground());
+			  }else{
+				  element.setClassName(css.whitebackground());
+			  }
+		  }
+	  }
+  }
+  @Override
+  public void setWhoseTurn(Color color) {
+	  if(color == Color.WHITE) 
+		  gameStatus.setText("White's Turn.");
+	  else
+		  gameStatus.setText("Black's Turn.");
+  }
+
+  @Override
+  public void setGameResult(GameResult gameResult) {
+	  if(gameResult != null)
+		  gameStatus.setText(gameResult.toString());
+  }
+  
+  @Override
+  public void setGameText(String string) {
+	  gameStatus.setText(string);
+  }
+  
+  @Override
+  public void setPromotePanel(boolean isPromotePanelVisible){
+	  Image image;
+	  if(isPromotePanelVisible){		 
+		  for(int i = 0; i < 4; i++){
+			  image = promoteGrid[0][i];
+			  if(i == 0)
+				  image.setResource(gameImages.whiteQueen());
+			  else if(i == 1)
+				  image.setResource(gameImages.whiteBishop());
+			  else if(i == 2)
+				  image.setResource(gameImages.whiteKnight());
+			  else if(i == 3)
+				  image.setResource(gameImages.whiteRook());
+		  }
+	  }
+	  else{
+		  for(int i = 0; i < 4; i++){
+			  image = promoteGrid[0][i];
+			  image.setResource(gameImages.whiteTile());
+		  }
+	  }
+  }
+  @Override 
+  public void initBoard(){
+	  for(int row = 0; row < 8; row++){
+		  for(int col = 0; col < 8; col++){
+			  final Image image = new Image();
+			  final FlowPanel flowpanel = new FlowPanel();
+			  board[row][col] = image;
+			  image.setWidth("100%");
+			  image.setHeight("100%");
+			  image.setStyleName("img");
+			  final int Finalrow = row;
+			  final int Finalcol = col;
+
+			  image.addClickHandler(new ClickHandler() {
+				  @Override
+				  public void onClick(ClickEvent event) {
+					  presenter.clickOnBoard(Finalrow, Finalcol);
+				  }
+			  });
+			  flowpanel.add(image);
+			  flowPanels[row][col] = flowpanel;
+			  gameGrid.setWidget(row, col, flowpanel);
+		  }
+	  }
+  }
+  @Override
+  public void initPromotePanel(){
+	// Initialize Promote Panel
+	    for(int i = 0; i < 4; i++){
+	    	final Image promoteImage = new Image();
+	    	promoteGrid[0][i] = promoteImage;
+	    	final int promoteCol = i;
+	    	promoteImage.setWidth("100%");
+	    	promoteImage.setHeight("100%");
+	    	promoteImage.addClickHandler(new ClickHandler() {
+	    		@Override
+	    		public void onClick(ClickEvent event) {
+	    			presenter.clickedOnPromotePanel(0, promoteCol);
+	    		}
+	    	});
+	    	promotePanel.setWidget(0, i, promoteImage);
+	    }
+  }
+  @Override
+  public void initControlPanel(){
+	  Button restart = new Button();
+	  Button save = new Button();
+	  CheckBox animationFlag = new CheckBox("Disable Animation");
+	  CheckBox soundFlag = new CheckBox("Disable Sound");
+	  
+	  restart.setText("Restart");
+	  save.setText("Save");
+	  restart.addClickHandler(new ClickHandler(){
+		  @Override
+		  public void onClick(ClickEvent event){
+			  presenter.restart();
+		  }
+	  });
+	  controlPanel.setWidget(0, 0, restart);
+	  save.addClickHandler(new ClickHandler(){
+		  @Override
+		  public void onClick(ClickEvent event){
+			  presenter.save();
+		  }
+	  });
+	  controlPanel.setWidget(0, 1, save);
+	  load.setAutoOpen(true);
+	  load.setAnimationEnabled(true);
+	  load.addItem("Load", popup);
+	  controlPanel.setWidget(0, 2, load);
+	  animationFlag.addClickHandler(new ClickHandler(){
+		  @Override
+		  public void onClick(ClickEvent event){
+			  boolean checked = ((CheckBox) event.getSource()).getValue();
+			  presenter.animationDisable(checked);
+		  }
+	  });
+	  controlPanel.setWidget(0, 3, animationFlag);
+	  soundFlag.addClickHandler(new ClickHandler(){
+		  @Override
+		  public void onClick(ClickEvent event){
+			  boolean checked =((CheckBox) event.getSource()).getValue();
+			  presenter.soundDisable(checked);
+		  }
+	  });
+	  controlPanel.setWidget(0, 4, soundFlag);
+  }
+  public void setLoadItem(String key){
+	  final String str = key;
+	  MenuItem item = new MenuItem(str, new Command(){
+		  public void execute(){
+			  presenter.load(str);
+		  }
+	  });
+	  popup.addItem(item);
+  }
+  public Image getBoard(int row, int col){
+	  return board[row][col];
+  }
+  public Image getPieceImage(Color color, PieceKind piecekind){
+	  Image image = new Image();
+	  switch(piecekind) {
+	  case KING:
+		  image.setResource(color == Color.WHITE ? 
+				  gameImages.whiteKing():gameImages.blackKing());
+		  break;
+	  case QUEEN:
+		  image.setResource(color == Color.WHITE ? 
+				  gameImages.whiteQueen():gameImages.blackQueen());
+		  break;
+	  case BISHOP:
+		  image.setResource(color == Color.WHITE ? 
+				  gameImages.whiteBishop():gameImages.blackBishop());
+		  break;
+	  case KNIGHT:
+		  image.setResource(color == Color.WHITE ? 
+				  gameImages.whiteKnight():gameImages.blackKnight());
+		  break;
+	  case ROOK:
+		  image.setResource(color == Color.WHITE ? 
+				  gameImages.whiteRook():gameImages.blackRook());
+		  break;
+	  case PAWN:
+		  image.setResource(color == Color.WHITE ? 
+				  gameImages.whitePawn():gameImages.blackPawn());
+		  break;
+		  // NULL
+	  default:
+		  image.setResource(gameImages.blank());
+		  break;
+	  }
+	  return image;
+  }
+}

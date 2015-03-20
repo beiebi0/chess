@@ -1,0 +1,122 @@
+package org.zhaohuizhang.hw3;
+
+import org.zhaohuizhang.hw6.client.ChessGameService;
+import org.zhaohuizhang.hw6.client.ChessGameServiceAsync;
+import org.zhaohuizhang.hw6.client.LoginInfo;
+import org.zhaohuizhang.hw8.ChessConstants;
+
+import com.google.gwt.core.client.EntryPoint;
+import com.google.gwt.core.client.GWT;
+import com.google.gwt.i18n.client.LocaleInfo;
+import com.google.gwt.user.client.rpc.AsyncCallback;
+import com.google.gwt.user.client.ui.Anchor;
+import com.google.gwt.user.client.ui.Label;
+import com.google.gwt.user.client.ui.MultiWordSuggestOracle;
+import com.google.gwt.user.client.ui.RootPanel;
+import com.google.gwt.user.client.ui.SuggestBox;
+import com.google.gwt.user.client.ui.VerticalPanel;
+import com.googlecode.gwtphonegap.client.PhoneGap;
+import com.googlecode.gwtphonegap.client.contacts.Contact;
+import com.googlecode.gwtphonegap.client.contacts.ContactError;
+import com.googlecode.gwtphonegap.client.contacts.ContactFindCallback;
+import com.googlecode.gwtphonegap.client.contacts.ContactFindOptions;
+import com.googlecode.gwtphonegap.collection.shared.CollectionFactory;
+import com.googlecode.gwtphonegap.collection.shared.LightArray;
+
+public class ChessEntryPoint implements EntryPoint {
+
+	private ChessConstants constants = (ChessConstants) GWT
+			.create(ChessConstants.class);
+	private LoginInfo loginInfo = null;
+	private VerticalPanel loginPanel = new VerticalPanel();
+	private Label loginLabel = new Label(constants.setWelcoming());
+	private Anchor signInLink = new Anchor(constants.setLogIn());
+
+	private LightArray<Contact> contactsArrays;
+
+	// private Anchor signOutLink = new Anchor("Log Out");
+
+	public void onModuleLoad() {
+		// Check login status using login service.
+		ChessGameServiceAsync loginService = GWT.create(ChessGameService.class);
+		loginService.login(GWT.getHostPageBaseURL()
+				+ "zhaohuizhang.html?locale="
+				+ LocaleInfo.getCurrentLocale().getLocaleName(),
+				new AsyncCallback<LoginInfo>() {
+					public void onFailure(Throwable error) {
+					}
+
+					public void onSuccess(LoginInfo result) {
+						loginInfo = result;
+						if (loginInfo.isLoggedIn()) {
+							loadChessGame();
+						} else {
+							loadLogin();
+						}
+					}
+				});
+
+	}
+
+	public void loadChessGame() {
+
+		SuggestBox tmpBox = new SuggestBox(getOracle());
+		Label label = new Label("Enter the email of your desired opponent:");
+		final Graphics graphics = new Graphics();
+		graphics.setPlayerName(loginInfo.getNickname());
+		graphics.setPlayerEmail(loginInfo.getEmailAddress());
+		graphics.setSignOutLink(loginInfo.getLogoutUrl());
+
+		Presenter presenter = new Presenter();
+		presenter.initView(graphics);
+		RootPanel.get().add(label);
+		RootPanel.get().add(tmpBox);
+		RootPanel.get().add(graphics);
+
+	}
+
+	public void loadLogin() {
+		// Assemble login panel.
+		signInLink.setHref(loginInfo.getLoginUrl());
+		loginPanel.add(loginLabel);
+		loginPanel.add(signInLink);
+		RootPanel.get().add(loginPanel);
+	}
+
+	private MultiWordSuggestOracle getOracle() {
+		findContacts();
+		if (contactsArrays != null) {
+			MultiWordSuggestOracle oracle = new MultiWordSuggestOracle();
+			int len = contactsArrays.length();
+			for (int i = 0; i < len; i++) {
+				Contact tmp = contactsArrays.get(i);
+				oracle.add(tmp.toString());
+			}
+			return oracle;
+		}
+		System.out.println("Error!");
+		return null;
+	}
+
+	private void findContacts() {
+		final PhoneGap phoneGap = GWT.create(PhoneGap.class);
+		LightArray<String> fields = CollectionFactory.<String> constructArray();
+		fields.push("displayName"); // search in displayname
+		fields.push("name"); // search in name as well
+		ContactFindOptions findOptions = new ContactFindOptions("", true);
+
+		phoneGap.getContacts().find(fields, new ContactFindCallback() {
+
+			@Override
+			public void onSuccess(LightArray<Contact> contacts) {
+				contactsArrays = contacts;
+			}
+
+			@Override
+			public void onFailure(ContactError error) {
+				// something went wrong, doh!
+
+			}
+		}, findOptions);
+	}
+}

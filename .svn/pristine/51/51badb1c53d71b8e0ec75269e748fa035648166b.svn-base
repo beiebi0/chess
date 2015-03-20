@@ -1,0 +1,449 @@
+package org.paulsultan.hw3;
+
+import java.util.Date;
+import java.util.HashSet;
+import java.util.Set;
+
+import org.paulsultan.hw2.StateChangerImpl;
+import org.paulsultan.hw2_5.StateExplorerImpl;
+import org.paulsultan.hw6.ServerOffException;
+import org.paulsultan.hw6.client.ChessService;
+import org.paulsultan.hw6.client.ChessServiceAsync;
+import org.paulsultan.hw9.AlphaBetaPruning;
+import org.paulsultan.hw9.DateTimer;
+import org.paulsultan.hw9.Heuristic;
+
+import org.shared.chess.Color;
+import org.shared.chess.GameResult;
+import org.shared.chess.Move;
+import org.shared.chess.Piece;
+import org.shared.chess.PieceKind;
+import org.shared.chess.Position;
+import org.shared.chess.State;
+import org.shared.chess.StateChanger;
+import org.shared.chess.StateExplorer;
+
+import com.google.gwt.core.client.GWT;
+import com.google.gwt.dom.client.Style;
+import com.google.gwt.animation.client.Animation;
+
+import com.google.gwt.event.dom.client.ClickEvent;
+import com.google.gwt.event.dom.client.ClickHandler;
+import com.google.gwt.storage.client.Storage;
+import com.google.gwt.storage.client.StorageMap;
+import com.google.gwt.user.client.Timer;
+import com.google.gwt.user.client.rpc.AsyncCallback;
+import com.google.gwt.user.client.rpc.ServiceDefTarget;
+import com.google.gwt.user.client.ui.Image;
+import com.google.web.bindery.event.shared.HandlerRegistration;
+import com.googlecode.gwtphonegap.client.util.PhonegapUtil;
+
+public class Presenter {    
+	public interface View {
+		void setPiece(int row, int col, Piece piece);
+		void setHighlighted(int row, int col, boolean highlighted);
+		void setWhoseTurn(Color color);
+		void setGameResult(GameResult gameResult);
+		
+		Image getImage(int row, int col);
+		Image getImage(Position pos);
+		Image getPromotionImage(int i);
+		void setPromotionGridVisible(boolean vis);
+		void addDragDropHandlers();
+		void setRank(Double newRank);
+        /**
+         * Opponent:opponentEmail - You are:color - Match id:2
+         * @param string
+         * @param colorForGame
+         * @param matchId
+         */
+        void setMatchStatus(String startDate, String string, Color colorForGame, String matchId);
+        void updateData();
+	}
+
+	View view;
+
+	HashSet<String> localMatches = new HashSet<String>();
+	
+	StateChanger stateChanger;
+	StateExplorer stateExplorer;
+	
+	Position activePosition;
+	Position promotionPos;
+	HandlerRegistration[][] handlers;
+	HandlerRegistration[] promotionHandlers;
+	AudioControl audioController;
+	ChessServiceAsync chessServices = GWT.create(ChessService.class);
+	AlphaBetaPruning computer = new AlphaBetaPruning(new Heuristic());
+	   
+	State state;
+	Color colorForGame;
+	Long matchId;
+	
+	public Presenter(View view){
+		PhonegapUtil.prepareService((ServiceDefTarget) chessServices,"http://11.psultanchess.appspot.com/paulsultan/", "service");
+		((ServiceDefTarget) chessServices).setServiceEntryPoint("http://11.psultanchess.appspot.com/paulsultan/service");
+
+		this.view=view;
+		this.audioController = new AudioControl();
+		this.stateChanger = new StateChangerImpl();
+		this.stateExplorer = new StateExplorerImpl();
+		this.state = new State();
+		
+		this.activePosition = null;
+		this.handlers = new HandlerRegistration[8][8];
+		this.promotionHandlers = new HandlerRegistration[4];
+		this.promotionPos = null;
+				
+		audioController.addTrack("move");
+		audioController.addTrack("capture");
+		initPromotionHandlers();
+		initBoardClickHandlers();
+		
+		Storage storage = Storage.getLocalStorageIfSupported();
+		if (storage!=null){
+			storage.clear();
+		}
+		//addTimer();
+	}
+	
+	public void addTimer(){
+	    Timer t = new Timer() {
+	        public void run() {
+	        	updateServer();
+	        }
+	      };
+		t.scheduleRepeating(5000);
+	}
+	public void updateServer(){
+        System.out.println("Queue Size: "+localMatches.size());
+        for(String eachMatchId : localMatches){
+      	  System.out.println(" "+eachMatchId);
+        }
+        for(String eachMatchId : localMatches){
+      	  State savedState = StateSerializer.parse(getMatchStateLocally(eachMatchId));
+		  sendMove(savedState, Long.valueOf(eachMatchId));
+        }
+        
+        view.updateData();
+	}
+	
+	public Color getColorForGame(){
+		return colorForGame;
+	}
+	
+	public Long getMatchId(){
+		return matchId;
+	}
+	public void setMatchId(Long id){
+		this.matchId = id;
+	}
+	
+    @SuppressWarnings("deprecation")
+    public void startSinglePlayer(){
+        clearGame();
+        matchId=(long)0;
+        colorForGame=Color.WHITE;
+        setState(new State());
+        initBoardClickHandlers();
+        
+        Date now = new Date();
+        String year = String.valueOf(now.getYear()+1900);
+        String month = String.valueOf(now.getMonth()+1);
+        String day = String.valueOf(now.getDate());
+        month = (month.length()==1) ? "0"+month : month;
+        day = (day.length()==1) ? "0"+day : day;
+        String startDate = year+month+day;
+        
+        view.setMatchStatus(startDate, "Computer", Color.WHITE, String.valueOf(matchId));
+    }
+	public void startGame(String startDate, String opponentEmail, Long matchId, Color myColor, State state){
+		clearGame();
+		this.matchId=matchId;
+		this.colorForGame=myColor;
+		setState(state);
+		initBoardClickHandlers();
+		
+		view.setMatchStatus(startDate, opponentEmail, colorForGame, String.valueOf(matchId));
+		
+		saveMatchStateLocally(String.valueOf(matchId), StateSerializer.dump(state));
+	}
+	public void clearGame(){
+		this.matchId=null;
+		this.colorForGame=null;
+		setState(null);
+		
+		removeBoardClickHandlers();
+		blurBoard();
+	}
+	
+	public void setState(State state){
+		this.state = state;
+		if(state==null){
+			view.setGameResult(null);
+			view.setWhoseTurn(null);
+			blurBoard();
+			for (int row = 0; row < 8; row++){
+				for (int col = 0; col < 8; col++) {
+					view.setPiece(row, col, null);
+				}
+			}
+		}
+		else{
+			view.setWhoseTurn(state.getTurn());
+			if (state.getGameResult()!=null)
+				view.setGameResult(state.getGameResult());
+			for (int row = 0; row < 8; row++){
+				for (int col = 0; col < 8; col++) {
+					view.setPiece(7-row, col, state.getPiece(row, col)); //white is on bottom
+				}
+			}
+		}
+	}
+	public State getState(){
+		return state;
+	}
+	
+	public void saveMatchStateLocally(String matchId, String state){
+		Storage storage = Storage.getLocalStorageIfSupported();
+		if (storage!=null){
+			StorageMap map = new StorageMap(storage);
+			map.put(matchId, state);
+		}
+	}
+	public String getMatchStateLocally(String matchId) {
+		Storage storage = Storage.getLocalStorageIfSupported();
+		String mapStr = null;
+		if (storage != null){
+			StorageMap map = new StorageMap(storage);
+			mapStr = map.get(matchId);
+		}
+		return mapStr;
+	}
+	public void deleteMatchStateLocally(String matchId) {
+		Storage storage = Storage.getLocalStorageIfSupported();
+		if (storage!=null){
+			StorageMap map = new StorageMap(storage);
+			map.remove(matchId);
+		}
+	}
+
+	public void initPromotionHandlers(){
+		//add click handlers for the promotion images
+		for (int i = 0; i < 4; i++) {
+			final int index = i;
+			promotionHandlers[i] = view.getPromotionImage(i).addClickHandler(
+				new ClickHandler(){
+					@Override
+					public void onClick(ClickEvent event){
+						setPromotion(index);
+					}
+				});
+		}
+		view.setPromotionGridVisible(false);
+	}
+	public void initBoardClickHandlers(){
+		for(int row=0; row<8; row++){
+			for (int col=0; col<8; col++){
+				final int r = 7-row;
+				final int c = col;
+				handlers[row][col] = view.getImage(row, col).addClickHandler(
+						new ClickHandler(){
+							@Override
+							public void onClick(ClickEvent event){
+								squareClicked(r, c);
+							}
+						});
+			}
+		}
+	}
+	public void removeBoardClickHandlers(){
+		for (int row = 0; row < 8; row++) {
+			for (int col = 0; col < 8; col++){
+				if (handlers[row][col]!=null){
+					handlers[row][col].removeHandler();
+					handlers[row][col]=null;
+				}
+			}
+		}
+	}
+
+	public void highlightMoves(Position pos){
+		//add highlighting to possible moves
+		activePosition = pos;
+		Set<Move> moves = stateExplorer.getPossibleMovesFromPosition(state, activePosition);
+		for(Move move : moves) {
+			view.setHighlighted(7-move.getTo().getRow(), move.getTo().getCol(), true);
+		}
+	}
+	public void blurBoard(){
+		//remove highlighting
+		activePosition = null;
+		for (int row = 0; row < 8; row++) {
+			for(int col = 0; col < 8; col++) {
+				view.setHighlighted(row, col, false);
+			}
+		}
+	}
+	
+	public void setPromotion(int index){
+		//promotion piece is clicked
+		PieceKind promotionPiece = PieceKind.PAWN;
+		if(index==0)
+			promotionPiece = PieceKind.KNIGHT;
+		else if(index==1)
+			promotionPiece = PieceKind.BISHOP;
+		else if(index==2)
+			promotionPiece = PieceKind.ROOK;
+		else
+			promotionPiece = PieceKind.QUEEN;
+		
+		initBoardClickHandlers();
+		view.setPromotionGridVisible(false);
+		Move move = new Move(activePosition, promotionPos, promotionPiece);
+		stateChanger.makeMove(state, move);
+		blurBoard();
+		setState(state);
+		sendMove(state, this.matchId);
+
+	}
+	public void squareClicked(int row, int col){
+		Position pos = new Position(row, col);
+		Piece piece = state.getPiece(pos);
+		
+		if(activePosition==null) {
+			//new move
+			if(piece==null)
+				//blank board was clicked
+				return;
+			else if (piece.getColor()!=state.getTurn())
+				//wrong color piece was clicked
+				return;
+			else if (matchId==(long)0 && piece.getColor()!=colorForGame)
+			    //facing computer
+			    highlightMoves(pos);
+			else if (piece.getColor()!=colorForGame)
+				//wrong color piece was clicked for current player
+				return;
+			else
+				highlightMoves(pos);
+		} 
+		else{
+			//move is active
+			if (piece!=null && piece.getColor()==state.getTurn()) {
+				//player choose a new piece to play (cancel move)
+				highlightMoves(pos);
+				blurBoard();
+			}
+			else{
+				//completing a move
+				PieceKind kind = state.getPiece(activePosition).getKind();
+				Set<Move> moves = stateExplorer.getPossibleMovesFromPosition(state, activePosition);
+				if (kind==PieceKind.PAWN && ((row==7 && state.getTurn()==Color.WHITE) || (row==0 && state.getTurn()==Color.BLACK))){
+					//needs promotion
+					Move move = new Move(activePosition, pos, PieceKind.QUEEN);
+					if (moves.contains(move)){
+						removeBoardClickHandlers();
+						promotionPos = pos;
+						view.setPromotionGridVisible(true);
+					}
+				}
+				else{
+					//normal move
+					Move move = new Move(activePosition, pos, null);
+					if (moves.contains(move)) {
+						playSoundForMove(state, move);
+						stateChanger.makeMove(state, move);
+						
+						MoveAnimation anim = new MoveAnimation(view.getImage(move.getFrom()), 
+								   							   view.getImage(move.getTo()));
+						anim.run(300);
+					}
+					blurBoard();
+				}
+			}
+		}
+	}
+
+	public void playSoundForMove(State state, Move move){		
+        if (state.getPiece(move.getTo())==null)
+            audioController.playTrack("move");
+		else
+			audioController.playTrack("capture");
+	}
+	
+	class MoveAnimation extends Animation{
+		Image fromImage;
+		Image toImage;
+		double deltaY;
+		double deltaX;
+		int startX;
+		int startY;
+		public MoveAnimation(Image fromImage, Image toImage) {
+			//instantiates movement
+			this.fromImage = fromImage;
+			this.toImage = toImage;
+			startX=(int)fromImage.getAbsoluteLeft();
+			startY=(int)fromImage.getAbsoluteTop();
+			deltaX=(int)toImage.getAbsoluteLeft()-(int)fromImage.getAbsoluteLeft();
+			deltaY=(int)toImage.getAbsoluteTop()-(int)fromImage.getAbsoluteTop();
+			fromImage.getElement().getStyle().setProperty("position", "absolute");
+		}
+		
+		@Override
+		protected void onUpdate(double progress){
+			double newX=deltaX*progress;
+			double newY=deltaY*progress;
+			fromImage.getElement().getStyle().setLeft(startX+newX, Style.Unit.PX);
+	        fromImage.getElement().getStyle().setTop(startY+newY, Style.Unit.PX);
+		}
+		
+		@Override
+		protected void onComplete() {
+			fromImage.getElement().getStyle().setProperty("position", "static");
+
+			super.onComplete();
+			setState(state);	
+			sendMove(state, getMatchId());
+
+		}
+	}
+	
+	public void sendMove(final State state, final Long matchId){
+	    if(this.matchId==0){
+	        if(state.getTurn()!=colorForGame && state.getGameResult()==null)
+	        	moveAI();
+	    }
+	    else{
+			chessServices.makeMove(StateSerializer.dump(state), matchId, new AsyncCallback<String>() {
+				@Override
+				public void onFailure(Throwable caught){
+					//offline
+					if(caught.getClass().equals(ServerOffException.class)){
+						System.out.println("Manually OFF");
+					}
+
+					saveMatchStateLocally(String.valueOf(matchId), StateSerializer.dump(state));
+					localMatches.add(String.valueOf(matchId));
+				}
+				@Override
+				public void onSuccess(String msg){
+					System.out.println("success sending state");
+					String[] results = msg.split("#");
+					String rank = results[0];
+					String matchId = results[1];
+					view.setRank(Double.valueOf(rank));
+					
+					saveMatchStateLocally(String.valueOf(matchId), StateSerializer.dump(state));
+					localMatches.remove(String.valueOf(matchId));
+				}
+			});
+	    }
+	}
+	
+	public void moveAI(){
+        Move move=computer.findBestMove(state, 3, new DateTimer(1000));
+        squareClicked(move.getFrom().getRow(), move.getFrom().getCol());
+        squareClicked(move.getTo().getRow(), move.getTo().getCol());
+	}
+}

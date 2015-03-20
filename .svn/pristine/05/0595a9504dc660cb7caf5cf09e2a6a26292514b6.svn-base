@@ -1,0 +1,94 @@
+package org.paulsultan.hw3;
+
+import org.paulsultan.hw6.LoginInfo;
+import org.paulsultan.hw6.client.ChessService;
+import org.paulsultan.hw6.client.ChessServiceAsync;
+
+import com.google.gwt.core.client.EntryPoint;
+import com.google.gwt.core.client.GWT;
+import com.google.gwt.event.dom.client.ClickEvent;
+import com.google.gwt.event.dom.client.ClickHandler;
+import com.google.gwt.user.client.Window;
+import com.google.gwt.user.client.rpc.AsyncCallback;
+import com.google.gwt.user.client.rpc.ServiceDefTarget;
+import com.google.gwt.user.client.ui.Button;
+import com.google.gwt.user.client.ui.MultiWordSuggestOracle;
+import com.google.gwt.user.client.ui.RootPanel;
+import com.google.gwt.user.client.ui.TextBox;
+import com.google.gwt.user.client.ui.VerticalPanel;
+import com.googlecode.gwtphonegap.client.PhoneGap;
+import com.googlecode.gwtphonegap.client.PhoneGapAvailableEvent;
+import com.googlecode.gwtphonegap.client.PhoneGapAvailableHandler;
+import com.googlecode.gwtphonegap.client.PhoneGapTimeoutEvent;
+import com.googlecode.gwtphonegap.client.PhoneGapTimeoutHandler;
+import com.googlecode.gwtphonegap.client.contacts.Contact;
+import com.googlecode.gwtphonegap.client.contacts.ContactError;
+import com.googlecode.gwtphonegap.client.contacts.ContactField;
+import com.googlecode.gwtphonegap.client.contacts.ContactFindOptions;
+import com.googlecode.gwtphonegap.client.contacts.ContactFindCallback;
+import com.googlecode.gwtphonegap.client.util.PhonegapUtil;
+import com.googlecode.gwtphonegap.collection.shared.CollectionFactory;
+import com.googlecode.gwtphonegap.collection.shared.LightArray;
+
+
+public class ChessEntryPoint implements EntryPoint {  
+	
+	final PhoneGap phoneGap = GWT.create(PhoneGap.class);
+	MultiWordSuggestOracle oracle = new MultiWordSuggestOracle();
+	
+	@Override
+	public void onModuleLoad(){	    
+		phoneGap.initializePhoneGap();
+		phoneGap.addHandler(new PhoneGapAvailableHandler(){
+			@Override
+			public void onPhoneGapAvailable(PhoneGapAvailableEvent event){
+
+				
+				
+				
+				VerticalPanel loginPanel = new VerticalPanel();
+				RootPanel.get().clear();
+				Button signInLink = new Button("Sign in");
+				final TextBox account = new TextBox();
+				account.setText("Paul.Sultan@gmail.com");
+				signInLink.addClickHandler(new ClickHandler(){
+					@Override
+					public void onClick(ClickEvent event){
+						loadChess(account.getText());
+					}
+				});
+				loginPanel.add(account);
+				loginPanel.add(signInLink);
+				RootPanel.get().add(loginPanel);
+			}
+
+		});
+		
+
+		phoneGap.addHandler(new PhoneGapTimeoutHandler(){
+			@Override
+			public void onPhoneGapTimeout(PhoneGapTimeoutEvent event) {
+				Window.alert("PhoneGapTimeout");
+			}
+		});
+		
+
+	}
+		
+	public void loadChess(String email){
+		ChessServiceAsync chessServices = GWT.create(ChessService.class);
+		PhonegapUtil.prepareService((ServiceDefTarget) chessServices,"http://11.psultanchess.appspot.com/paulsultan/", "service");
+		((ServiceDefTarget) chessServices).setServiceEntryPoint("http://11.psultanchess.appspot.com/paulsultan/service");
+		
+		
+		chessServices.login(email, new AsyncCallback<LoginInfo>(){
+			public void onFailure(Throwable error) {
+				Window.alert("Sign in Failure");
+			}
+			public void onSuccess(LoginInfo loginInfo){				
+				final Graphics graphics = new Graphics(loginInfo, oracle);
+				RootPanel.get().add(graphics);
+			}
+		});
+	}
+};

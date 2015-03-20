@@ -1,0 +1,598 @@
+package org.jiangfengchen.hw1;
+
+import static org.junit.Assert.assertEquals;
+import static org.shared.chess.Color.BLACK;
+import static org.shared.chess.Color.WHITE;
+import static org.shared.chess.State.COLS;
+import static org.shared.chess.State.ROWS;
+import static org.shared.chess.PieceKind.PAWN;
+import static org.shared.chess.PieceKind.BISHOP;
+import static org.shared.chess.PieceKind.ROOK;
+import static org.shared.chess.PieceKind.KING;
+import static org.shared.chess.PieceKind.QUEEN;
+import static org.shared.chess.PieceKind.KNIGHT;
+
+import org.junit.Test;
+import org.shared.chess.AbstractStateChangerTest;
+import org.shared.chess.Move;
+import org.shared.chess.Piece;
+import org.shared.chess.Position;
+import org.shared.chess.State;
+
+public abstract class AbstractStateChangerCaptureForBlack extends AbstractStateChangerTest {
+	  @Test
+	  public void testPawnCaptureBishop() {
+		boolean[] CastleBool={true, true};
+		Piece[][] board = new Piece[ROWS][COLS];
+	    Move move = new Move(new Position(5, 5), new Position(4, 6), null);
+	    State original= new State(BLACK,board,CastleBool,CastleBool,null,7,null);
+	    original.setPiece(5, 5,new Piece(BLACK,PAWN));
+	    original.setPiece(4, 6,new Piece(WHITE,BISHOP));
+	    original.setPiece(0, 0,new Piece(BLACK,KING));
+	    original.setPiece(7, 7,new Piece(WHITE,KING));
+	    State expected = original.copy();
+	    expected.setTurn(WHITE);
+	    expected.setPiece(5, 5, null);
+	    expected.setPiece(4, 6, new Piece(BLACK, PAWN));
+	    expected.setNumberOfMovesWithoutCaptureNorPawnMoved(0);
+	    stateChanger.makeMove(original, move);
+	    assertEquals(expected, original);
+	  }
+	  @Test
+	  public void testPawnCapturePawn() {
+		boolean[] CastleBool={true, true};
+		Piece[][] board = new Piece[ROWS][COLS];
+	    Move move = new Move(new Position(4, 6), new Position(3, 7), null);
+	    State original= new State(BLACK,board,CastleBool,CastleBool,null,7,null);
+	    original.setPiece(4, 6,new Piece(BLACK,PAWN));
+	    original.setPiece(3, 7,new Piece(WHITE,PAWN));
+	    original.setPiece(0, 0,new Piece(BLACK,KING));
+	    original.setPiece(7, 7,new Piece(WHITE,KING));
+	    State expected = original.copy();
+	    expected.setTurn(WHITE);
+	    expected.setPiece(4, 6, null);
+	    expected.setPiece(3, 7, new Piece(BLACK, PAWN));
+	    expected.setNumberOfMovesWithoutCaptureNorPawnMoved(0);
+	    stateChanger.makeMove(original, move);
+	    assertEquals(expected, original);
+	  }
+	  @Test
+	  public void testPawnEnPassant() {
+		boolean[] CastleBool={true, true};
+		Piece[][] board = new Piece[ROWS][COLS];
+	    Move move = new Move(new Position(3, 2), new Position(2, 1), null);
+	    State original= new State(BLACK,board,CastleBool,CastleBool,new Position(3,1),7,null);
+	    original.setPiece(3, 2,new Piece(BLACK,PAWN));
+	    original.setPiece(3, 1,new Piece(WHITE,PAWN));
+	    original.setPiece(0, 0,new Piece(BLACK,KING));
+	    original.setPiece(7, 7,new Piece(WHITE,KING));
+	    State expected = original.copy();
+	    expected.setTurn(WHITE);
+	    expected.setPiece(3, 2, null);
+	    expected.setPiece(3, 1, null);
+	    expected.setEnpassantPosition(null);
+	    expected.setPiece(2, 1, new Piece(BLACK, PAWN));
+	    expected.setNumberOfMovesWithoutCaptureNorPawnMoved(0);
+	    stateChanger.makeMove(original, move);
+	    assertEquals(expected, original);
+	  }
+	  @Test
+	  public void testPawnCaptureThenPromote() {
+		boolean[] CastleBool={true, true};
+		Piece[][] board = new Piece[ROWS][COLS];
+	    Move move = new Move(new Position(1, 2), new Position(0, 1), QUEEN);
+	    State original= new State(BLACK,board,CastleBool,CastleBool,null,7,null);
+	    original.setPiece(1, 2,new Piece(BLACK,PAWN));
+	    original.setPiece(0, 1,new Piece(WHITE,ROOK));
+	    original.setPiece(0, 0,new Piece(BLACK,KING));
+	    original.setPiece(7, 7,new Piece(WHITE,KING));
+	    State expected = original.copy();
+	    expected.setTurn(WHITE);
+	    expected.setPiece(1, 2, null);
+	    expected.setPiece(0, 1, new Piece(BLACK, QUEEN));
+	    expected.setNumberOfMovesWithoutCaptureNorPawnMoved(0);
+	    stateChanger.makeMove(original, move);
+	    assertEquals(expected, original);
+	  }
+	  @Test
+	  public void testPawnCaptureRook() {
+			boolean[] CastleBool={true, false};
+			Piece[][] board = new Piece[ROWS][COLS];
+		    Move move = new Move(new Position(4, 4), new Position(3, 3), null);
+		    State original= new State(BLACK,board,CastleBool,CastleBool,null,3,null);
+		    original.setPiece(4, 4,new Piece(BLACK,PAWN));
+		    original.setPiece(3, 3,new Piece(WHITE,ROOK));
+		    original.setPiece(0, 0,new Piece(BLACK,KING));
+		    original.setPiece(7, 7,new Piece(WHITE,KING));
+		    State expected = original.copy();
+		    expected.setTurn(WHITE);
+		    expected.setPiece(4, 4, null);
+		    expected.setPiece(3, 3, new Piece(BLACK, PAWN));
+		    expected.setNumberOfMovesWithoutCaptureNorPawnMoved(0);
+		    stateChanger.makeMove(original, move);
+		    assertEquals(expected, original);
+		  }
+	  @Test
+	  public void testPawnCaptureKnight() {
+			boolean[] CastleBool={true, true};
+			Piece[][] board = new Piece[ROWS][COLS];
+		    Move move = new Move(new Position(3, 6), new Position(2, 7), null);
+		    State original= new State(BLACK,board,CastleBool,CastleBool,null,0,null);
+		    original.setPiece(3, 6,new Piece(BLACK,PAWN));
+		    original.setPiece(2, 7,new Piece(WHITE,KNIGHT));
+		    original.setPiece(0, 0,new Piece(BLACK,KING));
+		    original.setPiece(7, 7,new Piece(WHITE,KING));
+		    State expected = original.copy();
+		    expected.setTurn(WHITE);
+		    expected.setPiece(3, 6, null);
+		    expected.setPiece(2, 7, new Piece(BLACK, PAWN));
+		    expected.setNumberOfMovesWithoutCaptureNorPawnMoved(0);
+		    stateChanger.makeMove(original, move);
+		    assertEquals(expected, original);
+		  }
+	  @Test
+	  public void testPawnCaptureQueen() {
+			boolean[] CastleBool={true, true};
+			Piece[][] board = new Piece[ROWS][COLS];
+		    Move move = new Move(new Position(4, 4), new Position(3, 3), null);
+		    State original= new State(BLACK,board,CastleBool,CastleBool,null,3,null);
+		    original.setPiece(4, 4,new Piece(BLACK,PAWN));
+		    original.setPiece(3, 3,new Piece(WHITE,QUEEN));
+		    original.setPiece(0, 0,new Piece(BLACK,KING));
+		    original.setPiece(7, 7,new Piece(WHITE,KING));
+		    State expected = original.copy();
+		    expected.setTurn(WHITE);
+		    expected.setPiece(4, 4, null);
+		    expected.setPiece(3, 3, new Piece(BLACK, PAWN));
+		    expected.setNumberOfMovesWithoutCaptureNorPawnMoved(0);
+		    stateChanger.makeMove(original, move);
+		    assertEquals(expected, original);
+		  }
+	  @Test
+	  public void testQueenCapturePawn() {
+			boolean[] CastleBool={true, true};
+			Piece[][] board = new Piece[ROWS][COLS];
+		    Move move = new Move(new Position(4, 4), new Position(3, 3), null);
+		    State original= new State(BLACK,board,CastleBool,CastleBool,null,2,null);
+		    original.setPiece(4, 4,new Piece(BLACK,QUEEN));
+		    original.setPiece(3, 3,new Piece(WHITE,PAWN));
+		    original.setPiece(0, 0,new Piece(BLACK,KING));
+		    original.setPiece(7, 7,new Piece(WHITE,KING));
+		    State expected = original.copy();
+		    expected.setTurn(WHITE);
+		    expected.setPiece(4, 4, null);
+		    expected.setPiece(3, 3, new Piece(BLACK, QUEEN));
+		    expected.setNumberOfMovesWithoutCaptureNorPawnMoved(0);
+		    stateChanger.makeMove(original, move);
+		    assertEquals(expected, original);
+		  }
+	  @Test
+	  public void testQueenCaptureKnight() {
+			boolean[] CastleBool={true, true};
+			Piece[][] board = new Piece[ROWS][COLS];
+		    Move move = new Move(new Position(4, 6), new Position(2, 4), null);
+		    State original= new State(BLACK,board,CastleBool,CastleBool,null,2,null);
+		    original.setPiece(4, 6,new Piece(BLACK,QUEEN));
+		    original.setPiece(2, 4,new Piece(WHITE,KNIGHT));
+		    original.setPiece(0, 0,new Piece(BLACK,KING));
+		    original.setPiece(7, 7,new Piece(WHITE,KING));
+		    State expected = original.copy();
+		    expected.setTurn(WHITE);
+		    expected.setPiece(4, 6, null);
+		    expected.setPiece(2, 4, new Piece(BLACK, QUEEN));
+		    expected.setNumberOfMovesWithoutCaptureNorPawnMoved(0);
+		    stateChanger.makeMove(original, move);
+		    assertEquals(expected, original);
+		  }
+	  @Test
+	  public void testQueenCaptureRook() {
+			boolean[] CastleBool={true, true};
+			Piece[][] board = new Piece[ROWS][COLS];
+		    Move move = new Move(new Position(5, 2), new Position(5, 4), null);
+		    State original= new State(BLACK,board,CastleBool,CastleBool,null,3,null);
+		    original.setPiece(5, 2,new Piece(BLACK,QUEEN));
+		    original.setPiece(5, 4,new Piece(WHITE,ROOK));
+		    original.setPiece(0, 0,new Piece(BLACK,KING));
+		    original.setPiece(7, 7,new Piece(WHITE,KING));
+		    State expected = original.copy();
+		    expected.setTurn(WHITE);
+		    expected.setPiece(5, 2, null);
+		    expected.setPiece(5, 4, new Piece(BLACK, QUEEN));
+		    expected.setNumberOfMovesWithoutCaptureNorPawnMoved(0);
+		    stateChanger.makeMove(original, move);
+		    assertEquals(expected, original);
+		  }
+	  @Test
+	  public void testQueenCaptureBishop() {
+			boolean[] CastleBool={true, true};
+			Piece[][] board = new Piece[ROWS][COLS];
+		    Move move = new Move(new Position(3, 4), new Position(7, 4), null);
+		    State original= new State(BLACK,board,CastleBool,CastleBool,null,5,null);
+		    original.setPiece(3, 4,new Piece(BLACK,QUEEN));
+		    original.setPiece(7, 4,new Piece(WHITE,BISHOP));
+		    original.setPiece(0, 0,new Piece(BLACK,KING));
+		    original.setPiece(7, 7,new Piece(WHITE,KING));
+		    State expected = original.copy();
+		    expected.setTurn(WHITE);
+		    expected.setPiece(3, 4, null);
+		    expected.setPiece(7, 4, new Piece(BLACK, QUEEN));
+		    expected.setNumberOfMovesWithoutCaptureNorPawnMoved(0);
+		    stateChanger.makeMove(original, move);
+		    assertEquals(expected, original);
+		  }
+	  @Test
+	  public void testQueenCaptureQueen() {
+			boolean[] CastleBool={true, true};
+			Piece[][] board = new Piece[ROWS][COLS];
+		    Move move = new Move(new Position(3, 4), new Position(6, 7), null);
+		    State original= new State(BLACK,board,CastleBool,CastleBool,null,2,null);
+		    original.setPiece(3, 4,new Piece(BLACK,QUEEN));
+		    original.setPiece(6, 7,new Piece(WHITE,QUEEN));
+		    original.setPiece(0, 0,new Piece(BLACK,KING));
+		    original.setPiece(7, 7,new Piece(WHITE,KING));
+		    State expected = original.copy();
+		    expected.setTurn(WHITE);
+		    expected.setPiece(3, 4, null);
+		    expected.setPiece(6, 7, new Piece(BLACK, QUEEN));
+		    expected.setNumberOfMovesWithoutCaptureNorPawnMoved(0);
+		    stateChanger.makeMove(original, move);
+		    assertEquals(expected, original);
+		  }
+	  @Test
+	  public void testRookCaptureQueen() {
+			boolean[] CastleBool={true, false};
+			Piece[][] board = new Piece[ROWS][COLS];
+		    Move move = new Move(new Position(3, 4), new Position(6, 4), null);
+		    State original= new State(BLACK,board,CastleBool,CastleBool,null,2,null);
+		    original.setPiece(3, 4,new Piece(BLACK,ROOK));
+		    original.setPiece(6, 4,new Piece(WHITE,QUEEN));
+		    original.setPiece(0, 0,new Piece(BLACK,KING));
+		    original.setPiece(7, 7,new Piece(WHITE,KING));
+		    State expected = original.copy();
+		    expected.setTurn(WHITE);
+		    expected.setPiece(3, 4, null);
+		    expected.setPiece(6, 4, new Piece(BLACK, ROOK));
+		    expected.setNumberOfMovesWithoutCaptureNorPawnMoved(0);
+		    stateChanger.makeMove(original, move);
+		    assertEquals(expected, original);
+		  }
+	  @Test
+	  public void testRookCaptureKnight() {
+			boolean[] CastleBool={true, false};
+			Piece[][] board = new Piece[ROWS][COLS];
+		    Move move = new Move(new Position(1, 3), new Position(6, 3), null);
+		    State original= new State(BLACK,board,CastleBool,CastleBool,null,2,null);
+		    original.setPiece(1, 3,new Piece(BLACK,ROOK));
+		    original.setPiece(6, 3,new Piece(WHITE,KNIGHT));
+		    original.setPiece(0, 0,new Piece(BLACK,KING));
+		    original.setPiece(7, 7,new Piece(WHITE,KING));
+		    State expected = original.copy();
+		    expected.setTurn(WHITE);
+		    expected.setPiece(1, 3, null);
+		    expected.setPiece(6, 3, new Piece(BLACK, ROOK));
+		    expected.setNumberOfMovesWithoutCaptureNorPawnMoved(0);
+		    stateChanger.makeMove(original, move);
+		    assertEquals(expected, original);
+		  }
+	  @Test
+	  public void testRookCapturePawn() {
+			boolean[] CastleBool={true, false};
+			Piece[][] board = new Piece[ROWS][COLS];
+		    Move move = new Move(new Position(3, 4), new Position(3, 7), null);
+		    State original= new State(BLACK,board,CastleBool,CastleBool,null,3,null);
+		    original.setPiece(3, 4,new Piece(BLACK,ROOK));
+		    original.setPiece(3, 7,new Piece(WHITE,PAWN));
+		    original.setPiece(0, 0,new Piece(BLACK,KING));
+		    original.setPiece(7, 7,new Piece(WHITE,KING));
+		    State expected = original.copy();
+		    expected.setTurn(WHITE);
+		    expected.setPiece(3, 4, null);
+		    expected.setPiece(3, 7, new Piece(BLACK, ROOK));
+		    expected.setNumberOfMovesWithoutCaptureNorPawnMoved(0);
+		    stateChanger.makeMove(original, move);
+		    assertEquals(expected, original);
+		  }
+	  @Test
+	  public void testRookCaptureBishop() {
+			boolean[] CastleBool={false, false};
+			Piece[][] board = new Piece[ROWS][COLS];
+		    Move move = new Move(new Position(2, 6), new Position(4, 6), null);
+		    State original= new State(BLACK,board,CastleBool,CastleBool,null,8,null);
+		    original.setPiece(2, 6,new Piece(BLACK,ROOK));
+		    original.setPiece(4, 6,new Piece(WHITE,BISHOP));
+		    original.setPiece(0, 0,new Piece(BLACK,KING));
+		    original.setPiece(7, 7,new Piece(WHITE,KING));
+		    State expected = original.copy();
+		    expected.setTurn(WHITE);
+		    expected.setPiece(2, 6, null);
+		    expected.setPiece(4, 6, new Piece(BLACK, ROOK));
+		    expected.setNumberOfMovesWithoutCaptureNorPawnMoved(0);
+		    stateChanger.makeMove(original, move);
+		    assertEquals(expected, original);
+		  }
+	  @Test
+	  public void testRookCaptureRook() {
+			boolean[] CastleBool={false, false};
+			Piece[][] board = new Piece[ROWS][COLS];
+		    Move move = new Move(new Position(3, 4), new Position(4, 4), null);
+		    State original= new State(BLACK,board,CastleBool,CastleBool,null,0,null);
+		    original.setPiece(3, 4,new Piece(BLACK,ROOK));
+		    original.setPiece(4, 4,new Piece(WHITE,ROOK));
+		    original.setPiece(0, 0,new Piece(BLACK,KING));
+		    original.setPiece(7, 7,new Piece(WHITE,KING));
+		    State expected = original.copy();
+		    expected.setTurn(WHITE);
+		    expected.setPiece(3, 4, null);
+		    expected.setPiece(4, 4, new Piece(BLACK, ROOK));
+		    expected.setNumberOfMovesWithoutCaptureNorPawnMoved(0);
+		    stateChanger.makeMove(original, move);
+		    assertEquals(expected, original);
+		  }
+	  @Test
+	  public void testBishopCaptureRook() {
+			boolean[] CastleBool={false, false};
+			Piece[][] board = new Piece[ROWS][COLS];
+		    Move move = new Move(new Position(2, 4), new Position(3, 5), null);
+		    State original= new State(BLACK,board,CastleBool,CastleBool,null,0,null);
+		    original.setPiece(2, 4,new Piece(BLACK,BISHOP));
+		    original.setPiece(3, 5,new Piece(WHITE,ROOK));
+		    original.setPiece(0, 0,new Piece(BLACK,KING));
+		    original.setPiece(7, 7,new Piece(WHITE,KING));
+		    State expected = original.copy();
+		    expected.setTurn(WHITE);
+		    expected.setPiece(2, 4, null);
+		    expected.setPiece(3, 5, new Piece(BLACK, BISHOP));
+		    expected.setNumberOfMovesWithoutCaptureNorPawnMoved(0);
+		    stateChanger.makeMove(original, move);
+		    assertEquals(expected, original);
+		  }
+	  @Test
+	  public void testBishopCapturePawn() {
+			boolean[] CastleBool={false, false};
+			Piece[][] board = new Piece[ROWS][COLS];
+		    Move move = new Move(new Position(2, 2), new Position(5, 5), null);
+		    State original= new State(BLACK,board,CastleBool,CastleBool,null,0,null);
+		    original.setPiece(2, 2,new Piece(BLACK,BISHOP));
+		    original.setPiece(5, 5,new Piece(WHITE,PAWN));
+		    original.setPiece(0, 0,new Piece(BLACK,KING));
+		    original.setPiece(7, 7,new Piece(WHITE,KING));
+		    State expected = original.copy();
+		    expected.setTurn(WHITE);
+		    expected.setPiece(2, 2, null);
+		    expected.setPiece(5, 5, new Piece(BLACK, BISHOP));
+		    expected.setNumberOfMovesWithoutCaptureNorPawnMoved(0);
+		    stateChanger.makeMove(original, move);
+		    assertEquals(expected, original);
+		  }
+	  @Test
+	  public void testBishopCaptureQueen() {
+			boolean[] CastleBool={false, false};
+			Piece[][] board = new Piece[ROWS][COLS];
+		    Move move = new Move(new Position(1, 1), new Position(4, 4), null);
+		    State original= new State(BLACK,board,CastleBool,CastleBool,null,0,null);
+		    original.setPiece(1, 1,new Piece(BLACK,BISHOP));
+		    original.setPiece(4, 4,new Piece(WHITE,QUEEN));
+		    original.setPiece(0, 0,new Piece(BLACK,KING));
+		    original.setPiece(7, 7,new Piece(WHITE,KING));
+		    State expected = original.copy();
+		    expected.setTurn(WHITE);
+		    expected.setPiece(1, 1, null);
+		    expected.setPiece(4, 4, new Piece(BLACK, BISHOP));
+		    expected.setNumberOfMovesWithoutCaptureNorPawnMoved(0);
+		    stateChanger.makeMove(original, move);
+		    assertEquals(expected, original);
+		  }
+	  @Test
+	  public void testBishopCaptureBishop() {
+			boolean[] CastleBool={false, false};
+			Piece[][] board = new Piece[ROWS][COLS];
+		    Move move = new Move(new Position(5, 6), new Position(2, 3), null);
+		    State original= new State(BLACK,board,CastleBool,CastleBool,null,0,null);
+		    original.setPiece(5, 6,new Piece(BLACK,BISHOP));
+		    original.setPiece(2, 3,new Piece(WHITE,BISHOP));
+		    original.setPiece(0, 0,new Piece(BLACK,KING));
+		    original.setPiece(7, 7,new Piece(WHITE,KING));
+		    State expected = original.copy();
+		    expected.setTurn(WHITE);
+		    expected.setPiece(5, 6, null);
+		    expected.setPiece(2, 3, new Piece(BLACK, BISHOP));
+		    expected.setNumberOfMovesWithoutCaptureNorPawnMoved(0);
+		    stateChanger.makeMove(original, move);
+		    assertEquals(expected, original);
+		  }
+	  @Test
+	  public void testBishopCaptureKnight() {
+			boolean[] CastleBool={false, false};
+			Piece[][] board = new Piece[ROWS][COLS];
+		    Move move = new Move(new Position(3, 6), new Position(1, 4), null);
+		    State original= new State(BLACK,board,CastleBool,CastleBool,null,0,null);
+		    original.setPiece(3, 6,new Piece(BLACK,BISHOP));
+		    original.setPiece(1, 4,new Piece(WHITE,KNIGHT));
+		    original.setPiece(0, 0,new Piece(BLACK,KING));
+		    original.setPiece(7, 7,new Piece(WHITE,KING));
+		    State expected = original.copy();
+		    expected.setTurn(WHITE);
+		    expected.setPiece(3, 6, null);
+		    expected.setPiece(1, 4, new Piece(BLACK, BISHOP));
+		    expected.setNumberOfMovesWithoutCaptureNorPawnMoved(0);
+		    stateChanger.makeMove(original, move);
+		    assertEquals(expected, original);
+		  }
+	  @Test
+	  public void testKnightCapturePawn() {
+			boolean[] CastleBool={false, false};
+			Piece[][] board = new Piece[ROWS][COLS];
+		    Move move = new Move(new Position(3, 4), new Position(4, 6), null);
+		    State original= new State(BLACK,board,CastleBool,CastleBool,null,0,null);
+		    original.setPiece(3, 4,new Piece(BLACK,KNIGHT));
+		    original.setPiece(4, 6,new Piece(WHITE,PAWN));
+		    original.setPiece(0, 0,new Piece(BLACK,KING));
+		    original.setPiece(7, 7,new Piece(WHITE,KING));
+		    State expected = original.copy();
+		    expected.setTurn(WHITE);
+		    expected.setPiece(3, 4, null);
+		    expected.setPiece(4, 6, new Piece(BLACK, KNIGHT));
+		    expected.setNumberOfMovesWithoutCaptureNorPawnMoved(0);
+		    stateChanger.makeMove(original, move);
+		    assertEquals(expected, original);
+		  }
+	  @Test
+	  public void testKnightCaptureQUEEN() {
+			boolean[] CastleBool={false, false};
+			Piece[][] board = new Piece[ROWS][COLS];
+		    Move move = new Move(new Position(3, 4), new Position(5, 5), null);
+		    State original= new State(BLACK,board,CastleBool,CastleBool,null,0,null);
+		    original.setPiece(3, 4,new Piece(BLACK,KNIGHT));
+		    original.setPiece(5, 5,new Piece(WHITE,QUEEN));
+		    original.setPiece(0, 0,new Piece(BLACK,KING));
+		    original.setPiece(7, 7,new Piece(WHITE,KING));
+		    State expected = original.copy();
+		    expected.setTurn(WHITE);
+		    expected.setPiece(3, 4, null);
+		    expected.setPiece(5, 5, new Piece(BLACK, KNIGHT));
+		    expected.setNumberOfMovesWithoutCaptureNorPawnMoved(0);
+		    stateChanger.makeMove(original, move);
+		    assertEquals(expected, original);
+		  }
+	  @Test
+	  public void testKnightCaptureBishop() {
+			boolean[] CastleBool={false, false};
+			Piece[][] board = new Piece[ROWS][COLS];
+		    Move move = new Move(new Position(3, 4), new Position(2, 6), null);
+		    State original= new State(BLACK,board,CastleBool,CastleBool,null,0,null);
+		    original.setPiece(3, 4,new Piece(BLACK,KNIGHT));
+		    original.setPiece(2, 6,new Piece(WHITE,BISHOP));
+		    original.setPiece(0, 0,new Piece(BLACK,KING));
+		    original.setPiece(7, 7,new Piece(WHITE,KING));
+		    State expected = original.copy();
+		    expected.setTurn(WHITE);
+		    expected.setPiece(3, 4, null);
+		    expected.setPiece(2, 6, new Piece(BLACK, KNIGHT));
+		    expected.setNumberOfMovesWithoutCaptureNorPawnMoved(0);
+		    stateChanger.makeMove(original, move);
+		    assertEquals(expected, original);
+		  }
+	  @Test
+	  public void testKnightCaptureRook() {
+			boolean[] CastleBool={false, false};
+			Piece[][] board = new Piece[ROWS][COLS];
+		    Move move = new Move(new Position(3, 4), new Position(1, 5), null);
+		    State original= new State(BLACK,board,CastleBool,CastleBool,null,0,null);
+		    original.setPiece(3, 4,new Piece(BLACK,KNIGHT));
+		    original.setPiece(1, 5,new Piece(WHITE,ROOK));
+		    original.setPiece(0, 0,new Piece(BLACK,KING));
+		    original.setPiece(7, 7,new Piece(WHITE,KING));
+		    State expected = original.copy();
+		    expected.setTurn(WHITE);
+		    expected.setPiece(3, 4, null);
+		    expected.setPiece(1, 5, new Piece(BLACK, KNIGHT));
+		    expected.setNumberOfMovesWithoutCaptureNorPawnMoved(0);
+		    stateChanger.makeMove(original, move);
+		    assertEquals(expected, original);
+		  }
+	  @Test
+	  public void testKnightCaptureKnight() {
+			boolean[] CastleBool={false, false};
+			Piece[][] board = new Piece[ROWS][COLS];
+		    Move move = new Move(new Position(3, 4), new Position(4, 2), null);
+		    State original= new State(BLACK,board,CastleBool,CastleBool,null,0,null);
+		    original.setPiece(3, 4,new Piece(BLACK,KNIGHT));
+		    original.setPiece(4, 2,new Piece(WHITE,KNIGHT));
+		    original.setPiece(7, 7,new Piece(WHITE,KING));
+		    original.setPiece(0, 0,new Piece(BLACK,KING));
+		    State expected = original.copy();
+		    expected.setTurn(WHITE);
+		    expected.setPiece(3, 4, null);
+		    expected.setPiece(4, 2, new Piece(BLACK, KNIGHT));
+		    expected.setNumberOfMovesWithoutCaptureNorPawnMoved(0);
+		    stateChanger.makeMove(original, move);
+		    assertEquals(expected, original);
+		  }
+	  @Test
+	  public void testKingCaptureKnight() {
+			boolean[] CastleBool={false, false};
+			Piece[][] board = new Piece[ROWS][COLS];
+		    Move move = new Move(new Position(3, 4), new Position(3, 3), null);
+		    State original= new State(BLACK,board,CastleBool,CastleBool,null,0,null);
+		    original.setPiece(3, 4,new Piece(BLACK,KING));
+		    original.setPiece(3, 3,new Piece(WHITE,KNIGHT));
+		    original.setPiece(7, 7,new Piece(WHITE,KING));
+		    State expected = original.copy();
+		    expected.setTurn(WHITE);
+		    expected.setPiece(3, 4, null);
+		    expected.setPiece(3, 3, new Piece(BLACK, KING));
+		    expected.setNumberOfMovesWithoutCaptureNorPawnMoved(0);
+		    stateChanger.makeMove(original, move);
+		    assertEquals(expected, original);
+		  }
+	  @Test
+	  public void testKingCaptureQueen() {
+			boolean[] CastleBool={false, false};
+			Piece[][] board = new Piece[ROWS][COLS];
+		    Move move = new Move(new Position(3, 4), new Position(4, 5), null);
+		    State original= new State(BLACK,board,CastleBool,CastleBool,null,0,null);
+		    original.setPiece(3, 4,new Piece(BLACK,KING));
+		    original.setPiece(4, 5,new Piece(WHITE,QUEEN));
+		    original.setPiece(7, 7,new Piece(WHITE,KING));
+		    State expected = original.copy();
+		    expected.setTurn(WHITE);
+		    expected.setPiece(3, 4, null);
+		    expected.setPiece(4, 5, new Piece(BLACK, KING));
+		    expected.setNumberOfMovesWithoutCaptureNorPawnMoved(0);
+		    stateChanger.makeMove(original, move);
+		    assertEquals(expected, original);
+		  }
+	  @Test
+	  public void testKingCapturePawn() {
+			boolean[] CastleBool={false, false};
+			Piece[][] board = new Piece[ROWS][COLS];
+		    Move move = new Move(new Position(3, 4), new Position(2, 4), null);
+		    State original= new State(BLACK,board,CastleBool,CastleBool,null,0,null);
+		    original.setPiece(3, 4,new Piece(BLACK,KING));
+		    original.setPiece(2, 4,new Piece(WHITE,PAWN));
+		    original.setPiece(7, 7,new Piece(WHITE,KING));
+		    State expected = original.copy();
+		    expected.setTurn(WHITE);
+		    expected.setPiece(3, 4, null);
+		    expected.setPiece(2, 4, new Piece(BLACK, KING));
+		    expected.setNumberOfMovesWithoutCaptureNorPawnMoved(0);
+		    stateChanger.makeMove(original, move);
+		    assertEquals(expected, original);
+		  }
+	  @Test
+	  public void testKingCaptureBishop() {
+			boolean[] CastleBool={false, false};
+			Piece[][] board = new Piece[ROWS][COLS];
+		    Move move = new Move(new Position(3, 4), new Position(3, 5), null);
+		    State original= new State(BLACK,board,CastleBool,CastleBool,null,0,null);
+		    original.setPiece(3, 4,new Piece(BLACK,KING));
+		    original.setPiece(3, 5,new Piece(WHITE,BISHOP));
+		    original.setPiece(7, 7,new Piece(WHITE,KING));
+		    State expected = original.copy();
+		    expected.setTurn(WHITE);
+		    expected.setPiece(3, 4, null);
+		    expected.setPiece(3, 5, new Piece(BLACK, KING));
+		    expected.setNumberOfMovesWithoutCaptureNorPawnMoved(0);
+		    stateChanger.makeMove(original, move);
+		    assertEquals(expected, original);
+		  }
+	  @Test
+	  public void testKingCaptureRook() {
+			boolean[] CastleBool={false, false};
+			Piece[][] board = new Piece[ROWS][COLS];
+		    Move move = new Move(new Position(3, 4), new Position(2, 3), null);
+		    State original= new State(BLACK,board,CastleBool,CastleBool,null,0,null);
+		    original.setPiece(3, 4,new Piece(BLACK,KING));
+		    original.setPiece(2, 3,new Piece(WHITE,ROOK));
+		    original.setPiece(7, 7,new Piece(WHITE,KING));
+		    State expected = original.copy();
+		    expected.setTurn(WHITE);
+		    expected.setPiece(3, 4, null);
+		    expected.setPiece(2, 3, new Piece(BLACK, KING));
+		    expected.setNumberOfMovesWithoutCaptureNorPawnMoved(0);
+		    stateChanger.makeMove(original, move);
+		    assertEquals(expected, original);
+		  }
+	  
+	  
+}

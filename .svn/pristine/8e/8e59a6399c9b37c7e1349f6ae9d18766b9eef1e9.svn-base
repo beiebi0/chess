@@ -1,0 +1,10 @@
+welcomeYou = 欢迎您 ''{0}'' 这是国际化测试，如果想测试英文版，请在地址栏后加?locale=en.
+welcome = 欢迎
+status = 状态
+showPiece = 显示可动棋子
+findUser = 找到此用户
+loadMatch = 加载比赛
+deleteMatch = 删除比赛
+showRank = 查看rank值
+autoMatch = 自动匹配
+ai = 和电脑对战

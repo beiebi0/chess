@@ -1,0 +1,195 @@
+package org.shihweihuang.hw2_5;
+
+import java.util.Set;
+
+import org.shared.chess.Color;
+import org.shared.chess.Move;
+import org.shared.chess.Piece;
+import org.shared.chess.PieceKind;
+import org.shared.chess.Position;
+import org.shared.chess.State;
+import org.shared.chess.StateExplorer;
+
+import org.shihweihuang.hw2.StateChangerImpl;
+
+import com.google.common.collect.Sets;
+
+public class StateExplorerImpl implements StateExplorer {
+	StateChangerImpl stateChanger = new StateChangerImpl();
+
+	@Override
+	public Set<Move> getPossibleMoves(State state) {
+		Set<Move> moves = Sets.newHashSet();
+		getMoves(state, moves);
+		return moves;
+	}
+
+	@Override
+	public Set<Move> getPossibleMovesFromPosition(State state, Position start) {
+		// Get moves from all possible moves that start from position "start"
+		Set<Move> moves = getPossibleMoves(state);
+		Set<Move> movesFromPosition = Sets.newHashSet();
+		for (Move m : moves) {
+			if (m.getFrom().equals(start))
+				movesFromPosition.add(m);
+		}
+		return movesFromPosition;
+	}
+
+	@Override
+	public Set<Position> getPossibleStartPositions(State state) {
+		// Get distinct start positions from all possible moves
+		Set<Move> moves = getPossibleMoves(state);
+		Set<Position> startPositions = Sets.newHashSet();
+		for (Move m : moves) {
+			Position start = m.getFrom();
+			if (!startPositions.contains(start))
+				startPositions.add(start);
+		}
+		return startPositions;
+	}
+
+	private void getMoves(State state, Set<Move> moves) {
+		// Test every possible moves from every piece, add them into set if they are legal
+		Move move = null;
+		State tryState = state.copy();
+		for (int row = 0; row < State.ROWS; row++)
+			for (int col = 0; col < State.COLS; col++) {
+				if (state.getPiece(row, col) != null
+						&& state.getPiece(row, col).getColor().equals(state.getTurn())) {
+					Piece piece = state.getPiece(row, col);
+					Color color = piece.getColor();
+					if (piece.getKind() == PieceKind.PAWN) {
+						if (color == Color.WHITE) {
+							for (int k = -1; k <= 1; k++) {
+								if (row + 1 == 7) {
+									move = new Move(new Position(row, col), new Position(row + 1,
+											col + k), PieceKind.QUEEN);
+									if (stateChanger.canMoveWithoutCheck(tryState, move)) {
+										moves.add(move);
+										moves.add(new Move(new Position(row, col), new Position(
+												row + 1, col + k), PieceKind.BISHOP));
+										moves.add(new Move(new Position(row, col), new Position(
+												row + 1, col + k), PieceKind.KNIGHT));
+										moves.add(new Move(new Position(row, col), new Position(
+												row + 1, col + k), PieceKind.ROOK));
+									}
+								}
+								else {
+									move = new Move(new Position(row, col), new Position(row + 1,
+											col + k), null);
+									if (stateChanger.canMoveWithoutCheck(tryState, move))
+										moves.add(move);
+								}
+							}
+							move = new Move(new Position(row, col),
+									new Position(row + 2, col), null);
+							if (stateChanger.canMoveWithoutCheck(tryState, move))
+								moves.add(move);
+						} else {
+							for (int k = -1; k <= 1; k++) {
+								if (row - 1 == 0) {
+									move = new Move(new Position(row, col), new Position(row - 1,
+											col + k), PieceKind.QUEEN);
+									if (stateChanger.canMoveWithoutCheck(tryState, move)) {
+										moves.add(move);
+										moves.add(new Move(new Position(row, col), new Position(
+												row - 1, col + k), PieceKind.BISHOP));
+										moves.add(new Move(new Position(row, col), new Position(
+												row - 1, col + k), PieceKind.KNIGHT));
+										moves.add(new Move(new Position(row, col), new Position(
+												row - 1, col + k), PieceKind.ROOK));
+									}
+								} else {
+									move = new Move(new Position(row, col), new Position(row - 1,
+											col + k), null);
+									if (stateChanger.canMoveWithoutCheck(tryState, move))
+										moves.add(move);
+								}
+							}
+							move = new Move(new Position(row, col),
+									new Position(row - 2, col), null);
+							if (stateChanger.canMoveWithoutCheck(tryState, move))
+								moves.add(move);
+						}
+					} else if (piece.getKind() == PieceKind.KING) {
+						for (int x = -1; x <= 1; x++)
+							for (int y = -1; y <= 1; y++) {
+								move = new Move(new Position(row, col), new Position(row + x,
+										col + y), null);
+								if (stateChanger.canMoveWithoutCheck(tryState, move))
+									moves.add(move);
+							}
+						move = new Move(new Position(row, col), new Position(row, col + 2),
+								null);
+						if (stateChanger.canMoveWithoutCheck(tryState, move))
+							moves.add(move);
+						move = new Move(new Position(row, col), new Position(row, col - 2),
+								null);
+						if (stateChanger.canMoveWithoutCheck(tryState, move))
+							moves.add(move);
+					} else if (piece.getKind() == PieceKind.BISHOP) {
+						for (int i = -1; i <= 1; i = i + 2)
+							for (int j = -1; j <= 1; j = j + 2) {
+								int r = row + i;
+								int c = col + j;
+								while (r >= 0 && r < State.ROWS && c >= 0 && c < State.COLS) {
+									move = new Move(new Position(row, col), new Position(r, c),
+											null);
+									if (stateChanger.canMoveWithoutCheck(tryState, move))
+										moves.add(move);
+									r = r + i;
+									c = c + j;
+								}
+							}
+					} else if (piece.getKind() == PieceKind.KNIGHT) {
+						for (int i = -2; i <= 2; i++)
+							for (int j = -2; j <= 2; j++) {
+								if (i == j || i == -j || i == 0 || j == 0)
+									continue;
+								if (row + i >= 0 && row + i < State.ROWS && col + j >= 0
+										&& col + j < State.COLS) {
+									move = new Move(new Position(row, col), new Position(row + i,
+											col + j), null);
+									if (stateChanger.canMoveWithoutCheck(tryState, move))
+										moves.add(move);
+								}
+							}
+					} else if (piece.getKind() == PieceKind.QUEEN) {
+						for (int i = -1; i <= 1; i++)
+							for (int j = -1; j <= 1; j++) {
+								if (i == 0 && j == 0)
+									continue;
+								int r = row + i;
+								int c = col + j;
+								while (r >= 0 && r < State.ROWS && c >= 0 && c < State.COLS) {
+									move = new Move(new Position(row, col), new Position(r, c),
+											null);
+									if (stateChanger.canMoveWithoutCheck(tryState, move))
+										moves.add(move);
+									r = r + i;
+									c = c + j;
+								}
+							}
+					} else if (piece.getKind() == PieceKind.ROOK) {
+						for (int i = -1; i <= 1; i++)
+							for (int j = -1; j <= 1; j++) {
+								if (i == j || i == -j)
+									continue;
+								int r = row + i;
+								int c = col + j;
+								while (r >= 0 && r < State.ROWS && c >= 0 && c < State.COLS) {
+									move = new Move(new Position(row, col), new Position(r, c),
+											null);
+									if (stateChanger.canMoveWithoutCheck(tryState, move))
+										moves.add(move);
+									r = r + i;
+									c = c + j;
+								}
+							}
+					}
+				}
+			}
+	}
+
+}

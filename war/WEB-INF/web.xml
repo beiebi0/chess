@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?><web-app xmlns="http://java.sun.com/xml/ns/javaee" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" version="2.5" xsi:schemaLocation="http://java.sun.com/xml/ns/javaee                http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd">
+  
+  <servlet>
+    <servlet-name>longjuntanServlet</servlet-name>
+    <servlet-class>org.longjuntan.hw6.server.GameServiceImpl</servlet-class>
+  </servlet>
+  <servlet-mapping>
+    <servlet-name>longjuntanServlet</servlet-name>
+    <url-pattern>/longjuntan/move</url-pattern>
+  </servlet-mapping>
+  
+  <!--  <servlet>
+    <servlet-name>loginService</servlet-name>
+    <servlet-class>org.longjuntan.hw6.server.LoginServiceImpl</servlet-class>
+  </servlet>
+
+  <servlet-mapping>
+    <servlet-name>loginService</servlet-name>
+    <url-pattern>/longjuntan/login</url-pattern>
+  </servlet-mapping>-->
+  
+ <!--  <servlet>
+    <servlet-name>ManifestServlet</servlet-name>
+    <servlet-class>com.googlecode.mgwt.linker.server.MGWTHtml5ManifestServlet</servlet-class>
+  </servlet>
+
+  <servlet-mapping>
+    <servlet-name>ManifestServlet</servlet-name>
+    <url-pattern>/longjuntan.manifest</url-pattern> 
+    </servlet-mapping>  
+    
+  <mime-mapping>
+    <extension>manifest</extension>
+    <mime-type>text/cache-manifest</mime-type>
+  </mime-mapping>-->
+  
+  <servlet>
+    <servlet-name>SystemServiceServlet</servlet-name>
+    <servlet-class>com.google.api.server.spi.SystemServiceServlet</servlet-class>
+    <init-param>
+      <param-name>services</param-name>
+      <param-value/>
+    </init-param>
+  </servlet>
+
+  <servlet-mapping>
+    <servlet-name>SystemServiceServlet</servlet-name>
+    <url-pattern>/_ah/spi/*</url-pattern>
+  </servlet-mapping>
+  
+   <!-- <security-constraint>
+    <web-resource-collection>
+      <url-pattern>/*</url-pattern>
+    </web-resource-collection>
+    <auth-constraint>
+      <role-name>*</role-name>
+    </auth-constraint>
+  </security-constraint> --> 
+     
+  <servlet>
+    <servlet-name>PresenceServlet</servlet-name>
+    <servlet-class>org.longjuntan.hw7.PresenceServlet</servlet-class>
+  </servlet>
+  <servlet-mapping>
+    <servlet-name>PresenceServlet</servlet-name>
+    <url-pattern> /_ah/channel/disconnected/</url-pattern>
+    <url-pattern> /_ah/channel/connected/</url-pattern>   
+  </servlet-mapping> 
+  
+
+</web-app>

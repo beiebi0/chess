@@ -1,0 +1,61 @@
+package org.leozis.hw10;
+
+import org.leozis.hw3.Presenter;
+
+import com.allen_sauer.gwt.dnd.client.DragEndEvent;
+import com.allen_sauer.gwt.dnd.client.DragHandler;
+import com.allen_sauer.gwt.dnd.client.DragStartEvent;
+import com.allen_sauer.gwt.dnd.client.VetoDragException;
+
+public final class MyDragController implements DragHandler {
+	private Presenter presenter;
+	int fromRow;
+	int fromCol;
+	
+	
+	public MyDragController(Presenter presenter) {
+		this.presenter = presenter;
+	}
+
+	@Override
+	public void onPreviewDragEnd(DragEndEvent event) throws VetoDragException {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void onPreviewDragStart(DragStartEvent event)
+			throws VetoDragException {
+		// TODO Auto-generated method stub
+
+	}
+	
+	@Override
+	public void onDragEnd(DragEndEvent event) {
+		int clickEventX = event.getContext().draggable.getAbsoluteLeft();
+		int clickEventY = event.getContext().draggable.getAbsoluteTop();
+		int col = clickEventX / 50;
+		int row = clickEventY / 50;
+
+//		System.out.println(row);
+//		System.out.println(col);
+		
+		presenter.makeDragMove(row,col,fromRow,fromCol);
+
+
+	}
+
+	@Override
+	public void onDragStart(DragStartEvent event) {
+		int clickEventX = event.getContext().draggable.getAbsoluteLeft();
+		int clickEventY = event.getContext().draggable.getAbsoluteTop();
+		int col = clickEventX / 50;
+		int row = clickEventY / 50;
+		
+		this.fromRow = row;
+		this.fromCol = col;
+		
+
+	}
+
+}

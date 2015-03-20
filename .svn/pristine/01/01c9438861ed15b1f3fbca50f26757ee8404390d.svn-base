@@ -1,0 +1,88 @@
+	hello=隆hola
+
+	needSingIn=Por favor Iniciar sesi贸n, con el fin de jugar el juego del ajedrez.!
+	
+	signIn=registrarse
+	
+	signOut=salir
+	
+	autoGameButton=Random Partido Amigos
+	cancelAutoButton=Cancelar Emparejar al Azar
+	save=grabar la partida
+	load=juego de carga
+	clearAll=Borrar todo
+	
+	enterID=Introduzca Oponente jugadores Correo Electr髇ico
+	
+	pleaseWaitForAutoMatch=Random Partido Amigos
+	
+	invalidEmail=direcci贸n de correo electr贸nico no v谩lida!
+	
+	playMatch=jugar
+	
+	playWithAI=Jugar contra la computadora
+	
+	matchList=Seleccionar partido
+	
+	delete=borrar
+	
+	disableAnimation=Desactivar la animaci贸n
+	
+	disableSound=Desactivar el sonido
+	
+	black=ennegrecer
+	
+	white=p谩lido
+	
+	turn=El cambio actual en el juego es de
+	
+	you=Usted juega como
+	
+	opponent=Rival est谩 jugando como
+	
+	saved=partidas guardadas
+	
+	restart=Comienza un nuevo juego
+	
+#	choosePromotion=Elegir un piecekind abajo para la promoci贸n.
+	
+	waitingForOpponent=esperando oponente
+	
+	failToJoin=No se ha podido entrar en el juego.
+	
+	failToDelete=No se pudo eliminar el juego.
+	
+	failToUpdate=Error al actualizar la lista oponente.
+	
+	failToLoad=No se pudo cargar el juego.
+	
+	errorToken=Error al recuperar la se馻l Por favor, vuelve a intentarlo m醩 tarde.
+	hasBeenDeleted=Este juego ha sido eliminado por el oponente
+	
+	checkmate=dar mate a
+	
+	fiftymoverule=cincuenta regla de mover
+	
+	threefoldrepet=triple regla de repetici髇
+	
+	stalemate=tablas
+	
+	loggInAs= Bienvenido de nuevo {0}
+
+	createMatchWith=Creado con 茅xito un partido con {0}
+
+	startDate= Fecha de inicio del partido {0}
+
+	rating= clasificaci贸n : {0}  RD: {1}
+
+	gameresult= El ganador de este juego es {0} debido a
+
+	gamedraw= Nadie gana es un empate debido a
+	
+	matchInfo=Ajuste Identificaci贸n: {0} adversario: {1} Iniciado el:
+
+	time={0,date,medium} {0,time,medium}
+	
+	AIWhite=Jugar con el ordenador (Blanco)
+	AIBlack=Jugar con el ordenador (Negro)
+	comp=Es el turno de la Computaci髇

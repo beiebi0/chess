@@ -1,0 +1,25 @@
+package org.alexanderoskotsky.hw3;
+
+import org.alexanderoskotsky.hw6.ChessService;
+import org.alexanderoskotsky.hw6.ChessServiceAsync;
+
+import com.google.gwt.core.client.EntryPoint;
+import com.google.gwt.core.shared.GWT;
+import com.google.gwt.user.client.rpc.ServiceDefTarget;
+import com.google.gwt.user.client.ui.RootPanel;
+
+public class ChessEntryPoint implements EntryPoint {
+	@Override
+	public void onModuleLoad() {
+		ChessServiceAsync service = GWT.create(ChessService.class);
+		
+		((ServiceDefTarget) service).setServiceEntryPoint("http://alex-chess-hw11.appspot.com/alexanderoskotsky/service");
+		
+		final Graphics graphics = new Graphics();
+		Presenter presenter = new Presenter(service, graphics);
+
+		RootPanel.get().add(graphics);
+
+		presenter.bindEvents();
+	}
+}

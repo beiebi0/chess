@@ -1,0 +1,219 @@
+package org.harshmehta.hw2_5;
+
+import static org.shared.chess.Color.WHITE;
+import static org.shared.chess.PieceKind.BISHOP;
+import static org.shared.chess.PieceKind.KNIGHT;
+import static org.shared.chess.PieceKind.QUEEN;
+import static org.shared.chess.PieceKind.ROOK;
+import static org.shared.chess.State.COLS;
+import static org.shared.chess.State.ROWS;
+
+import java.util.Set;
+
+import org.harshmehta.hw2.StateChangerImpl;
+import org.shared.chess.IllegalMove;
+import org.shared.chess.Move;
+import org.shared.chess.Piece;
+import org.shared.chess.PieceKind;
+import org.shared.chess.Position;
+import org.shared.chess.State;
+import org.shared.chess.StateExplorer;
+
+import com.google.common.collect.Sets;
+
+public class StateExplorerImpl implements StateExplorer {
+  private StateChangerImpl stateChanger = new StateChangerImpl();
+
+  @Override
+  public Set<Move> getPossibleMoves(State state) {
+    Set<Move> moves = Sets.newHashSet();
+    for (int i=0; i<ROWS; i++) {
+      for (int j=0; j<COLS; j++) {
+        Piece piece = state.getPiece(i, j);
+        if (piece != null && piece.getColor() == state.getTurn()) {
+          // This color's piece
+          addValidMovesOfThisPiece(state, piece, new Position(i,j), moves);
+        }
+      }
+    }
+    return moves;
+  }
+  
+  /**
+   * Adds the valid moves of this piece in the 'moves' set
+   * @param state Current state of the game
+   * @param piece The piece to get the valid moves for
+   * @param position The position the piece is on
+   * @param moves A set in which potential valid moves will be added
+   */
+  void addValidMovesOfThisPiece(State state, Piece piece, Position position, Set<Move> moves) {
+    PieceKind pieceKind = piece.getKind();
+    Move move;
+    int fromRow = position.getRow();
+    int fromCol = position.getCol();
+    
+    switch (pieceKind) {
+    case ROOK: case QUEEN:
+      for (int i=0; i<ROWS; i++) {
+        // Check for valid vertical moves
+        move = new Move(position, new Position(i,fromCol), null);
+        addMoveIfValidMove(state, move, moves);
+      }
+      for (int i=0; i<COLS; i++) {
+        // Check for valid horizontal moves
+        move = new Move(position, new Position(fromRow,i), null);
+        addMoveIfValidMove(state, move, moves);
+      }
+      if (pieceKind == ROOK) {
+        break;  // No valid moves for Rook
+      }
+      
+    case BISHOP:
+      fromRow = position.getRow();
+      fromCol = position.getCol();
+      int diff = (ROWS-1)-Math.max(fromRow, fromCol);
+      int rMax = diff + fromRow;
+      int cMax = diff + fromCol;
+      while (rMax>=0 && cMax>=0) {
+        // Check for valid Top-Right to Bottom-Left moves
+        move = new Move(position, new Position(rMax,cMax), null);
+        addMoveIfValidMove(state, move, moves);
+        rMax--;
+        cMax--;
+      }
+      fromRow = position.getRow();
+      fromCol = position.getCol();
+      diff = Math.min((ROWS-1)-fromRow, fromCol);
+      rMax = diff + fromRow;
+      cMax = fromCol - diff;
+      while (rMax>=0 && cMax<COLS) {
+        // Check for valid Top-Left to Bottom-Right moves
+        move = new Move(position, new Position(rMax,cMax), null);
+        addMoveIfValidMove(state, move, moves);
+        rMax--;
+        cMax++;
+      }
+      break;  // No valid moves for Bishop or Queen
+    
+    case KNIGHT:
+      int [] rows = {2,1,-2,-1};
+      int [] cols = {2,1,-2,-1};
+      for (int i=0; i<rows.length; i++) {
+        for (int j=0; j<cols.length; j++) {
+          if (Math.abs(rows[i]) != Math.abs(cols[j])) {
+            int newRow = fromRow+rows[i];
+            int newCol = fromCol+cols[j];
+            if ((newCol >= 0 && newCol < COLS) && (newRow >= 0 && newRow < ROWS)) {
+              // Check for valid Knight moves (total 8 possible moves)
+              move = new Move(position, new Position(newRow,newCol), null);
+              addMoveIfValidMove(state, move, moves);
+            }
+          }
+        }
+      }
+      break;  // No valid knight moves
+      
+    case PAWN:
+      int [] whiteRows = {1,2,1,1};
+      int [] whiteCols = {0,0,-1,1};
+      int [] blackRows = {-1,-2,-1,-1};
+      int [] blackCols = {0,0,1,-1};
+      //int [] rows, cols;
+      if (piece.getColor() == WHITE) {
+        rows = whiteRows;
+        cols = whiteCols;
+      }
+      else {
+        rows = blackRows;
+        cols = blackCols;
+      }
+      for (int i=0; i<rows.length; i++) {
+        int newRow = fromRow+rows[i];
+        int newCol = fromCol+cols[i];
+        if ((newCol >= 0 && newCol < COLS) && (newRow >= 0 && newRow < ROWS)) {
+          // Check for valid Pawn moves (total 4 possible moves, including enpassant)
+          move = new Move(position, new Position(newRow,newCol), null);
+          addMoveIfValidMove(state, move, moves);
+          // Also check for valid promotion, in case pawn moves to eligible (8th) rank
+          // Need to account for all 4 possible promotions (Queen, Bishop, Rook, Knight)
+          PieceKind [] promotionToPieces = {QUEEN, KNIGHT, ROOK, BISHOP};
+          for (PieceKind pcKind : promotionToPieces) {
+            move = new Move(position, new Position(newRow,newCol), pcKind);
+            addMoveIfValidMove(state, move, moves);
+          }
+        }
+      }
+      break;  // No valid pawn move
+      
+    case KING:
+      // Check all 8 directions surrounding the King
+      int row = fromRow+1;
+      int col = fromCol-1;
+      for (int i=row; i>=row-2; i--) {
+        for (int j=col; j<=col+2; j++) {
+          if ((j >= 0 && j < COLS) && (i >= 0 && i < ROWS)) {
+            // Check for valid King moves (total 8 possible moves, excluding same position)
+            move = new Move(position, new Position(i,j), null);
+            addMoveIfValidMove(state, move, moves);
+          }
+        }
+      }
+      // Check castling moves
+      move = new Move(position, new Position(fromRow,fromCol-2), null);  // Queen-side castle
+      addMoveIfValidMove(state, move, moves);
+      move = new Move(position, new Position(fromRow,fromCol+2), null);  // King-side castle
+      addMoveIfValidMove(state, move, moves);
+      break;  // No valid King move
+      
+    default:
+        break;
+    }
+    
+  }
+  
+  /**
+   * Try the proposed move and add it in the 'moves' set if it is valid
+   * @param state Current state
+   * @param move Proposed move
+   * @param moves Set in which valid moves are added
+   */
+  void addMoveIfValidMove(State state, Move move, Set<Move> moves) {
+    try {
+      stateChanger.makeMove(state.copy(), move, true);
+      moves.add(move);  // No exception thrown; This move was valid! Add it to moves
+    }
+    catch (IllegalMove e) {
+      // Do nothing; Just move on to the next move. In this case, return.
+      return;
+    }
+  }
+
+  @Override
+  public Set<Move> getPossibleMovesFromPosition(State state, Position start) {
+    Set<Move> moves = Sets.newHashSet();
+    Piece piece = state.getPiece(start);
+    if (piece != null)
+      addValidMovesOfThisPiece(state, piece, start, moves);
+    return moves;
+  }
+
+  @Override
+  public Set<Position> getPossibleStartPositions(State state) {
+    Set<Move> moves = Sets.newHashSet();
+    Set<Position> positions = Sets.newHashSet();
+    for (int i=0; i<ROWS; i++) {
+      for (int j=0; j<COLS; j++) {
+        Piece piece = state.getPiece(i, j);
+        if (piece != null && piece.getColor() == state.getTurn()) {
+          // This color's piece
+          moves.clear();
+          addValidMovesOfThisPiece(state, piece, new Position(i,j), moves);
+          if (!moves.isEmpty()) {
+            positions.add(new Position(i,j));
+          }
+        }
+      }
+    }
+    return positions;
+  }
+}

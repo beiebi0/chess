@@ -1,0 +1,13 @@
+package org.shitianren.hw6.client;
+
+import com.google.gwt.user.client.rpc.RemoteService;
+import com.google.gwt.user.client.rpc.RemoteServiceRelativePath;
+
+@RemoteServiceRelativePath("chessgameservice")
+public interface ChessGameService extends RemoteService {
+	public String createChannel();
+
+	public String sendState(String state);
+	
+	public String getReady();
+}

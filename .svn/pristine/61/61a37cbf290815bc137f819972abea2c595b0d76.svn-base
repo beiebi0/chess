@@ -1,0 +1,221 @@
+package org.simongellis.hw3;
+
+import static org.junit.Assert.assertEquals;
+
+import java.util.Set;
+
+import org.junit.Before;
+import org.junit.Test;
+import org.mockito.Mockito;
+
+import static org.mockito.Mockito.*;
+
+import org.shared.chess.Color;
+import org.shared.chess.GameResult;
+import org.shared.chess.GameResultReason;
+import org.shared.chess.Move;
+import org.shared.chess.Piece;
+import org.shared.chess.PieceKind;
+import org.shared.chess.Position;
+import org.shared.chess.State;
+import org.shared.chess.StateChanger;
+import org.shared.chess.StateExplorer;
+import org.simongellis.hw2.StateChangerImpl;
+import org.simongellis.hw2_5.StateExplorerImpl;
+import org.simongellis.hw7.client.Serializer;
+
+import com.google.gwt.event.dom.client.ClickHandler;
+import com.google.gwt.event.dom.client.HasClickHandlers;
+import com.google.gwt.user.client.rpc.AsyncCallback;
+
+public class PresenterTest {
+	Presenter presenter;
+	Presenter.View view;
+	StateChanger stateChanger;
+	Serializer serializer;
+
+	final String serializedStart = "W_" + "RNBQKBNR" + "PPPPPPPP" + "--------" + "--------"
+			+ "--------" + "--------" + "pppppppp" + "rnbqkbnr_" + "Tt_" + "Tt_" + "X_" + "0_"
+			+ "X";
+
+	final String serializedKingsOnly = "W_" + "----K---" + "--------" + "--------" + "--------"
+			+ "--------" + "--------" + "--------" + "----k---_" + "Ff_" + "Ff_" + "X_" + "0_"
+			+ "X";
+
+	@Before
+	public void setup() {
+		presenter = new Presenter();
+		view = Mockito.mock(Presenter.View.class);
+		for (int row = 0; row < State.ROWS + 1; ++row) {
+			for (int col = 0; col < State.COLS; ++col) {
+				HasClickHandlers dummyCell = Mockito.mock(HasClickHandlers.class);
+				when(view.getSquare(row, col)).thenReturn(dummyCell);
+			}
+		}
+		HasClickHandlers dummyOptionsButton = Mockito.mock(HasClickHandlers.class);
+		when(view.getOptionsButton()).thenReturn(dummyOptionsButton);
+		HasClickHandlers dummyEmailButton = Mockito.mock(HasClickHandlers.class);
+		when(view.getEmailButton()).thenReturn(dummyEmailButton);
+		HasClickHandlers dummyAutoButton = Mockito.mock(HasClickHandlers.class);
+		when(view.getAutoButton()).thenReturn(dummyAutoButton);
+		HasClickHandlers dummyCancelMatchButton = Mockito.mock(HasClickHandlers.class);
+		when(view.getAutoCancelButton()).thenReturn(dummyCancelMatchButton);
+		HasClickHandlers dummyDeleteButton = Mockito.mock(HasClickHandlers.class);
+		when(view.getDeleteButton()).thenReturn(dummyDeleteButton);
+		HasClickHandlers dummyAIButton = Mockito.mock(HasClickHandlers.class);
+		when(view.getAIButton()).thenReturn(dummyAIButton);
+		HasClickHandlers dummyCloseButton = Mockito.mock(HasClickHandlers.class);
+		when(view.getCloseButton()).thenReturn(dummyCloseButton);
+		
+		when(view.getHistoryToken()).thenReturn(serializedStart);
+		when(view.isDragAndDropSupported()).thenReturn(false);
+				
+		presenter.setView(view);
+		
+		serializer = new Serializer();
+		stateChanger = new StateChangerImpl();
+	}
+
+	@Test
+	public void testSetup() {
+		for (int row = 0; row < State.ROWS + 1; ++row) {
+			for (int col = 0; col < State.COLS; ++col) {
+				verify(view).getSquare(row, col);
+				HasClickHandlers cell = view.getSquare(row, col);
+				verify(cell).addClickHandler((ClickHandler) anyObject());
+			}
+		}
+		verify(view).getDeleteButton();
+		HasClickHandlers resetButton = view.getDeleteButton();
+		verify(resetButton).addClickHandler((ClickHandler) anyObject());
+	}
+
+	@Test
+	public void testSerializeState() {
+		State state = new State();
+		String expected = serializedStart;
+		String actual = serializer.serializeState(state);
+		assertEquals(expected, actual);
+	}
+
+	@Test
+	public void testUnserializeState() {
+		Piece[][] board = new Piece[State.ROWS][State.COLS];
+		board[0][4] = new Piece(Color.WHITE, PieceKind.KING);
+		board[7][4] = new Piece(Color.BLACK, PieceKind.KING);
+		State expected = new State(Color.WHITE, board, new boolean[2], new boolean[2], null, 0,
+				null);
+		State actual = serializer.unserializeState(serializedKingsOnly);
+		assertEquals(expected, actual);
+	}
+
+	@Test
+	public void testReturnDefaultStateOnUnparsableSerializedState() {
+		String gibberish = "09ujke_waedfkldnsav32--_fewiaj;";
+		State expected = new State();
+		State actual = serializer.unserializeState(gibberish);
+		assertEquals(expected, actual);
+	}
+
+	@Test
+	public void testCheckmateDisplayed() {
+		GameResult whiteCheckmate = new GameResult(Color.WHITE, GameResultReason.CHECKMATE);
+		Piece[][] board = new Piece[State.ROWS][State.COLS];
+		board[5][3] = new Piece(Color.WHITE, PieceKind.KING);
+		board[7][3] = new Piece(Color.BLACK, PieceKind.KING);
+		board[6][7] = new Piece(Color.WHITE, PieceKind.ROOK);
+		State state = new State(Color.BLACK, board, new boolean[2], new boolean[2], null, 0,
+				whiteCheckmate);
+		presenter.setState(state);
+		verify(view).setGameResult(whiteCheckmate);
+	}
+
+	@Test
+	public void testPromotionPiecesDisplay() {
+		Piece[][] board = new Piece[State.ROWS][State.COLS];
+		board[0][4] = new Piece(Color.WHITE, PieceKind.KING);
+		board[7][4] = new Piece(Color.BLACK, PieceKind.KING);
+		board[6][0] = new Piece(Color.WHITE, PieceKind.PAWN);
+		State state = new State(Color.WHITE, board, new boolean[2], new boolean[2], null, 0, null);
+		presenter.setState(state);
+		presenter.setPlayerColor(Color.WHITE);
+		presenter.selectPiece(6, 0);
+		presenter.selectPiece(7, 0);
+		verify(view).setPromotionPiecesVisible(true);
+	}
+
+	@Test
+	public void testSelectStartingPosition() {
+		State state = new State();
+		presenter.setState(state);
+		presenter.setPlayerColor(Color.WHITE);
+		presenter.selectPiece(0, 1);
+		StateExplorer stateExplorer = new StateExplorerImpl();
+		Set<Move> b1Moves = stateExplorer.getPossibleMovesFromPosition(state, new Position(0, 1));
+		for (Move move : b1Moves) {
+			Position target = move.getTo();
+			verify(view).setHighlighted(target.getRow(), target.getCol(), true);
+		}
+	}
+
+	@Test
+	public void testCancelMove() {
+		State state = new State();
+		presenter.setState(state);
+		presenter.setPlayerColor(Color.WHITE);
+		presenter.selectPiece(1, 6);
+		presenter.selectPiece(0, 0);
+		StateExplorer stateExplorer = new StateExplorerImpl();
+		Set<Move> b1Moves = stateExplorer.getPossibleMovesFromPosition(state, new Position(1, 6));
+		for (Move move : b1Moves) {
+			Position target = move.getTo();
+			verify(view).setHighlighted(target.getRow(), target.getCol(), false);
+		}
+	}
+
+	@Test
+	public void testChooseDifferentMove() {
+		State state = new State();
+		presenter.setState(state);
+		presenter.setPlayerColor(Color.WHITE);
+		presenter.selectPiece(0, 1);
+		StateExplorer stateExplorer = new StateExplorerImpl();
+		Set<Move> b1Moves = stateExplorer.getPossibleMovesFromPosition(state, new Position(0, 1));
+		presenter.selectPiece(1, 6);
+		Set<Move> g2Moves = stateExplorer.getPossibleMovesFromPosition(state, new Position(1, 6));
+		for (Move move : b1Moves) {
+			Position target = move.getTo();
+			verify(view).setHighlighted(target.getRow(), target.getCol(), true);
+			verify(view).setHighlighted(target.getRow(), target.getCol(), false);
+		}
+		for (Move move : g2Moves) {
+			Position target = move.getTo();
+			verify(view).setHighlighted(target.getRow(), target.getCol(), true);
+		}
+	}
+
+	@Test
+	@SuppressWarnings("unchecked")
+	public void testExecuteMove() {
+		State state = new State();
+		presenter.setState(state);
+		presenter.setPlayerColor(Color.WHITE);
+		presenter.selectPiece(1, 6);
+		presenter.selectPiece(3, 6);
+		Move move = new Move(new Position(1, 6), new Position(3, 6), null);
+		String serializedMove = serializer.serializeMove(move);
+		verify(view).makeMove(eq(serializedMove), isA(AsyncCallback.class));
+		
+		State oldState = state.copy();
+		stateChanger.makeMove(state, move);
+		presenter.animateMove(oldState, move);
+		for (int row = 0; row < State.ROWS; ++row) {
+			for (int col = 0; col < State.COLS; ++col) {
+				if (col != 6 || (row != 1 && row != 3))
+					verify(view, times(2)).setPiece(row, col, state.getPiece(row, col));
+			}
+		}
+		verify(view).setWhoseTurn(Color.BLACK);
+		verify(view, times(2)).setGameResult(null);
+	}
+}

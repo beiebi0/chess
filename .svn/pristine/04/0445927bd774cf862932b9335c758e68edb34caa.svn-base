@@ -1,0 +1,15 @@
+package org.bohuang.hw2;
+
+import org.shared.chess.AbstractStateChangerAllTest;
+import org.shared.chess.StateChanger;
+import org.bohuang.hw2.StateChangerImpl;
+
+public class StateChangerImplAllTest extends AbstractStateChangerAllTest{
+
+	@Override
+	public StateChanger getStateChanger() {
+		// TODO Auto-generated method stub
+		return new StateChangerImpl();
+	}
+
+}

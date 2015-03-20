@@ -1,0 +1,50 @@
+package org.shihweihuang.hw7.server;
+
+import java.io.IOException;
+import java.util.Set;
+
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import org.shihweihuang.hw7.Player;
+
+import com.google.appengine.api.channel.ChannelPresence;
+import com.google.appengine.api.channel.ChannelService;
+import com.google.appengine.api.channel.ChannelServiceFactory;
+import com.googlecode.objectify.Key;
+
+import static com.googlecode.objectify.ObjectifyService.ofy;
+
+public class ChannelPresenceServlet extends HttpServlet {
+
+	private static final long serialVersionUID = 1L;    
+	String connectID;
+	
+	@Override
+	public void doPost(HttpServletRequest req, HttpServletResponse resp)
+      throws IOException, ServletException{
+		ChannelService channelService = ChannelServiceFactory.getChannelService();
+		ChannelPresence presence = channelService.parsePresence(req);
+		connectID = presence.clientId();
+		String user = connectID.substring(0, connectID.indexOf("*"));
+		Key<Player> playerKey = Key.create(Player.class, user);
+		Player player = ofy().load().key(playerKey).get();
+		if (!presence.isConnected()){
+			Set<String> tokenList = player.getTokens();
+			tokenList.remove(connectID);
+			ofy().save().entities(player).now();
+		} else {
+			if (player == null){
+				player = new Player();
+				player.setEmail(user);
+			}
+			Set<String> tokenList = player.getTokens();
+			tokenList.add(connectID);
+			ofy().save().entities(player).now();
+		}
+	}
+	
+
+}

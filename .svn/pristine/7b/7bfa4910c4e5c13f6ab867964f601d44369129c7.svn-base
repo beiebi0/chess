@@ -1,0 +1,25 @@
+package org.yuehlinchung.hw6.shared;
+
+import java.util.ArrayList;
+import java.util.List;
+import com.google.gwt.user.client.rpc.IsSerializable;
+import com.googlecode.objectify.annotation.Entity;
+import com.googlecode.objectify.annotation.Id;
+import com.googlecode.objectify.annotation.Serialize;
+
+@Entity
+public class Mail implements IsSerializable {
+	@Id String email;
+	@Serialize private List<String> emailList = new ArrayList<String>();
+	
+	public Mail() {}
+	
+	public Mail(List<String> emails) {
+		this.email= "contact";
+		this.emailList = emails;
+	}
+	
+	public List<String> getContact() {
+		return emailList;
+	}
+}

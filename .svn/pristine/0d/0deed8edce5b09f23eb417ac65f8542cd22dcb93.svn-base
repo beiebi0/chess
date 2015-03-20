@@ -1,0 +1,76 @@
+package org.alexanderoskotsky.hw2;
+
+import java.util.Set;
+
+import org.alexanderoskotsky.hw2_5.StateExplorerImpl;
+import org.shared.chess.Color;
+import org.shared.chess.GameResult;
+import org.shared.chess.GameResultReason;
+import org.shared.chess.IllegalMove;
+import org.shared.chess.Move;
+import org.shared.chess.Piece;
+import org.shared.chess.Position;
+import org.shared.chess.State;
+import org.shared.chess.StateChanger;
+import org.shared.chess.StateExplorer;
+
+public class StateChangerImpl implements StateChanger {
+	public void makeMove(State state, Move move) throws IllegalMove {
+		validateMove(state, move);
+		
+		Color color = state.getTurn();
+		
+		StateManipulator sm = new StateManipulator();
+		sm.doMove(state, move);
+
+		StateExplorerImpl sei = new StateExplorerImpl();
+
+		Set<Move> moves = sei.getPossibleMoves(state);
+
+		if (moves.isEmpty()) {
+			if (sei.isPositionUnderAttack(state, sei.findKing(state, state.getTurn()), state.getTurn())) {
+				state.setGameResult(new GameResult(color, GameResultReason.CHECKMATE));
+			} else {
+				state.setGameResult(new GameResult(null, GameResultReason.STALEMATE));
+			}
+		} else if (state.getNumberOfMovesWithoutCaptureNorPawnMoved() == 100) {
+			state.setGameResult(new GameResult(null, GameResultReason.FIFTY_MOVE_RULE));
+		}
+
+	}
+
+	/**
+	 * Test for illegal moves.
+	 * 
+	 * 
+	 * @param state
+	 * @param move
+	 * @throws IllegalMove
+	 *             if move is illegal
+	 */
+	private void validateMove(State state, Move move) throws IllegalMove {
+		if (state.getGameResult() != null) {
+			// Game already ended!
+			throw new IllegalMove();
+		}
+		Position from = move.getFrom();
+		Piece piece = state.getPiece(from);
+		if (piece == null) {
+			// Nothing to move!
+			throw new IllegalMove();
+		}
+		Color color = piece.getColor();
+		if (color != state.getTurn()) {
+			// Wrong player moves!
+			throw new IllegalMove();
+		}
+
+		StateExplorer se = new StateExplorerImpl();
+
+		Set<Move> moves = se.getPossibleMovesFromPosition(state, move.getFrom());
+
+		if (!moves.contains(move)) {
+			throw new IllegalMove();
+		}
+	}
+}

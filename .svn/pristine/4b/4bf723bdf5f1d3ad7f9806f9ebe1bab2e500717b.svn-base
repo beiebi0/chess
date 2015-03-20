@@ -1,0 +1,1037 @@
+package org.haoxiangzuo.hw3;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.Random;
+
+import org.shared.chess.Color;
+
+import org.shared.chess.GameResult;
+import org.shared.chess.Piece;
+import org.shared.chess.PieceKind;
+import org.shared.chess.Position;
+import org.shared.chess.State;
+import org.haoxiangzuo.hw3.Presenter.View;
+import org.haoxiangzuo.hw6.client.ChessService;
+import org.haoxiangzuo.hw6.client.ChessServiceAsync;
+import org.haoxiangzuo.hw6.client.MyConstant;
+import org.haoxiangzuo.hw6.client.MyMessages;
+import org.haoxiangzuo.hw6.client.UserInfos;
+
+import com.google.gwt.animation.client.Animation;
+import com.google.gwt.appengine.channel.client.ChannelError;
+import com.google.gwt.appengine.channel.client.ChannelFactoryImpl;
+import com.google.gwt.appengine.channel.client.Socket;
+import com.google.gwt.appengine.channel.client.SocketListener;
+import com.google.gwt.core.client.GWT;
+import com.google.gwt.dom.client.AudioElement;
+import com.google.gwt.dom.client.Style.Unit;
+import com.google.gwt.event.dom.client.ClickEvent;
+import com.google.gwt.event.dom.client.ClickHandler;
+import com.google.gwt.event.dom.client.DragOverEvent;
+import com.google.gwt.event.dom.client.DragOverHandler;
+import com.google.gwt.event.dom.client.DragStartEvent;
+import com.google.gwt.event.dom.client.DragStartHandler;
+import com.google.gwt.event.dom.client.DropEvent;
+import com.google.gwt.event.dom.client.DropHandler;
+import com.google.gwt.event.logical.shared.ValueChangeEvent;
+import com.google.gwt.event.logical.shared.ValueChangeHandler;
+import com.google.gwt.i18n.shared.DateTimeFormat;
+import com.google.gwt.i18n.shared.DateTimeFormat.PredefinedFormat;
+import com.google.gwt.media.client.Audio;
+import com.google.gwt.resources.client.ImageResource;
+import com.google.gwt.storage.client.Storage;
+import com.google.gwt.uibinder.client.UiBinder;
+import com.google.gwt.uibinder.client.UiField;
+import com.google.gwt.user.client.Element;
+import com.google.gwt.user.client.Timer;
+import com.google.gwt.user.client.Window;
+import com.google.gwt.user.client.rpc.AsyncCallback;
+import com.google.gwt.user.client.rpc.ServiceDefTarget;
+import com.google.gwt.user.client.ui.Anchor;
+import com.google.gwt.user.client.ui.Button;
+import com.google.gwt.user.client.ui.Composite;
+import com.google.gwt.user.client.ui.FlexTable;
+import com.google.gwt.user.client.ui.Grid;
+import com.google.gwt.user.client.ui.HTMLPanel;
+import com.google.gwt.user.client.ui.HorizontalPanel;
+import com.google.gwt.user.client.ui.Image;
+import com.google.gwt.user.client.ui.Label;
+import com.google.gwt.user.client.ui.ListBox;
+import com.google.gwt.user.client.ui.MultiWordSuggestOracle;
+import com.google.gwt.user.client.ui.RootPanel;
+import com.google.gwt.user.client.ui.SuggestBox;
+import com.google.gwt.user.client.ui.TextBox;
+import com.google.gwt.user.client.ui.VerticalPanel;
+import com.google.gwt.user.client.ui.Widget;
+import com.google.gwt.user.client.History;
+import com.googlecode.gwtphonegap.client.PhoneGap;
+import com.googlecode.gwtphonegap.client.PhoneGapAvailableEvent;
+import com.googlecode.gwtphonegap.client.PhoneGapAvailableHandler;
+import com.googlecode.gwtphonegap.client.PhoneGapTimeoutEvent;
+import com.googlecode.gwtphonegap.client.PhoneGapTimeoutHandler;
+import com.googlecode.gwtphonegap.client.contacts.Contact;
+import com.googlecode.gwtphonegap.client.contacts.ContactError;
+import com.googlecode.gwtphonegap.client.contacts.ContactField;
+import com.googlecode.gwtphonegap.client.contacts.ContactFindCallback;
+import com.googlecode.gwtphonegap.client.contacts.ContactFindOptions;
+import com.googlecode.gwtphonegap.client.util.PhonegapUtil;
+import com.googlecode.gwtphonegap.collection.shared.CollectionFactory;
+import com.googlecode.gwtphonegap.collection.shared.LightArray;
+import com.sun.tools.internal.xjc.generator.bean.field.Messages;
+
+public class Graphics extends Composite implements View {
+  private static GameImages gameImages = GWT.create(GameImages.class);
+  private static GraphicsUiBinder uiBinder = GWT.create(GraphicsUiBinder.class);
+
+  interface GraphicsUiBinder extends UiBinder<Widget, Graphics> {
+  }
+
+  @UiField GameCss css;
+  @UiField Label gameStatus;
+  @UiField Grid gameGrid;
+  @UiField Grid promotion;
+  @UiField Grid promotion2;
+  @UiField Button show;
+  @UiField Button reset;
+  @UiField FlexTable flex;
+  
+  @UiField Button findThisUser;
+  @UiField VerticalPanel mainPanel;
+  @UiField HorizontalPanel loginPanel;
+  @UiField Label welcome;
+  @UiField Anchor signout;
+  @UiField Button autoMatch;
+  @UiField Label opponentStatus;
+  @UiField HorizontalPanel emailGamePanel;
+  @UiField HorizontalPanel MatchListPanel;
+  @UiField ListBox matchesList;
+  @UiField Button loadMatch;
+  @UiField Button deleteMatch;
+  @UiField Button showRank;
+  @UiField Button playAi;
+  @UiField Button fakeLogin;
+  @UiField TextBox fakeLoginText;
+  @UiField HorizontalPanel fakePanel;
+  private SuggestBox emailAddress;
+  private Image[][] board = new Image[8][8];
+  public Presenter presenter = new Presenter();
+  private Audio audio = createAudioClick();
+  private UserInfos currentUser = null;
+  private Color myColor;
+  private Socket socket;
+  private State thisState;
+  private ChessServiceAsync chessService = GWT.create(ChessService.class);
+  private MyConstant constants = GWT.create(MyConstant.class);
+  private MyMessages messages = GWT.create(MyMessages.class);
+  private Storage storage;
+  private Timer timer;
+  private PhoneGap phoneGap;
+  
+  public Graphics(PhoneGap phoneGap) {
+    initWidget(uiBinder.createAndBindUi(this));
+    PhonegapUtil.prepareService((ServiceDefTarget) chessService, "http://haoxianghw11.appspot.com/haoxiangzuo/", "service");
+//    this.phoneGap = GWT.create(PhoneGap.class);
+    this.phoneGap = phoneGap;
+	 addGraphics();
+	    gameGrid.resize(8, 8);
+	    gameGrid.setCellPadding(0);
+	    gameGrid.setCellSpacing(0);
+	    gameGrid.setBorderWidth(0);
+	    Draw();
+//		gameStatus.setText(messages.status());
+//		show.setText(messages.showPiece());
+//		loadMatch.setText(messages.loadMatch());
+//		deleteMatch.setText(messages.deleteMatch());
+//		playAi.setText(messages.ai());
+//		showRank.setText(messages.showRank());
+//		autoMatch.setText(messages.autoMatch());
+//		findThisUser.setText(messages.findUser());
+	    State state = new State();
+	    thisState = state;
+	    presenter.setView(this);
+	    presenter.setPhoneGap();
+	    setLogin();
+  }
+  public void setLogin()
+  {
+	  fakeLogin.addClickHandler(new ClickHandler(){
+
+		@Override
+		public void onClick(ClickEvent event) {
+			// TODO Auto-generated method stub
+			if (!fakeLoginText.getText().equals("")||fakeLoginText.getText()!=null)
+			{
+				chessService.fakeLogin(fakeLoginText.getText(), new AsyncCallback<UserInfos>(){
+
+					@Override
+					public void onFailure(Throwable caught) {
+						// TODO Auto-generated method stub
+						
+					}
+
+					@Override
+					public void onSuccess(UserInfos result) {
+						// TODO Auto-generated method stub
+						setUser(result);
+					}});
+			}
+		}});
+	  fakePanel.add(fakeLoginText);
+	  fakePanel.add(fakeLogin);
+	  mainPanel.add(fakePanel);
+	  loginPanel.add(welcome);
+	  loginPanel.add(signout);
+	  mainPanel.add(loginPanel);
+	  opponentStatus.setText("No opponent, please find one");
+	  mainPanel.add(opponentStatus);
+	  emailGamePanel.add(findThisUser);
+	  emailAddress = new SuggestBox(getContacts());
+	  emailGamePanel.add(emailAddress);
+	  mainPanel.add(emailGamePanel);
+	  matchesList.setWidth("500px");
+	  mainPanel.add(matchesList);
+	  MatchListPanel.add(loadMatch);
+	  MatchListPanel.add(deleteMatch);
+	  MatchListPanel.add(showRank);
+	  mainPanel.add(MatchListPanel);
+  }
+
+  public void setUser(UserInfos user)
+  {
+	  currentUser = user;
+	  welcome.setText(messages.welcome()+" "+currentUser.getNickname()+" "+currentUser.getEmailAddress());
+	  signout.setHref(currentUser.getLogoutUrl());
+	  addLocalStorage();
+	  newSocketListner(currentUser.getToken());
+	  addListeners();
+	  addTimer();
+  }
+	public MultiWordSuggestOracle getContacts()
+	  {
+		  LightArray<String> fields = CollectionFactory.<String> constructArray();
+		  fields.push("emails");  //search in name as well
+		  ContactFindOptions findOptions = new ContactFindOptions("",true);
+		  final MultiWordSuggestOracle oracle = new MultiWordSuggestOracle(); 
+		  phoneGap.getContacts().find(fields, new ContactFindCallback() {
+
+		          @Override
+		          public void onSuccess(LightArray<Contact> contacts) {
+		                  //read contacts here..
+		        	   for (int i = 0 ; i<contacts.length(); i++)
+		        	   {
+		        		   LightArray<ContactField> emails = contacts.get(i).getEmails();
+		        		   if (emails!=null)
+		        		   {
+		        		   for (int j = 0; j<emails.length(); j++)
+		        		   {
+		        			   oracle.add(emails.get(j).getValue());
+		        		   }
+		        		   }
+		        	   }
+		          }
+
+		          @Override
+		          public void onFailure(ContactError error) {
+		                  //something went wrong, doh!
+		        	  Window.alert("oops!");
+		          }
+		  }, findOptions);
+		  return oracle;
+	  }
+	
+  public void addTimer()
+  {
+	  timer = new Timer() {
+	      public void run() {
+	    	  final StringWrapper s = new StringWrapper();
+	    	  for (int i=0; i<storage.getLength(); i++)
+	    	  {
+	    		  final String key = storage.key(i);
+	    		  String[] data = key.split(",");
+	    		  if (data[1].charAt(0)=='m'&&data[0].equals(currentUser.getEmailAddress()))
+	    		  {
+	    			  String move = storage.getItem(key);
+	    			  chessService.makeMove(move, new AsyncCallback<Void>(){
+
+						@Override
+						public void onFailure(Throwable caught) {
+							// TODO Auto-generated method stub
+							
+						}
+
+						@Override
+						public void onSuccess(Void result) {
+							// TODO Auto-generated method stub
+							s.setKey(key);
+//							deleteStorageStuff(key);
+						}});
+	    			  break;
+	    		  }
+	    	  }
+	    	  deleteStorageStuff(s.getKey());
+	      }
+	    };
+
+	    // Schedule the timer to run once in 10 seconds.
+	    timer.scheduleRepeating(10000);
+  }
+  public void deleteStorageStuff(String key)
+  {
+	  storage.removeItem(key);
+  }
+  public void addLocalStorage()
+  {
+	  storage = Storage.getLocalStorageIfSupported();
+//	  storage.clear();
+  }
+  public void addListeners()
+  {
+	  autoMatch.addClickHandler(new ClickHandler(){
+
+		@Override
+		public void onClick(ClickEvent event) {
+			// TODO Auto-generated method stub
+			chessService.autoMatch(currentUser, new AsyncCallback<String>(){
+
+				@Override
+				public void onFailure(Throwable caught) {
+					// TODO Auto-generated method stub
+					Window.alert("error auto Match");
+				}
+
+				@Override
+				public void onSuccess(String result) {
+					// TODO Auto-generated method stub
+					if (result.charAt(0)=='0')
+					{
+						Window.alert(result.substring(1));
+					}
+					else if (result.charAt(0)=='1')
+					{
+						Window.alert(result.substring(1));
+					}
+					else
+					{
+						String[] re = result.split("#");
+						String date = DateTimeFormat.getFormat(PredefinedFormat.DATE_LONG).format(new Date(Long.parseLong(re[3])));
+						opponentStatus.setText(re[0]+": "+re[1]+" Date:"+date);
+						presenter.setId(Long.valueOf(re[1]));
+						matchesList.addItem(re[0]+"#"+re[1]+"#"+date);
+						saveInStorage(re[1], re[4]);
+						if (re[2].equals("w"))
+						{
+							presenter.setAi(false);
+							setWhite();
+						}
+						else
+						{
+							presenter.setAi(false);
+							setBlack();
+						}
+					}
+				}});
+		}});
+	  findThisUser.addClickHandler(new ClickHandler(){
+
+		@Override
+		public void onClick(ClickEvent event) {
+			// TODO Auto-generated method stub
+			String email = emailAddress.getText();
+			if (email.equals("")||email==null||email.equals(currentUser.getEmailAddress()))
+				Window.alert("Please enter right emailAddress");
+			else
+			{
+				chessService.findOpponent(email, currentUser, new AsyncCallback<String>(){
+
+					@Override
+					public void onFailure(Throwable caught) {
+						// TODO Auto-generated method stub
+						
+					}
+
+					@Override
+					public void onSuccess(String result) {
+						// TODO Auto-generated method stub
+						
+						String[] re = result.split("#");
+						String date = DateTimeFormat.getFormat(PredefinedFormat.DATE_LONG).format(new Date(Long.parseLong(re[3])));
+						opponentStatus.setText(re[0]+": "+re[1]+" Date: "+date);
+						presenter.setId(Long.valueOf(re[1]));
+						matchesList.addItem(re[0]+"#"+re[1]+"#"+date);
+						matchesList.setSelectedIndex(matchesList.getItemCount()-1);
+						saveInStorage(re[1],re[4]);
+						if (re[2].equals("w"))
+						{	
+							thisState = new State();
+							presenter.setAi(false);
+							setWhite();
+						}
+						else
+						{
+							thisState = new State();
+							presenter.setAi(false);
+							setBlack();
+						}
+					}});
+			}
+		}});
+	  loadMatch.addClickHandler(new ClickHandler(){
+
+		@Override
+		public void onClick(ClickEvent event) {
+			// TODO Auto-generated method stub
+			String matchMessage = matchesList.getValue(matchesList.getSelectedIndex());
+			if (matchMessage.equals("")||matchMessage==null)
+				Window.alert("No such Game");
+			else
+			{
+				presenter.setAi(false);
+				String infos ="";
+				String[] in = matchMessage.split("#");
+				infos = currentUser.getEmailAddress()+"#"+in[1];
+				final String colorInfo = in[0];
+				String tempStateString = storage.getItem(currentUser.getEmailAddress()+","+in[1]);
+				State tempState = presenter.stringToState(tempStateString);
+				thisState = tempState;
+				presenter.setNewState(thisState);
+				presenter.setHistory();
+				opponentStatus.setText(in[0]+" "+in[1]+" "+in[2]);
+				chessService.loadMatch(infos, new AsyncCallback<String>(){
+
+					@Override
+					public void onFailure(Throwable caught) {
+						// TODO Auto-generated method stub
+						
+					}
+
+					@Override
+					public void onSuccess(String result) {
+						// TODO Auto-generated method stub
+						String[] messages = result.split("#");
+						State state = presenter.stringToState(messages[0]);
+						presenter.setId(Long.valueOf(messages[2]));
+						String date = DateTimeFormat.getFormat(PredefinedFormat.DATE_LONG).format(new Date(Long.parseLong(messages[4])));
+						opponentStatus.setText(colorInfo+" "+messages[2]+" Date: "+date);
+						myColor = messages[1].equals("w")?Color.WHITE:Color.BLACK;
+						thisState = state; 
+						presenter.setColor(myColor);
+						presenter.setNewState(thisState);
+						presenter.setHistory();
+					}});
+			}
+		}});
+	  deleteMatch.addClickHandler(new ClickHandler(){
+
+		@Override
+		public void onClick(ClickEvent event) {
+			// TODO Auto-generated method stub
+			String matchMessage = matchesList.getValue(matchesList.getSelectedIndex());
+			if (matchMessage.equals("")||matchMessage==null)
+				Window.alert("No such Game");
+			else
+			{
+				String infos ="";
+				String[] in = matchMessage.split("#");
+				Long thisId = Long.valueOf(in[1]);
+				if (presenter.getId()==null||presenter.getId().equals(thisId))
+				{
+					thisState = null;
+					presenter.setNewState(thisState);
+					gameStatus.setText("delete!");
+					Draw();
+				}
+				infos = currentUser.getEmailAddress()+"#"+thisId;
+				chessService.deleteMatch(infos, new AsyncCallback<Void>(){
+
+					@Override
+					public void onFailure(Throwable caught) {
+						// TODO Auto-generated method stub
+						
+					}
+
+					@Override
+					public void onSuccess(Void result) {
+						// TODO Auto-generated method stub
+						Window.alert("Success!");
+						matchesList.removeItem(matchesList.getSelectedIndex());
+					}});
+			}
+		}});
+	  showRank.addClickHandler(new ClickHandler(){
+
+		@Override
+		public void onClick(ClickEvent event) {
+			// TODO Auto-generated method stub
+			chessService.showRank(currentUser.getEmailAddress(), new AsyncCallback<String>(){
+
+				@Override
+				public void onFailure(Throwable caught) {
+					// TODO Auto-generated method stub
+					
+				}
+
+				@Override
+				public void onSuccess(String result) {
+					// TODO Auto-generated method stub
+					Window.alert("My Rank: "+result);
+				}});
+		}});
+	  playAi.addClickHandler(new ClickHandler(){
+
+		@Override
+		public void onClick(ClickEvent event) {
+			// TODO Auto-generated method stub
+			opponentStatus.setText("Play with Ai, You are white");
+			thisState = new State();
+			setWhite();
+			presenter.setAi(true);
+		}});
+  }
+  @Override
+  public void saveInStorage(String key, String data)
+  {
+	  storage.setItem(currentUser.getEmailAddress()+","+key, data);
+  }
+  @Override
+  public void deleteStorage(String key)
+  {
+	  storage.removeItem(currentUser.getEmailAddress()+","+key);
+  }
+  public void newSocketListner(String token)
+	{
+//		socket.close();
+		socket = new ChannelFactoryImpl().createChannel(token).open(new SocketListener(){
+
+			@Override
+			public void onOpen() {
+				// TODO Auto-generated method stub
+//				Window.alert(messages.welcomeYou(currentUser.getEmailAddress()));
+				chessService.getMatches(currentUser, new AsyncCallback<ArrayList<String>>(){
+
+					@Override
+					public void onFailure(Throwable caught) {
+						// TODO Auto-generated method stub
+						
+					}
+
+					@Override
+					public void onSuccess(ArrayList<String> result) {
+						// TODO Auto-generated method stub
+						for (int i=0; i<result.size(); i++)
+						{
+							String thisOne = result.get(i);
+							String[] mes = thisOne.split("#");
+							String date = DateTimeFormat.getFormat(PredefinedFormat.DATE_LONG).format(new Date(Long.parseLong(mes[2])));
+							matchesList.addItem(mes[0]+"#"+mes[1]+"#"+date);
+							String state = mes[3];
+							saveInStorage(mes[1],state);
+							
+						}
+					}});
+			}
+
+			@Override
+			public void onMessage(String message) {
+				// TODO Auto-generated method stub
+				if (message.charAt(0)=='1')
+				{
+					String[] re = message.substring(1).split("#");
+					String date = DateTimeFormat.getFormat(PredefinedFormat.DATE_LONG).format(new Date(Long.parseLong(re[3])));
+					opponentStatus.setText(re[0]+": "+re[1]+" Date: "+date);
+					presenter.setId(Long.valueOf(re[1]));
+					matchesList.addItem(re[0]+"#"+re[1]+"#"+date);
+					saveInStorage(re[1],re[4]);
+					if (re[2].equals("w"))
+						setWhite();
+					else
+						setBlack();
+				}
+				else if (message.charAt(0)=='0')
+				{
+					String[] re = message.substring(1).split(",");
+					Long id = presenter.getId();
+					if (Long.valueOf(re[5]).equals(id))
+					{
+						otherMoves(re);
+					}
+				}
+				else if (message.charAt(0)=='2')
+				{
+					String[] mes = message.substring(1).split("#");
+					Window.alert("Some one start a new game with you, please click load to switch to that game. Match Id:"+mes[1]);
+					
+					String date = DateTimeFormat.getFormat(PredefinedFormat.DATE_LONG).format(new Date(Long.parseLong(mes[3])));
+					matchesList.addItem(mes[0]+"#"+mes[1]+"#"+date);
+					saveInStorage(mes[1], mes[4]);
+				}
+			}
+
+			@Override
+			public void onError(ChannelError error) {
+				// TODO Auto-generated method stub
+				
+			}
+
+			@Override
+			public void onClose() {
+				// TODO Auto-generated method stub
+				
+			}});
+	}
+  public void setWhite()
+  {
+	  myColor = Color.WHITE;	    
+	  presenter.setColor(myColor);
+	  presenter.setNewState(thisState);
+	  presenter.setHistory();
+  }
+  public void setBlack()
+  {
+	  myColor = Color.BLACK;
+	  presenter.setColor(myColor);
+	  presenter.setNewState(thisState);
+	  presenter.setHistory();
+  }
+  @Override
+  public void otherMoves(String[] moves)
+  {
+	  audio.play();
+	  presenter.setLastPos(new Position(Integer.valueOf(moves[0]),Integer.valueOf(moves[1])));
+	  if (Integer.valueOf(moves[4])!=5)
+		  presenter.setProPos(new Position(Integer.valueOf(moves[2]),Integer.valueOf(moves[3])));
+	  Element element = board[7-Integer.valueOf(moves[2])][Integer.valueOf(moves[3])].getElement();
+	  CustomAnimation animation = new CustomAnimation(board[7-Integer.valueOf(moves[0])][Integer.valueOf(moves[1])],7-Integer.valueOf(moves[2]),Integer.valueOf(moves[3]),Integer.valueOf(moves[4]));
+	  animation.scrollTo(element.getAbsoluteLeft(), element.getAbsoluteTop(), 1000);
+  }
+  
+  
+  private void addGraphics() {
+	// TODO Auto-generated method stub
+//	  flex.setWidget(0, 0, new Label("SavedName"));
+	    reset.setVisible(false);
+	    reset.addClickHandler(new ClickHandler(){
+
+			@Override
+			public void onClick(ClickEvent event) {
+				// TODO Auto-generated method stub
+				reset.setVisible(false);
+				presenter.resetGame();
+			}
+	    	
+	    });
+	    
+	    show.addClickHandler(new ClickHandler(){
+
+			@Override
+			public void onClick(ClickEvent event) {
+				// TODO Auto-generated method stub
+				presenter.getPosPos();
+			}
+	    	
+	    });
+	    promotion.resize(1, 5);
+	    promotion.setCellPadding(0);
+	    promotion.setCellSpacing(0);
+	    promotion.setBorderWidth(0);
+	    promotion.setText(0, 0, "Promotion To");
+	    for (int i=1; i<5; i++)
+	    {
+	    	final Image image = new Image();
+	    	image.setWidth("100%");
+	    	switch(i-1)
+	    	{
+	    	case 0: image.setResource(gameImages.whiteQueen());break;
+	    	case 1: image.setResource(gameImages.whiteKnight());break;
+	    	case 2: image.setResource(gameImages.whiteRook());break;
+	    	case 3: image.setResource(gameImages.whiteBishop());break;
+	    	}
+	    	final int p = i-1;
+	    	image.addClickHandler(new ClickHandler(){
+
+				@Override
+				public void onClick(ClickEvent event) {
+					// TODO Auto-generated method stub
+					Position pos = presenter.getLastPos();
+					Position pro = presenter.getProPos();
+					Element element = board[7-pro.getRow()][pro.getCol()].getElement();
+					CustomAnimation animation = new CustomAnimation(board[7-pos.getRow()][pos.getCol()],0,0,p);
+					animation.scrollTo(element.getAbsoluteLeft(), element.getAbsoluteTop(), 1000);
+				}
+	    	});
+	    	promotion.setWidget(0, i, image);
+	    }
+	    promotion.setVisible(false);
+	    ////
+	    
+	    promotion2.resize(1, 5);
+	    promotion2.setCellPadding(0);
+	    promotion2.setCellSpacing(0);
+	    promotion2.setBorderWidth(0);
+	    promotion2.setText(0, 0, "Promotion To");
+	    for (int i=1; i<5; i++)
+	    {
+	    	final Image image = new Image();
+	    	image.setWidth("100%");
+	    	switch(i-1)
+	    	{
+	    	case 0: image.setResource(gameImages.blackQueen());break;
+	    	case 1: image.setResource(gameImages.blackKnight());break;
+	    	case 2: image.setResource(gameImages.blackRook());break;
+	    	case 3: image.setResource(gameImages.blackBishop());break;
+	    	}
+	    	final int p = i-1;
+	    	image.addClickHandler(new ClickHandler(){
+
+				@Override
+				public void onClick(ClickEvent event) {
+					// TODO Auto-generated method stub
+					Position pos = presenter.getLastPos();
+					Position pro = presenter.getProPos();
+					Element element = board[7-pro.getRow()][pro.getCol()].getElement();
+					CustomAnimation animation = new CustomAnimation(board[7-pos.getRow()][pos.getCol()],0,0,p);
+					animation.scrollTo(element.getAbsoluteLeft(), element.getAbsoluteTop(), 1000);
+				}
+	    	});
+	    	promotion2.setWidget(0, i, image);
+	    }
+	    promotion2.setVisible(false);
+	    
+}
+
+@Override
+  public void movePiece(int row, int col)
+  {
+	for (int r = 0; r < 8; r++) {
+	      for (int c = 0; c < 8; c++) {
+	        this.setHighlighted(r, c, false);
+	      }
+	  }
+	 presenter.movePiece(row,col);
+  }
+  @Override
+  public void setPiece(final int row, final int col,final  Piece piece) {
+    // TODO
+	  if (piece!=null)
+      {
+              final Image image = new Image();
+              board[row][col] = image;
+                    switch(piece.getKind())
+                    {
+                            case PAWN:
+                                    image.setResource(piece.getColor()==Color.WHITE?gameImages.whitePawn():gameImages.blackPawn());
+                                    break;
+                            case KING:
+                                    image.setResource(piece.getColor()==Color.WHITE?gameImages.whiteKing():gameImages.blackKing());
+                                    break;
+                            case QUEEN:
+                                    image.setResource(piece.getColor()==Color.WHITE?gameImages.whiteQueen():gameImages.blackQueen());
+                                    break;
+                            case KNIGHT:
+                                    image.setResource(piece.getColor()==Color.WHITE?gameImages.whiteKnight():gameImages.blackKnight());
+                                    break;
+                            case ROOK:
+                                    image.setResource(piece.getColor()==Color.WHITE?gameImages.whiteRook():gameImages.blackRook());
+                                    break;
+                            case BISHOP:
+                                    image.setResource(piece.getColor()==Color.WHITE?gameImages.whiteBishop():gameImages.blackBishop());
+                                    break;
+                    }
+              image.addClickHandler(new ClickHandler(){
+
+                    @Override
+                    public void onClick(ClickEvent event) {
+                            // TODO Auto-generated method stub
+                            if (myColor.equals(presenter.getState().getTurn()))
+                            {
+                            audio.play();
+                            Element element = board[row][col].getElement();
+                           
+                           
+                            if (element.getClassName()==css.highlighted())
+                            {
+                                    Position p = presenter.getLastPos();
+                                    if (presenter.getState().getPiece(p).getKind()!=PieceKind.PAWN||(row!=7&&row!=0)){
+                                            CustomAnimation animation = new CustomAnimation(board[7-p.getRow()][p.getCol()],row,col,-1);
+                                            animation.scrollTo(element.getAbsoluteLeft(), element.getAbsoluteTop(), 1000);
+                                    }
+                                    else
+                                            movePiece(row,col);
+                            }
+                            else
+                                    presenter.selected(row,col,piece);
+                            }
+                            }
+              });
+             
+              board[row][col].getElement().setDraggable("DRAGGABLE_TRUE");
+              image.addDragStartHandler(new DragStartHandler() {
+                   
+                    @Override
+                    public void onDragStart(DragStartEvent event) {
+                            // TODO Auto-generated method stub
+                            if (myColor.equals(presenter.getState().getTurn()))
+                            {
+                            audio.play();
+                            Element element = board[row][col].getElement();
+                            if (element.getClassName()==css.highlighted())
+                                    movePiece(row, col);
+                            else
+                                    presenter.selected(row,col,piece);
+                            }
+                    }
+              });
+              image.addDragOverHandler(new DragOverHandler() {
+                           
+                            @Override
+                            public void onDragOver(DragOverEvent event) {
+                                    // TODO Auto-generated method stub
+                                   
+                            }
+              });
+              image.addDropHandler(new DropHandler() {
+                           
+                            @Override
+                            public void onDrop(DropEvent event) {
+                                    // TODO Auto-generated method stub
+                                    audio.play();
+                                    Element element = board[row][col].getElement();
+                                    if (element.getClassName()==css.highlighted())
+                                            movePiece(row, col);
+                            }
+              });
+              gameGrid.setWidget(row, col, image);
+      }
+      
+  }
+
+  @Override
+  public void setHighlighted(int row, int col, boolean highlighted) {
+    Element element = board[row][col].getElement();
+    if (highlighted) {
+      element.setClassName(css.highlighted());
+    } else {
+      element.removeClassName(css.highlighted());
+    }
+  }
+  @Override
+  public void setAiWaiting()
+  {
+	  gameStatus.setText("Ai Thinking....");
+  }
+  @Override
+  public void setWhoseTurn(Color color) {
+    // TODO
+	  gameStatus.setText(messages.status()+": Color: "+(color==Color.WHITE?"White":"Black")+" Result: ");
+  }
+
+  @Override
+  public void setGameResult(GameResult gameResult) {
+    // TODO
+	  if (gameResult==null)
+		  gameStatus.setText(gameStatus.getText()+"keep moving! ");
+	  else
+	  {
+		  String result = "";
+		  if (gameResult.getWinner()==null)
+			  result = "No Winner! Because of "+gameResult.getGameResultReason().toString();
+		  else
+			  result = "Checkmate! Winner is "+(gameResult.getWinner()==Color.WHITE?"White":"Black");
+		  gameStatus.setText(result);
+//		  reset.setVisible(true);
+	  }
+  }
+  @Override
+  public void Draw()
+  {
+	  for (int row = 0; row < 8; row++) {
+          for (int col = 0; col < 8; col++) {
+            final Image image = new Image();
+            board[row][col] = image;
+            image.setWidth("100%");
+            final int i = row;
+            final int j = col;
+            if (row % 2 == 0 && col % 2 == 1 || row % 2 == 1 && col % 2 == 0) {
+              image.setResource(gameImages.blackTile());
+            } else {
+              image.setResource(gameImages.whiteTile());
+            }
+            image.addClickHandler(new ClickHandler(){
+                   
+                                  @Override
+                                  public void onClick(ClickEvent event) {
+                                          // TODO Auto-generated method stub
+                                          audio.play();
+                                          Element element = board[i][j].getElement();
+                                          if (element.getClassName()==css.highlighted())
+                                          {
+                                                 
+                                                  Position p = presenter.getLastPos();
+                                                  if (presenter.getState().getPiece(p).getKind()!=PieceKind.PAWN||(i!=7&&i!=0)){
+                                                          CustomAnimation animation = new CustomAnimation(board[7-p.getRow()][p.getCol()],i,j,-1);
+                                                          animation.scrollTo(element.getAbsoluteLeft(), element.getAbsoluteTop(), 1000);
+                                                  }
+                                                  else
+                                                          movePiece(i,j);
+                                          }
+                                  }
+                           
+                    });
+            image.addDragOverHandler(new DragOverHandler() {
+                         
+                          @Override
+                          public void onDragOver(DragOverEvent event) {
+                                  // TODO Auto-generated method stub
+                                 
+                          }
+            });
+            image.addDropHandler(new DropHandler() {
+                         
+                          @Override
+                          public void onDrop(DropEvent event) {
+                                  // TODO Auto-generated method stub
+                                  audio.play();
+                                  Element element = board[i][j].getElement();
+                                  if (element.getClassName()==css.highlighted())
+                                          movePiece(i, j);
+                          }
+            });
+            gameGrid.setWidget(row, col, image);
+          }
+      }
+
+  }
+  @Override
+  public void reDraw()
+  {
+//	  History.newItem("page"+presenter.stateToString(presenter.getState()));
+	  Draw();
+  }
+  @Override
+  public void callHistoryChanger(String x)
+  {
+	State state = this.presenter.stringToState(x);
+	this.reset.setVisible(false);
+	this.presenter.setNewState(state);
+	this.presenter.setHistory();
+  }
+  @Override
+  public void setPromotion(boolean t)
+  {
+	  promotion.setVisible(t);
+  }
+  @Override
+  public void setPromotion2(boolean t)
+  {
+	  promotion2.setVisible(t);
+  }
+  @Override
+  public void showPosPos()
+  {
+	  presenter.getPosPos();
+  }
+  @Override
+  public void setPosHighlighted(int row, int col, boolean highlighted) {
+    Element element = board[row][col].getElement();
+    if (highlighted) {
+      element.setClassName(css.showMoveHL());
+    } else {
+      element.removeClassName(css.showMoveHL());
+    }
+  }
+
+  public Audio createAudioClick()
+  {
+	  Audio audio = Audio.createIfSupported();
+	  if (audio==null)
+		  return null;
+	  
+	  audio.addSource("haoxiangzuo_audio/click.mp3", AudioElement.TYPE_MP3);
+	  
+	  audio.setControls(true);
+	  audio.load();
+	  return audio;
+  }
+  public class CustomAnimation extends Animation
+  {
+	  private final Image element;
+	    private int startL;
+	    private int startT;
+	    private int finalL;
+	    private int finalT;
+	    private int x;
+	    private int y;
+	    private int normalMoveOrPromotion;
+	 
+	    public CustomAnimation(Image element,int i, int j, int normalMoveOrPromotion)
+	    {
+	        this.element = element;
+	        this.x = i;
+	        this.y = j;
+	        this.normalMoveOrPromotion = normalMoveOrPromotion;
+	    }
+	 
+	    public void scrollTo(int x, int y, int milliseconds)
+	    {
+	        this.finalL = x;
+	        this.finalT = y;
+	 
+	        startL = element.getElement().getAbsoluteLeft();
+	        
+	        startT = element.getElement().getAbsoluteTop();
+	        
+	        run(milliseconds);
+	    }
+	 
+	    @Override
+	    protected void onUpdate(double progress)
+	    {
+	        double offset_left = (progress * (this.finalL - startL));
+	        double offset_top = (progress * (this.finalT - startT));
+	        this.element.getElement().getStyle().setProperty("position", "absolute");
+	        this.element.getElement().getStyle().setProperty("left", (startL+offset_left)+"px");
+	        this.element.getElement().getStyle().setProperty("top", (startT+offset_top)+"px");
+	    }
+	    
+	    @Override
+	    protected void onComplete()
+	    {
+	    	if (normalMoveOrPromotion==-1||normalMoveOrPromotion==5)
+	    		movePiece(x, y);
+	    	else
+	    	{
+	    		for (int r = 0; r < 8; r++) {
+	    		      for (int c = 0; c < 8; c++) {
+	    		        setHighlighted(r, c, false);
+	    		      }
+	    		  }
+	    		presenter.promotion(normalMoveOrPromotion);
+	    	}
+	    }
+  }
+@Override
+public void setLogs(String log) {
+	// TODO Auto-generated method stub
+	gameStatus.setText(gameStatus.getText()+" "+log);
+}
+@Override
+public Storage getStorage() {
+	// TODO Auto-generated method stub
+	return storage;
+}
+@Override
+public String getUserEmail() {
+	// TODO Auto-generated method stub
+	return currentUser.getEmailAddress();
+}
+@Override
+public void delayMove(String log) {
+	// TODO Auto-generated method stub
+	Window.alert(log+" Your internet is off, Move will be sent after you get connected again!");
+}
+@Override
+public Timer getTimer() {
+	// TODO Auto-generated method stub
+	return null;
+}
+}

@@ -1,0 +1,59 @@
+package org.harshmehta.hw6.server;
+
+import java.util.HashMap;
+
+import com.google.appengine.api.channel.ChannelMessage;
+import com.google.appengine.api.channel.ChannelService;
+import com.google.appengine.api.channel.ChannelServiceFactory;
+
+public class ChessServer {
+  private static int gameId=0;
+  private static int player=0;
+  private static HashMap<Integer,Game> gameMap = new HashMap<Integer,Game>();
+  
+  public static Game addPlayer(String clientId) {
+    if (player == 0) { // Cannot pair just yet
+      Game game = new Game();
+      game.setPlayer1ClientId(clientId);
+      game.setGameId(gameId);
+      game.setTurn(player);
+      gameMap.put(gameId, game);
+      ++player;
+      return game;
+    }
+    else {
+      // This is the second player. Pair with first player
+      Game game = gameMap.get(gameId);
+      game.setPlayer2ClientId(clientId);
+      beginGame(game);
+      player=0;  // Reset player number
+      gameId++;
+      return game;
+    }
+  }
+  
+  /**
+   * @return 
+   * 0: First Player
+   * 1: Second Player
+   */
+  public static int getPlayerId() {
+    return player;
+  }
+  
+  public static Game getGame(int gameId) {
+    if (gameMap.containsKey(gameId)) {
+      return gameMap.get(gameId);
+    }
+    return null;
+  }
+  
+  public static void removeGame(int gameId) {
+    gameMap.remove(gameId);
+  }
+  
+  private static void beginGame(Game game) {
+    ChannelService channelService = ChannelServiceFactory.getChannelService();
+    channelService.sendMessage(new ChannelMessage(game.getPlayer1ClientId(), new String("begin")));
+  }
+}

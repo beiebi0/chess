@@ -1,0 +1,59 @@
+<!DOCTYPE ui:UiBinder SYSTEM "http://dl.google.com/gwt/DTD/xhtml.ent">
+<ui:UiBinder xmlns:ui="urn:ui:com.google.gwt.uibinder"
+  xmlns:g="urn:import:com.google.gwt.user.client.ui">
+  <ui:style field="css" type="org.ashishmanral.hw11.GameCss">
+    .highlighted {
+      outline: inset green 3px;
+    }
+    .highlightSelected {
+      outline: dotted green 3px;
+    }
+    td img {
+      display: block
+    }
+    .gameStatus {
+      font-size: 15px;
+      font-weight: bold;
+      color: black;
+    }
+  </ui:style>
+  <g:HTMLPanel>
+    <div class="{css.gameStatus}">
+    <g:Label ui:field="matchIdLabel"/>
+    </div>
+    <div class="{css.gameStatus}">
+    <g:Label ui:field="matchStartDateLabel"/>
+    </div>
+    <div class="{css.gameStatus}">
+    <g:Label ui:field="whiteLabel"/>
+    </div>
+    <div class="{css.gameStatus}">
+    <g:Label ui:field="blackLabel"/>
+    </div>
+  <div class="{css.gameStatus}">
+      <g:Label ui:field="gameStatus" text="Status"/>
+    </div>
+    <g:Grid ui:field="gameGrid"/>
+    <br/>
+    <g:Grid ui:field="whitePromotionGrid"/>
+    <g:Grid ui:field="blackPromotionGrid"/>
+    <div class="{css.gameStatus}">
+      <g:Label ui:field="currentPlayerLabel"/>
+    </div>
+    <div class="{css.gameStatus}">
+      <g:Label ui:field="opponentLabel"/>
+    </div>
+    <br />
+    <g:Button ui:field="AI">Play With Computer</g:Button>
+    <br />
+    <g:Button ui:field="automatchButton">Auto Match</g:Button>
+    <g:Button ui:field="deleteButton">Delete Match</g:Button>
+    <br />
+    <g:TextBox ui:field="opponentEmailBox">Opponent's email address"</g:TextBox>
+    <g:Button ui:field="challengeButton" text="Challenge!!" />
+    <br />
+    <g:ListBox ui:field="matchList"/>
+    <br />
+    
+  </g:HTMLPanel>
+</ui:UiBinder> 

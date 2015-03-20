@@ -1,0 +1,21 @@
+package org.peigenyou.hw3;
+
+import org.shared.chess.State;
+
+import com.gargoylesoftware.htmlunit.javascript.host.Window;
+import com.google.gwt.core.client.EntryPoint;
+import com.googlecode.mgwt.linker.server.MGWTPhonegapHtml5ManifestServlet;
+import com.google.gwt.user.client.ui.RootPanel;
+
+public class ChessEntryPoint implements EntryPoint {
+  @Override
+  public void onModuleLoad() {
+    final Presenter presenter = new Presenter();
+    final Graphics graphics = new Graphics(presenter);
+    presenter.setView(graphics);
+    RootPanel.get().add(graphics);
+    RootPanel.get().setHeight("500px");
+    RootPanel.get().setWidth("400px");
+  }
+  
+}

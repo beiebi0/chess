@@ -1,0 +1,51 @@
+<!DOCTYPE ui:UiBinder SYSTEM "http://dl.google.com/gwt/DTD/xhtml.ent">
+<ui:UiBinder xmlns:ui="urn:ui:com.google.gwt.uibinder"
+	xmlns:g="urn:import:com.google.gwt.user.client.ui">
+	<ui:style field="css" type="org.shitianren.hw3.GameCss">
+		.highlighted {
+		outline: dotted green
+		2px;
+		}
+		td img {
+		display: block
+		}
+	</ui:style>
+	<g:HTMLPanel>
+
+
+		<g:VerticalPanel ui:field="connectPanel">
+			<g:Label ui:field="waitStatus" text="findOpponent" />
+			<g:Button ui:field = "AIButton"/>
+		</g:VerticalPanel>
+
+
+		<g:FlowPanel ui:field="gamePanel">
+			<g:SimplePanel ui:field="simplepanelGameEnd" />
+			<g:SimplePanel ui:field="simplepanelCapture" />
+			<g:SimplePanel ui:field="simplepanelClick" />
+
+			<g:VerticalPanel ui:field="autoMatchPanel">
+				<g:Button ui:field="autoMatchButton" />
+			</g:VerticalPanel>
+
+			<g:VerticalPanel ui:field="gameDisplayPanel">
+				<g:Label ui:field="gameDisStatus" />
+				<g:ListBox ui:field="matchList" />
+				<g:Button ui:field = "deleteGameButton"/>
+			</g:VerticalPanel>
+
+			<g:Label ui:field="saveStatus" text="saveStatus" />
+			<g:TextBox ui:field="nameText" />
+			<g:Button ui:field="saveButton" />
+			<g:Label ui:field="loadStatus" text="loadStatus" />
+			<g:ListBox ui:field="listBox" />
+			<g:Button ui:field="loadButton" />
+
+			<g:Label ui:field="gameStatus" text="Status" />
+			<g:Grid ui:field="gameGrid" />
+			<g:Button ui:field="restartButton" />
+			<g:Label ui:field="promotionStatus" text="" />
+			<g:Grid ui:field="promotionGrid" />
+		</g:FlowPanel>
+	</g:HTMLPanel>
+</ui:UiBinder>

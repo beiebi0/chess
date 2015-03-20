@@ -1,0 +1,35 @@
+# Generated from org.harshmehta.hw3.GraphicsGraphicsUiBinderImplGenMessages
+# for locale fr
+
+# Description: Game Status
+05F82CE9465A44BF076EF9D5617B3AF2=Statut de jeu:
+
+# Description: Auto Match Button
+21EC10E25BCD56B90B030DC10A9EDDEA=Matchup aléatoire!
+
+# Description: Email Field
+30BC5B2A7D3BE2EAA7DF18FC975F8C95=Adresse e-mail adversaire
+
+# Description: Your Details
+352D4F6D1B844657402BA9CA8829D0DB=Vos détails:
+
+# Description: Delete Match Button
+6F23DF4E407D376B4DF1E62026D589D3=Supprimer correspondre
+
+# Description: Your Turn
+8E147AE8A12AC58570C4E1448561915F=À vous la parole:
+
+# Description: Opponent
+9AEA5CDE3381B1CE3C110AC1606BE46F=Adversaire:
+
+# Description: AI Black Button
+BACD5E34A3A91B665CDF9E7DEEEF7F47=Jouer contre Noir AI
+
+# Description: Current Turn
+BB1AD2D4DC43DBC887CFF73A5B0B3968=Mettez en cours:
+
+# Description: Play Button
+C505ED3E450D93553B3EE49A4497DB9E=Jouer!
+
+# Description: AI White Button
+D575E0AB7B69636B9FBD29B345395116=Jouer contre Blanc AI

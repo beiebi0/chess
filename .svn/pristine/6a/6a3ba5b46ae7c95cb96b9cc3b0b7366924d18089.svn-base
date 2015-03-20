@@ -1,0 +1,302 @@
+package org.zhaohuizhang.hw6.server;
+
+import static com.googlecode.objectify.ObjectifyService.ofy;
+
+import java.util.Collection;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.Map;
+import java.util.Queue;
+import java.util.Set;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import org.zhaohuizhang.hw6.client.ChessGameService;
+import org.zhaohuizhang.hw6.client.LoginInfo;
+import org.zhaohuizhang.hw7.Match;
+import org.zhaohuizhang.hw7.Player;
+import org.zhaohuizhang.hw8.RankCaculator;
+import org.zhaohuizhang.hw8.ResultOfPlayer;
+
+import com.google.appengine.api.channel.ChannelMessage;
+import com.google.appengine.api.channel.ChannelService;
+import com.google.appengine.api.channel.ChannelServiceFactory;
+import com.google.appengine.api.users.User;
+import com.google.appengine.api.users.UserService;
+import com.google.appengine.api.users.UserServiceFactory;
+import com.google.gwt.user.server.rpc.RemoteServiceServlet;
+import com.googlecode.objectify.Key;
+import com.googlecode.objectify.ObjectifyService;
+
+public class ChessGameServiceImpl extends RemoteServiceServlet implements
+		ChessGameService {
+	private static final long serialVersionUID = 8213747913035536605L;
+
+	private Queue<User> unmatchedPlayers = new LinkedList<User>();
+	private Map<User, User> matchedPlayers = new HashMap<User, User>();
+	private final UserService userService;
+	ChannelService channelService = ChannelServiceFactory.getChannelService();
+
+	static {
+		ObjectifyService.register(Player.class);
+		ObjectifyService.register(Match.class);
+	}
+
+	public ChessGameServiceImpl() {
+		this(UserServiceFactory.getUserService());
+	}
+
+	public ChessGameServiceImpl(UserService userService) {
+		this.userService = userService;
+	}
+	
+	public static void addHeadersForCORS(HttpServletRequest req, HttpServletResponse resp) {
+	    resp.setHeader("Access-Control-Allow-Methods", "POST"); // "GET, HEAD, POST, PUT, DELETE, TRACE, OPTIONS");
+	    resp.setHeader("Access-Control-Allow-Origin", "*");
+	    resp.setHeader("Access-Control-Allow-Headers", "X-GWT-Module-Base, X-GWT-Permutation, Content-Type"); 
+	  }
+
+	  @Override
+	  protected void doOptions(HttpServletRequest req, HttpServletResponse resp) {
+	    addHeadersForCORS(req, resp);
+	  }
+
+	  @Override
+	  protected void onAfterResponseSerialized(String serializedResponse) {
+	    super.onAfterResponseSerialized(serializedResponse);
+	    addHeadersForCORS(getThreadLocalRequest(), getThreadLocalResponse());
+	  }
+
+	@Override
+	public LoginInfo login(String requestUri) {
+		User user = userService.getCurrentUser();
+		if (user == null) {
+			LoginInfo info = new LoginInfo();
+			info.setLoginUrl(userService.createLoginURL(requestUri));
+			return info;
+		}
+
+		if (ofy().load().type(Player.class).id(user.getEmail()).get() == null) {
+			Player player = new Player(user.getEmail(), user.getNickname());
+			ofy().save().entity(player).now();
+		} else {
+			Player player = ofy().load().type(Player.class).id(user.getEmail())
+					.get();
+			player.setName(user.getNickname());
+			ofy().save().entity(player).now();
+		}
+
+		LoginInfo info = new LoginInfo(user.getEmail(), user.getNickname());
+		info.setLogoutUrl(userService.createLogoutURL(requestUri));
+		return info;
+	}
+
+	@Override
+	public void sendMove(String moveStr) {
+		if (userService.isUserLoggedIn()) {
+			User currUser = userService.getCurrentUser();
+			if (matchedPlayers.containsKey(currUser)) {
+				User otherUser = matchedPlayers.get(currUser);
+				ChannelMessage message = new ChannelMessage(
+						otherUser.getUserId(), "M" + moveStr);
+				channelService.sendMessage(message);
+			}
+		}
+	}
+
+	@Override
+	public void sendState(String stateStr) {
+		if (userService.isUserLoggedIn()) {
+			User currUser = userService.getCurrentUser();
+			if (matchedPlayers.containsKey(currUser)) {
+				User otherUser = matchedPlayers.get(currUser);
+				ChannelMessage message = new ChannelMessage(
+						otherUser.getUserId(), "S" + stateStr);
+				channelService.sendMessage(message);
+			}
+		}
+	}
+
+	@Override
+	public synchronized void matchPlayers() {
+		if (userService.isUserLoggedIn()) {
+			User currUser = userService.getCurrentUser();
+			User otherUser;
+			while (!unmatchedPlayers.isEmpty()) {
+				otherUser = unmatchedPlayers.poll();
+				if (otherUser.equals(currUser)) {
+					break;
+				} else {
+					matchedPlayers.put(currUser, otherUser);
+					matchedPlayers.put(otherUser, currUser);
+
+					ChannelMessage messageForBlack = new ChannelMessage(
+							otherUser.getUserId(), "B" + currUser.getNickname());
+					ChannelMessage messageForWhite = new ChannelMessage(
+							currUser.getUserId(), "W" + otherUser.getNickname());
+
+					channelService.sendMessage(messageForBlack);
+					channelService.sendMessage(messageForWhite);
+					return;
+				}
+			}
+			addPlayerToQueen(currUser);
+
+		}
+	}
+
+	public synchronized String connectToServer() {
+		if (userService.isUserLoggedIn()) {
+			User currUser = userService.getCurrentUser();
+			String token = channelService.createChannel(currUser.getUserId());
+			return token;
+		}
+		return null;
+	}
+
+	@Override
+	public void updateMatch(String email, String state, String turn,
+			boolean isOver) {
+		if (userService.isUserLoggedIn()) {
+			User currUser = userService.getCurrentUser();
+			Key<Player> opponentKey = Key.create(Player.class, email);
+			Key<Player> currPlayerKey = Key.create(Player.class,
+					currUser.getEmail());
+			Date today = new Date();
+			Match match = new Match(opponentKey, currPlayerKey, state, isOver, turn, today);
+
+			// crossTransaction(match, opponentKey, currPlayerKey);
+
+			ofy().save().entity(match).now();
+			Player player = ofy().load().key(currPlayerKey).get();
+			Player opponent;
+			if (ofy().load().type(Player.class).id(email).get() == null) {
+				opponent = new Player(email);
+				opponent.setName("Unknown");
+				ofy().save().entity(opponent).now();
+
+			} else {
+				opponent = ofy().load().type(Player.class).id(email).get();
+			}
+			System.out.println(player.getEmail());
+			System.out.println(opponent.getEmail());
+
+			Key<Match> matchKey = ofy().load().entity(match).getKey();
+			player.addMatch(matchKey);
+			opponent.addMatch(matchKey);
+			System.out.println(player.getMatches());
+			System.out.println(opponent.getMatches());
+			ofy().save().entity(player).now();
+			ofy().save().entity(opponent).now();
+
+			// Player tmp = ofy().load().type(Player.class).id(email).get();
+			// System.out.println("Matches" + tmp.getMatches());
+
+		}
+
+	}
+
+	@Override
+	public String[] getAllMatches() {
+		if (userService.isUserLoggedIn()) {
+			User currUser = userService.getCurrentUser();
+			Key<Player> currPlayerKey = Key.create(Player.class,
+					currUser.getEmail());
+			Player currPlayer = ofy().load().key(currPlayerKey).get();
+			Set<Key<Match>> matchesKey = currPlayer.getMatches();
+			int size = matchesKey.size();
+			String[] results = new String[size];
+			Collection<Match> matches = ofy().load()
+					.keys(currPlayer.getMatches()).values();
+			int index = 0;
+			for (Match match : matches) {
+				Player opponent = ofy().load()
+						.key(match.getOpponent(currPlayerKey)).get();
+				StringBuffer buffer = new StringBuffer();
+				buffer.append("Match Id:" + match.getMatchid() + "_");
+				buffer.append("Opponent Name:" + opponent.getName() + "_");
+				buffer.append("Turn:" + match.getTurn() + "_");
+				if (match.isOver()) {
+					buffer.append("Over_");
+				} else {
+					buffer.append("On_");
+				}
+				results[index++] = buffer.toString();
+			}
+			return results;
+
+		}
+		return null;
+	}
+
+	private void addPlayerToQueen(User currUser) {
+		if (unmatchedPlayers.isEmpty()) {
+			unmatchedPlayers.add(currUser);
+		} else {
+			Iterator<User> it = unmatchedPlayers.iterator();
+			while (it.hasNext()) {
+				User tmp = it.next();
+				if (tmp.equals(currUser)) {
+					return;
+				}
+			}
+			unmatchedPlayers.add(currUser);
+		}
+
+	}
+
+	/*
+	 * private void crossTransaction(final Match match, final Key<Player>
+	 * opponentKey, final Key<Player> currPlayerKey) { ofy().transact(new
+	 * VoidWork() {
+	 * 
+	 * @Override public void vrun() { ofy().save().entity(match).now(); Player
+	 * player = ofy().load().key(currPlayerKey).get(); Player opponent =
+	 * ofy().load().key(opponentKey).get();
+	 * System.out.println(player.getName());
+	 * System.out.println(opponent.getName());
+	 * 
+	 * Key<Match> matchKey = ofy().load().entity(match).getKey();
+	 * player.addMatch(matchKey); opponent.addMatch(matchKey);
+	 * System.out.println(player.getMatches());
+	 * System.out.println(opponent.getMatches());
+	 * ofy().save().entity(player).now(); ofy().save().entity(opponent).now(); }
+	 * 
+	 * }); }
+	 */
+
+	@Override
+	public String[] getPlayerInfo() {
+		if (userService.isUserLoggedIn()) {
+			String[] results = new String[1];
+			User currUser = userService.getCurrentUser();
+			Player player = ofy().load().type(Player.class)
+					.id(currUser.getEmail()).get();
+			String rank = Double.toString(player.getRank());
+			results[0] = rank;
+			return results;
+		}
+		return null;
+	}
+
+	@Override
+	public String updateRank(String opponentEmail, ResultOfPlayer result) {
+		if (userService.isUserLoggedIn()) {
+			User currUser = userService.getCurrentUser();
+			Player player = ofy().load().type(Player.class)
+					.id(currUser.getEmail()).get();
+			Player opponent = ofy().load().type(Player.class).id(opponentEmail).get();
+			Double rankOfPlayer = player.getRank();
+			Double rankOfOpponent = opponent.getRank();
+			RankCaculator rankCalculator = RankCaculator.getInstance();
+			Double newRank = rankCalculator.calculateRanking(rankOfPlayer, rankOfOpponent, result);
+			player.setRank(newRank);
+			ofy().save().entity(player).now();	
+			return Double.toString(newRank);
+		}
+		return null;
+	}
+}

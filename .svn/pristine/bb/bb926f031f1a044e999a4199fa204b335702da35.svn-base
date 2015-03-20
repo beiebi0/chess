@@ -1,0 +1,75 @@
+package org.ashishmanral.hw5;
+
+
+import org.ashishmanral.hw6.client.LoginService;
+import org.ashishmanral.hw6.client.LoginServiceAsync;
+import org.ashishmanral.hw6.client.UserDetails;
+
+import com.google.gwt.core.client.EntryPoint;
+import com.google.gwt.core.client.GWT;
+import com.google.gwt.event.logical.shared.ValueChangeEvent;
+import com.google.gwt.event.logical.shared.ValueChangeHandler;
+import com.google.gwt.storage.client.Storage;
+import com.google.gwt.user.client.History;
+import com.google.gwt.user.client.Window;
+import com.google.gwt.user.client.rpc.AsyncCallback;
+import com.google.gwt.user.client.ui.Anchor;
+import com.google.gwt.user.client.ui.Label;
+import com.google.gwt.user.client.ui.RootPanel;
+import com.google.gwt.user.client.ui.VerticalPanel;
+
+/**
+ * ChessEntryPoint class
+ * @author Ashish
+ * EntryPoint for GWT
+ */
+public class ChessEntryPoint implements EntryPoint{
+  
+  private UserDetails userDetails = null;
+  
+  /**
+   * First method that gets fired
+   */
+  public void onModuleLoad() {
+    LoginServiceAsync ashishLoginService = GWT.create(LoginService.class);
+    ashishLoginService.login(Window.Location.getHref(), new AsyncCallback<UserDetails>() {
+      public void onFailure(Throwable error) {
+        Window.alert("Some Exception occured while Login Service");
+      }
+      
+      public void onSuccess(UserDetails details) {
+        userDetails = details;
+        if(userDetails.isLoggedIn()) {
+          Graphics graphics;
+          if(History.getToken().isEmpty()){
+            Storage storage=Storage.getLocalStorageIfSupported();
+            if(storage!=null) storage.clear();
+              History.newItem("WR$WG$WB$WQ$WK$WB$WG$WR$WP$WP$WP$WP$WP$WP$WP$WP$N$N$N$N$N$N$N$N$N$N$N$N$N$N$N$N$N$N$N$N$N$N$N$N$N$N$N$N$N$N$N$N$BP$BP$BP$BP$BP$BP$BP$BP$BR$BG$BB$BQ$BK$BB$BG$BR$W$T$T$T$T$0$88$N");
+              graphics=new Graphics(details);
+            }
+            else{
+              graphics=new Graphics(details);
+              graphics.restoreState(History.getToken());
+            }
+            RootPanel.get().add(graphics);
+            final Graphics finalGraphics=graphics;
+            History.addValueChangeHandler(new ValueChangeHandler<String>() {
+              public void onValueChange(ValueChangeEvent<String> event) {
+                String historyToken = event.getValue();
+                finalGraphics.restoreState(historyToken);
+              }
+            });
+          } 
+          else {
+        	Anchor signIn = new Anchor("Sign In");
+        	signIn.setHref(userDetails.getLoginUrl());
+        	VerticalPanel verticalPanel = new VerticalPanel();
+        	verticalPanel.add(new Label("Please sign in to play Chess!!"));
+        	verticalPanel.add(signIn);
+            RootPanel.get().add(verticalPanel);
+          }
+      }
+    });
+  } 
+}
+

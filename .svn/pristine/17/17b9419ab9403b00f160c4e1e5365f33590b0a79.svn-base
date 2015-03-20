@@ -1,0 +1,17 @@
+package org.harshmehta.hw9;
+
+/**
+ * Class for ranking moves
+ * @author Harsh
+ *
+ * @param <T>
+ */
+public class MoveScore<T> implements Comparable<MoveScore<T>> {
+  T move;
+  int score;
+
+  @Override
+  public int compareTo(MoveScore<T> o) {
+    return o.score - score; // sort DESC (best score first)
+  }
+}

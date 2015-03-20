@@ -1,0 +1,96 @@
+package org.zhaohuizhang.hw7;
+
+import java.util.Date;
+
+import com.googlecode.objectify.Key;
+import com.googlecode.objectify.annotation.Entity;
+import com.googlecode.objectify.annotation.Id;
+
+@Entity
+public class Match {
+	@Id
+	Long matchid;
+	Key<Player> black;
+	Key<Player> white;
+	String state;
+	boolean isOver;
+	String turn;
+	Date startDate;
+
+	
+
+	public Match() {
+	}
+
+	public Match(Key<Player> white, Key<Player> black, String state,
+			boolean isOver, String turn, Date startDate) {
+		this.black = black;
+		this.white = white;
+		this.state = state;
+		this.isOver = isOver;
+		this.turn = turn;
+		this.startDate = startDate;
+	}
+
+	public Long getMatchid() {
+		return matchid;
+	}
+
+	public void setMatchid(Long matchid) {
+		this.matchid = matchid;
+	}
+	
+	public Key<Player> getBlack() {
+		return black;
+	}
+
+	public void setBlack(Key<Player> black) {
+		this.black = black;
+	}
+
+	public Key<Player> getWhite() {
+		return white;
+	}
+
+	public void setWhite(Key<Player> white) {
+		this.white = white;
+	}
+
+	public String getState() {
+		return state;
+	}
+
+	public void setState(String state) {
+		this.state = state;
+	}
+	
+	public Date getStartDate() {
+		return startDate;
+	}
+
+	public void setStartDate(Date startDate) {
+		this.startDate = startDate;
+	}
+
+	public boolean isOver() {
+		return isOver;
+	}
+
+	public void setOver(boolean isOver) {
+		this.isOver = isOver;
+	}
+
+	public String getTurn() {
+		return turn;
+	}
+
+	public void setTurn(String turn) {
+		this.turn = turn;
+	}
+
+	public Key<Player> getOpponent(Key<Player> currPlayerKey) {
+		return currPlayerKey.equals(black) ? white : black;
+		
+	}
+
+}

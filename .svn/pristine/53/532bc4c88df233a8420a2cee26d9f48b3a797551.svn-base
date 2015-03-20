@@ -1,0 +1,85 @@
+package org.bohuang.hw9;
+
+import java.util.Set;
+
+import org.bohuang.hw2_5.StateExplorerImpl;
+import org.shared.chess.Move;
+import org.shared.chess.Piece;
+import org.shared.chess.State;
+
+public class Heuristic {
+	
+	StateExplorerImpl explorer = new StateExplorerImpl();
+	
+	public Iterable<Move> getOrderedMoves(State state){
+		Set<Move> posMoves = explorer.getPossibleMoves(state);		
+		return posMoves;
+	}
+	
+	public int getStateValue(State state){
+		int value = 0;
+		//Color color = state.getTurn();
+		if(state.getGameResult()!=null){
+			if(state.getGameResult().getWinner()!=null){
+				if(state.getGameResult().getWinner().isWhite()){
+					value = Integer.MAX_VALUE;				
+				}else{
+					value = Integer.MIN_VALUE;
+				}
+			}			
+		}
+		
+		for(int row = 0 ; row < 8 ; row++){
+			for(int col = 0 ; col < 8 ; col++){
+				Piece piece = state.getPiece(row, col);
+				int pieceValue = getPieceValue(piece,row);
+				value = value + pieceValue;
+			}
+		}
+		
+		return value;
+	}
+
+	private int getPieceValue(Piece piece, int row) {
+		int pieceValue = 0;
+		if(piece == null){
+			return 0;
+		}
+		switch(piece.getKind()){
+		case ROOK:{
+			pieceValue = 25;
+			break;
+		}
+		case KNIGHT:{
+			pieceValue = 15;
+			break;
+		}
+		case BISHOP:{
+			pieceValue = 25;
+			break;
+		}
+		case QUEEN:{
+			pieceValue = 50;
+			break;
+		}
+		case KING:{
+			pieceValue = 100;
+			break;
+		}
+		case PAWN:{
+			pieceValue = 10;
+			if(piece.getColor().isWhite()){
+				pieceValue = pieceValue + row;
+			}else{
+				pieceValue = pieceValue + 7-row;
+			}
+			break;
+		}
+		}
+		if(!piece.getColor().isWhite()){
+			pieceValue = 0 - pieceValue;
+		}
+		return pieceValue;
+	}
+
+}

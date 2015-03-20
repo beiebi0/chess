@@ -1,0 +1,392 @@
+package org.jiangfengchen.hw6.server;
+
+
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.Map;
+import java.util.Random;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import org.jiangfengchen.hw7.Contact;
+import org.jiangfengchen.hw7.Match;
+import org.jiangfengchen.hw7.Player;
+import org.jiangfengchen.hw8.RatingHelper;
+
+import org.jiangfengchen.hw6.client.LoginInfo;
+import org.jiangfengchen.hw6.client.LoginService;
+
+
+import com.google.appengine.api.channel.ChannelMessage;
+import com.google.appengine.api.channel.ChannelService;
+import com.google.appengine.api.channel.ChannelServiceFactory;
+import com.google.appengine.api.users.User;
+import com.google.appengine.api.users.UserService;
+import com.google.appengine.api.users.UserServiceFactory;
+
+
+
+import com.google.gwt.user.server.rpc.RemoteServiceServlet;
+import com.googlecode.objectify.Objectify;
+import com.googlecode.objectify.ObjectifyService;
+
+
+public class LoginServiceImpl extends RemoteServiceServlet implements
+LoginService {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+    private static LinkedList<Player> onlinelist= new LinkedList<Player>();
+    
+	static{
+		ObjectifyService.register(Match.class);
+		ObjectifyService.register(Player.class);
+		ObjectifyService.register(Contact.class);
+	}
+	
+	ChannelService channelService = ChannelServiceFactory.getChannelService();
+public LoginInfo login(String requestUri) {
+	Objectify ofy = ObjectifyService.ofy();
+	UserService userService = UserServiceFactory.getUserService();	
+	User user = userService.getCurrentUser();
+	LoginInfo loginInfo = new LoginInfo();
+
+	if (user != null) {
+			loginInfo.setLoggedIn(true);
+			loginInfo.setEmailAddress(user.getEmail());
+			loginInfo.setNickname(user.getNickname());
+			loginInfo.setLogoutUrl(userService.createLogoutURL(requestUri));
+			String token =  channelService.createChannel(loginInfo.getEmailAddress());
+			loginInfo.setToken(token);
+	} else {
+			loginInfo.setLoggedIn(false);
+			loginInfo.setLoginUrl(userService.createLoginURL(requestUri));
+	}
+	if(loginInfo.getEmailAddress()!=null){
+		ofy.clear();
+		Player saved = ofy.load().type(Player.class).id(loginInfo.getEmailAddress()).get();
+		if(saved==null){
+			Player pl = new Player(loginInfo.getEmailAddress(),loginInfo.getNickname());
+			Playerlogin(pl);
+			ofy.save().entity(pl).now();
+		}else{
+			double rank = saved.getRating();
+			loginInfo.setRank(rank);
+			saved.setOnline(true);
+			Playerlogin(saved);
+			ofy.save().entity(saved).now();
+		}
+	}
+	return loginInfo;
+}
+
+@Override
+public LinkedList<Match> LoadGame(String userId) {	
+	Objectify ofy = ObjectifyService.ofy();
+	LinkedList<Match> result= new LinkedList<Match>();
+	Iterable<Match> list = ofy.load().type(Match.class);
+	Iterator<Match> itr= list.iterator();
+	while(itr.hasNext()){
+		Match mt = itr.next();
+		if((mt.getWhite().equals(userId)&& !mt.isDeleteW())||(mt.getBlack().equals(userId)&&!mt.isDeleteB()))result.add(mt);
+	}
+	
+	return result;
+}
+
+@Override
+public Match SearchGame(String userId) {
+	
+	double i = Math.random()*2;
+	Match mt;
+	Objectify ofy = ObjectifyService.ofy();
+//	try
+//	{
+		Random random = new Random();
+		Iterator<Player> itr = onlinelist.iterator();
+		LinkedList<String> users= new LinkedList<String>();
+		while(itr.hasNext()){
+			Player pl = itr.next();
+			users.add(pl.getEmail());
+		}
+		int k= random.nextInt(users.size());
+		String opponent = users.get(k);
+		if(opponent.equals(userId)&&users.size()==1) return null;
+		while(opponent.equals(userId)){
+			k= random.nextInt(users.size());
+			opponent = users.get(k);
+		}
+	if (i>1) {
+		 mt = new Match(userId,opponent,System.currentTimeMillis());
+	}else {
+		 mt = new Match(opponent,userId,System.currentTimeMillis());
+	}
+	channelService.sendMessage(new ChannelMessage(opponent,"0,"+userId+" "+mt.getMatchid()+" "+mt.getState()+" "+mt.getWhite()+" "+mt.getBlack()));
+	ofy.save().entity(mt).now();
+//	ofy.getTxn().commit();
+ //   }finally{
+ //   	if(ofy.getTxn().isActive()) ofy.getTxn().rollback();
+ //   }
+	return mt;
+}
+
+@Override
+public Match GameWith(String userId, String opponent) {
+	double i = Math.random()*2;
+	Match mt;
+	Objectify ofy = ObjectifyService.ofy().transaction();
+	try
+	{
+	if (i>1) {
+		 mt = new Match(userId,opponent,System.currentTimeMillis());
+	}else {
+		 mt = new Match(opponent,userId,System.currentTimeMillis());
+	}
+	channelService.sendMessage(new ChannelMessage(opponent,"0,"+userId+" "+mt.getMatchid()+" "+mt.getState()+" "+mt.getWhite()+" "+mt.getBlack()));
+	ofy.save().entity(mt).now();
+	ofy.getTxn().commit();
+    }finally{
+    	if(ofy.getTxn().isActive()) ofy.getTxn().rollback();
+    }
+	return mt;
+}
+
+@Override
+public Match MakeMove(String state, String userId, long gameId,String result) {
+	Match res =null;
+	Objectify ofy= ObjectifyService.ofy().transaction();
+	try
+	{
+	 res = ofy.load().type(Match.class).id(gameId).get();
+	if (res.getWhite().equals(userId)&&res.isWhiteTurn()){
+			res.setState(state);
+			res.setWhiteTurn(false);
+			
+			if(result!=null&&result!=""){
+				if(result.equals("W")){
+					Date today = new Date();
+					Player w = ofy.load().type(Player.class).id(res.getWhite()).get();
+					ofy.clear();
+					Player b = ofy.load().type(Player.class).id(res.getBlack()).get();
+					int wt=RatingHelper.DayDiff(today, w.getLastPlayed());
+					double wfinalRD=RatingHelper.finalRD(w.getRating(), w.getRD(), b, wt);
+					double wrating=RatingHelper.newRating(w, b, 1.0,wt);
+					int bt=RatingHelper.DayDiff(today, b.getLastPlayed());
+					double bfinalRD=RatingHelper.finalRD(b.getRating(), b.getRD(), w, bt);
+					double brating=RatingHelper.newRating(b, w, 0.0,bt);
+					w.setRD(wfinalRD);
+					w.setRating(wrating);
+					b.setRD(bfinalRD);
+					b.setRating(brating);
+					ofy.save().entity(b).now();
+					ofy.save().entity(w).now();
+					channelService.sendMessage(new ChannelMessage(res.getBlack(),"2,"+((int) brating)));
+					channelService.sendMessage(new ChannelMessage(res.getWhite(),"2,"+((int) wrating)));
+					
+				}else if(result.equals("B")){
+					Date today = new Date();
+					Player w = ofy.load().type(Player.class).id(res.getWhite()).get();
+					ofy.clear();
+					Player b = ofy.load().type(Player.class).id(res.getBlack()).get();
+					int wt=RatingHelper.DayDiff(today, w.getLastPlayed());
+					double wfinalRD=RatingHelper.finalRD(w.getRating(), w.getRD(), b, wt);
+					double wrating=RatingHelper.newRating(w, b, 0.0,wt);
+					int bt=RatingHelper.DayDiff(today, b.getLastPlayed());
+					double bfinalRD=RatingHelper.finalRD(b.getRating(), b.getRD(), w, bt);
+					double brating=RatingHelper.newRating(b, w, 1.0,bt);
+					w.setRD(wfinalRD);
+					w.setRating(wrating);
+					b.setRD(bfinalRD);
+					b.setRating(brating);
+					ofy.save().entity(b).now();
+					ofy.save().entity(w).now();
+					channelService.sendMessage(new ChannelMessage(res.getBlack(),"2,"+((int) brating)));
+					channelService.sendMessage(new ChannelMessage(res.getWhite(),"2,"+((int) wrating)));
+				}else{
+					Date today = new Date();
+					Player w = ofy.load().type(Player.class).id(res.getWhite()).get();
+					ofy.clear();
+					Player b = ofy.load().type(Player.class).id(res.getBlack()).get();
+					int wt=RatingHelper.DayDiff(today, w.getLastPlayed());
+					double wfinalRD=RatingHelper.finalRD(w.getRating(), w.getRD(), b, wt);
+					double wrating=RatingHelper.newRating(w, b,0.5,wt);
+					int bt=RatingHelper.DayDiff(today, b.getLastPlayed());
+					double bfinalRD=RatingHelper.finalRD(b.getRating(), b.getRD(), w, bt);
+					double brating=RatingHelper.newRating(b, w,0.5,bt);
+					w.setRD(wfinalRD);
+					w.setRating(wrating);
+					b.setRD(bfinalRD);
+					b.setRating(brating);
+					ofy.save().entity(b).now();
+					ofy.save().entity(w).now();
+					channelService.sendMessage(new ChannelMessage(res.getBlack(),"2,"+((int) brating)));
+					channelService.sendMessage(new ChannelMessage(res.getWhite(),"2,"+((int) wrating)));
+				}
+			}
+				
+	}else if (res.getBlack().equals(userId)&&!res.isWhiteTurn()){
+			res.setState(state);
+			res.setWhiteTurn(true);
+			
+			if(result!=null){
+				if(result.equals("W")){
+					Date today = new Date();
+					Player w = ofy.load().type(Player.class).id(res.getWhite()).get();
+					ofy.clear();
+					Player b = ofy.load().type(Player.class).id(res.getBlack()).get();
+					int wt=RatingHelper.DayDiff(today, w.getLastPlayed());
+					double wfinalRD=RatingHelper.finalRD(w.getRating(), w.getRD(), b, wt);
+					double wrating=RatingHelper.newRating(w, b, 1.0,wt);
+					int bt=RatingHelper.DayDiff(today, b.getLastPlayed());
+					double bfinalRD=RatingHelper.finalRD(b.getRating(), b.getRD(), w, bt);
+					double brating=RatingHelper.newRating(b, w, 0.0,bt);
+					w.setRD(wfinalRD);
+					w.setRating(wrating);
+					b.setRD(bfinalRD);
+					b.setRating(brating);
+					ofy.save().entity(b).now();
+					ofy.save().entity(w).now();
+					channelService.sendMessage(new ChannelMessage(res.getBlack(),"2,"+((int) brating)));
+					channelService.sendMessage(new ChannelMessage(res.getWhite(),"2,"+((int) wrating)));
+					
+				}else if(result.equals("B")){
+					Date today = new Date();
+					Player w = ofy.load().type(Player.class).id(res.getWhite()).get();
+					ofy.clear();
+					Player b = ofy.load().type(Player.class).id(res.getBlack()).get();
+					int wt=RatingHelper.DayDiff(today, w.getLastPlayed());
+					double wfinalRD=RatingHelper.finalRD(w.getRating(), w.getRD(), b, wt);
+					double wrating=RatingHelper.newRating(w, b, 0.0,wt);
+					int bt=RatingHelper.DayDiff(today, b.getLastPlayed());
+					double bfinalRD=RatingHelper.finalRD(b.getRating(), b.getRD(), w, bt);
+					double brating=RatingHelper.newRating(b, w, 1.0,bt);
+					w.setRD(wfinalRD);
+					w.setRating(wrating);
+					b.setRD(bfinalRD);
+					b.setRating(brating);
+					ofy.save().entity(b).now();
+					ofy.save().entity(w).now();
+					channelService.sendMessage(new ChannelMessage(res.getBlack(),"2,"+((int) brating)));
+					channelService.sendMessage(new ChannelMessage(res.getWhite(),"2,"+((int) wrating)));
+				}else{
+					Date today = new Date();
+					Player w = ofy.load().type(Player.class).id(res.getWhite()).get();
+					ofy.clear();
+					Player b = ofy.load().type(Player.class).id(res.getBlack()).get();
+					int wt=RatingHelper.DayDiff(today, w.getLastPlayed());
+					double wfinalRD=RatingHelper.finalRD(w.getRating(), w.getRD(), b, wt);
+					double wrating=RatingHelper.newRating(w, b, 0.5,wt);
+					int bt=RatingHelper.DayDiff(today, b.getLastPlayed());
+					double bfinalRD=RatingHelper.finalRD(b.getRating(), b.getRD(), w, bt);
+					double brating=RatingHelper.newRating(b, w, 0.5,bt);
+					w.setRD(wfinalRD);
+					w.setRating(wrating);
+					b.setRD(bfinalRD);
+					b.setRating(brating);
+					ofy.save().entity(b).now();
+					ofy.save().entity(w).now();
+					channelService.sendMessage(new ChannelMessage(res.getBlack(),"2,"+((int) brating)));
+					channelService.sendMessage(new ChannelMessage(res.getWhite(),"2,"+((int) wrating)));
+				}
+			}
+	}else{
+		return null;
+	}
+		ofy.save().entity(res).now();
+		ofy.getTxn().commit();
+	}finally{
+		if(ofy.getTxn().isActive()) {
+			ofy.getTxn().rollback();
+			res=null;
+		}
+	}
+	if(res!=null){
+		if (res.getWhite().equals(userId)&&!res.isWhiteTurn()){
+			channelService.sendMessage(new ChannelMessage(res.getBlack(),"1,"+state+","+res.getBlack()+",b,"+gameId));
+		}else if (res.getBlack().equals(userId)&&res.isWhiteTurn()){
+			channelService.sendMessage(new ChannelMessage(res.getWhite(),"1,"+state+","+res.getWhite()+",w,"+gameId));
+		}
+	}
+
+  
+	return res;
+}
+
+@Override
+public String Delete(String userId, long gameId) {
+	Objectify ofy = ObjectifyService.ofy().transaction();
+	try{
+	Match result = ofy.load().type(Match.class).id(gameId).get();
+	if (result.getWhite().equals(userId)) result.setDeleteW(true);
+	else if(result.getBlack().equals(userId))result.setDeleteB(true);
+	if(result.isDeleteB()&&result.isDeleteW()) ofy.delete().entity(result);
+	else ofy.save().entity(result).now();
+	ofy.getTxn().commit();
+	}finally{
+    	if(ofy.getTxn().isActive()) {
+    		ofy.getTxn().rollback();
+    		return null;
+    	}
+    }
+	return gameId+"";
+}
+
+@Override
+public Match LoadById(long id) {
+	Objectify ofy = ObjectifyService.ofy();
+	ofy.clear();
+	Match result = ofy.load().type(Match.class).id(id).get();
+	return result;
+}
+
+public static void kickoff(Player pl){
+	for(Player pn:onlinelist){
+		if(pn.getId().equals(pl.getId())) {
+			onlinelist.remove(pn);
+		}
+	}
+}
+public static void Playerlogin(Player pl){
+	for(Player pn:onlinelist){
+		if(pn.getId().equals(pl.getId())) return;
+	}
+	onlinelist.add(pl);
+}
+
+	  public static void addHeadersForCORS(HttpServletRequest req, HttpServletResponse resp) {
+	    resp.setHeader("Access-Control-Allow-Methods", "POST"); // "GET, HEAD, POST, PUT, DELETE, TRACE, OPTIONS");
+	    resp.setHeader("Access-Control-Allow-Origin", "*");
+	    resp.setHeader("Access-Control-Allow-Headers", "X-GWT-Module-Base, X-GWT-Permutation, Content-Type"); 
+	  }
+	  
+	  @Override
+	  protected void doOptions(HttpServletRequest req, HttpServletResponse resp) {
+	    addHeadersForCORS(req, resp);
+	  }
+
+	  @Override
+	  protected void onAfterResponseSerialized(String serializedResponse) {
+	    super.onAfterResponseSerialized(serializedResponse);
+	    addHeadersForCORS(getThreadLocalRequest(), getThreadLocalResponse());
+	  }
+
+	@Override
+	public void SaveContact(long id, String emails) {
+		Objectify ofy= ObjectifyService.ofy();
+		Contact toput = new Contact(id,emails);
+		ofy.save().entity(toput).now();
+	}
+
+	@Override
+	public String LoadContact(long id) {
+		Objectify ofy= ObjectifyService.ofy();
+		Contact result = ofy.load().type(Contact.class).id(id).get();
+		ofy.delete().entity(result).now();
+		return result.getContact();
+	}
+	  
+}

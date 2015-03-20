@@ -1,0 +1,643 @@
+package org.haoxiangzuo.hw1;
+
+import static org.junit.Assert.assertEquals;
+
+import org.junit.Test;
+import org.shared.chess.AbstractStateChangerTest;
+import org.shared.chess.StateChanger;import org.junit.Test;
+import org.shared.chess.AbstractStateChangerTest;
+import org.shared.chess.GameResult;
+import org.shared.chess.GameResultReason;
+import org.shared.chess.Move;
+import org.shared.chess.Piece;
+import org.shared.chess.PieceKind;
+import org.shared.chess.Position;
+import org.shared.chess.State;
+import org.shared.chess.Color;
+
+public abstract class AbstractStateChangerEndOfTheGameForWhiteTest extends AbstractStateChangerTest 
+{
+	private void clearAllPieces() {
+		  for (int row = 0; row<=7; row++)
+			  for (int col = 0; col<=7; col++)
+				  start.setPiece(row, col, null);
+		  }
+	  @Test
+		public void testBlackKingBeingCheckMateByOneWhiteRookAndOneWhiteQueen(){
+		  	clearAllPieces();
+			Piece blackKing = new Piece(Color.BLACK,PieceKind.KING);
+			Piece whiteKing = new Piece(Color.WHITE,PieceKind.KING);
+			Piece whiteQueen = new Piece(Color.WHITE,PieceKind.QUEEN);
+			Piece whiteRook = new Piece(Color.WHITE,PieceKind.ROOK);
+			start.setCanCastleKingSide(Color.BLACK, false);
+			start.setCanCastleQueenSide(Color.BLACK, false);
+			start.setCanCastleKingSide(Color.WHITE, false);
+			start.setCanCastleQueenSide(Color.WHITE, false);
+			start.setPiece(7, 4, blackKing);
+			start.setPiece(0, 4, whiteKing);
+			start.setPiece(6, 7, whiteRook);
+			start.setPiece(0, 0, whiteQueen);
+			start.setTurn(Color.WHITE);
+			
+			State expected = start.copy();
+			expected.setTurn(Color.BLACK);
+			expected.setPiece(0, 0, null);
+			expected.setPiece(7, 0,	whiteQueen);
+			expected.setNumberOfMovesWithoutCaptureNorPawnMoved(1);
+			GameResult result = new GameResult(Color.WHITE, GameResultReason.CHECKMATE);
+			expected.setGameResult(result);
+			
+			Move moveWhiteQueen = new Move(new Position(0,0), new Position(7,0), null);
+			stateChanger.makeMove(start, moveWhiteQueen);
+			assertEquals(expected, start);
+		}
+		@Test
+		public void testBlackKingBeingCheckMateByOneWhiteQueen()
+		{
+			start.setTurn(Color.WHITE);
+			start.setPiece(6, 5, null);
+			start.setPiece(6, 6, null);
+			start.setPiece(1, 4, null);
+			
+			State expected = start.copy();
+			expected.setTurn(Color.BLACK);
+			expected.setPiece(0, 3, null);
+			expected.setPiece(4, 7, new Piece(Color.WHITE, PieceKind.QUEEN));
+			expected.setNumberOfMovesWithoutCaptureNorPawnMoved(1);
+			GameResult result = new GameResult(Color.WHITE, GameResultReason.CHECKMATE);
+			expected.setGameResult(result);
+			
+			Move moveWhiteQueen = new Move(new Position(0,3), new Position(4,7),null);
+			stateChanger.makeMove(start, moveWhiteQueen);
+			assertEquals(expected,start);
+		}
+		@Test
+		public void testBlackKingBeingCheckMateByOneWhiteKingAndOneWhiteRook()
+		{
+			clearAllPieces();
+			start.setTurn(Color.WHITE);
+			start.setPiece(7, 3, new Piece(Color.BLACK, PieceKind.KING));
+			start.setPiece(5, 3, new Piece(Color.WHITE, PieceKind.KING));
+			start.setPiece(0, 6, new Piece(Color.WHITE, PieceKind.ROOK));
+			start.setCanCastleKingSide(Color.BLACK, false);
+			start.setCanCastleQueenSide(Color.BLACK, false);
+			start.setCanCastleKingSide(Color.WHITE, false);
+			start.setCanCastleQueenSide(Color.WHITE, false);
+			
+			State expected = start.copy();
+			expected.setTurn(Color.BLACK);
+			expected.setPiece(0, 6, null);
+			expected.setPiece(7, 6, new Piece(Color.WHITE, PieceKind.ROOK));
+			expected.setNumberOfMovesWithoutCaptureNorPawnMoved(1);
+			
+			GameResult result = new GameResult(Color.WHITE, GameResultReason.CHECKMATE);
+			expected.setGameResult(result);
+			
+			Move moveWhiteRook = new Move(new Position(0,6), new Position(7,6), null);
+			stateChanger.makeMove(start, moveWhiteRook);
+			assertEquals(expected,start);
+		}
+		@Test
+		public void testBlackKingBeingCheckmateByOneWhiteQueeWhenWhiteQueenDoingCaptrue()
+		{
+			start.setTurn(Color.WHITE);
+			start.setPiece(6, 5, null);
+			start.setPiece(6, 6, null);
+			start.setPiece(1, 4, null);
+			start.setPiece(4, 7, new Piece(Color.BLACK, PieceKind.PAWN));
+			
+			State expected = start.copy();
+			expected.setTurn(Color.BLACK);
+			expected.setPiece(0, 3, null);
+			expected.setPiece(4, 7, new Piece(Color.WHITE, PieceKind.QUEEN));
+			GameResult result = new GameResult(Color.WHITE, GameResultReason.CHECKMATE);
+			expected.setGameResult(result);
+			
+			Move moveWhiteQueen = new Move(new Position(0,3), new Position(4,7),null);
+			stateChanger.makeMove(start, moveWhiteQueen);
+			assertEquals(expected,start);
+		}
+		@Test
+		public void testBlackKingBeingCheckmateByOneWhiteQueenAndOneWhiteRookInTheCorner()
+		{
+			clearAllPieces();
+			start.setTurn(Color.WHITE);
+			start.setPiece(7, 0, new Piece(Color.BLACK, PieceKind.KING));
+			start.setPiece(6, 4, new Piece(Color.WHITE, PieceKind.ROOK));
+			start.setPiece(0, 2, new Piece(Color.WHITE, PieceKind.QUEEN));
+			start.setPiece(0, 4, new Piece(Color.WHITE, PieceKind.KING));
+			start.setPiece(4, 4, new Piece(Color.WHITE, PieceKind.BISHOP));
+			start.setCanCastleKingSide(Color.BLACK, false);
+			start.setCanCastleQueenSide(Color.BLACK, false);
+			start.setCanCastleKingSide(Color.WHITE, false);
+			start.setCanCastleQueenSide(Color.WHITE, false);
+			
+			State expected = start.copy();
+			expected.setTurn(Color.BLACK);
+			expected.setPiece(0, 2, null);
+			expected.setPiece(5, 2, new Piece(Color.WHITE, PieceKind.QUEEN));
+			expected.setNumberOfMovesWithoutCaptureNorPawnMoved(1);
+			GameResult result = new GameResult(Color.WHITE, GameResultReason.CHECKMATE);
+			expected.setGameResult(result);
+			
+			Move moveWhiteQueen = new Move(new Position(0,2), new Position(5,2), null);
+			stateChanger.makeMove(start, moveWhiteQueen);
+			assertEquals(expected, start);
+		}
+		@Test
+		public void testBlackKingBeingCheckmateByTwoWhiteRooksAndOneWhiteQueen()
+		{
+			clearAllPieces();
+			start.setTurn(Color.WHITE);
+			start.setCanCastleKingSide(Color.BLACK, false);
+			start.setCanCastleQueenSide(Color.BLACK, false);
+			start.setCanCastleKingSide(Color.WHITE, false);
+			start.setCanCastleQueenSide(Color.WHITE, false);
+			start.setPiece(new Position(7,4), new Piece(Color.BLACK, PieceKind.KING));
+			start.setPiece(new Position(0,3), new Piece(Color.WHITE, PieceKind.ROOK));
+			start.setPiece(new Position(0,5), new Piece(Color.WHITE, PieceKind.ROOK));
+			start.setPiece(new Position(0,4), new Piece(Color.WHITE, PieceKind.KING));
+			start.setPiece(new Position(1,1), new Piece(Color.WHITE, PieceKind.QUEEN));
+			
+			State expected = start.copy();
+			expected.setTurn(Color.BLACK);
+			expected.setPiece(new Position(1,1), null);
+			expected.setPiece(new Position(1,4), new Piece(Color.WHITE, PieceKind.QUEEN));
+			expected.setNumberOfMovesWithoutCaptureNorPawnMoved(1);
+			GameResult result = new GameResult(Color.WHITE, GameResultReason.CHECKMATE);
+			expected.setGameResult(result);
+			
+			Move moveWhiteQueen = new Move(new Position(1,1), new Position(1,4), null);
+			stateChanger.makeMove(start, moveWhiteQueen);
+			assertEquals(expected, start);
+		}
+		@Test
+		public void testBlackKingBeingCheckmateByOneWhiteKingAndTwoWhiteBishops()
+		{
+			clearAllPieces();
+			start.setTurn(Color.WHITE);
+			start.setPiece(7, 0, new Piece(Color.BLACK, PieceKind.KING));
+			start.setPiece(6, 2, new Piece(Color.WHITE, PieceKind.BISHOP));
+			start.setPiece(4, 1, new Piece(Color.WHITE, PieceKind.BISHOP));
+			start.setPiece(5, 1, new Piece(Color.WHITE, PieceKind.KING));
+			start.setCanCastleKingSide(Color.BLACK, false);
+			start.setCanCastleQueenSide(Color.BLACK, false);
+			start.setCanCastleKingSide(Color.WHITE, false);
+			start.setCanCastleQueenSide(Color.WHITE, false);
+			
+			State expected = start.copy();
+			expected.setTurn(Color.BLACK);
+			expected.setPiece(4, 1, null);
+			expected.setPiece(5, 2, new Piece(Color.WHITE, PieceKind.BISHOP));
+			expected.setNumberOfMovesWithoutCaptureNorPawnMoved(1);
+			GameResult result = new GameResult(Color.WHITE, GameResultReason.CHECKMATE);
+			expected.setGameResult(result);
+			
+			Move moveWhiteBishop = new Move(new Position(4,1), new Position(5,2), null);
+			stateChanger.makeMove(start, moveWhiteBishop);
+			assertEquals(expected, start);
+		}
+		@Test
+		public void testBlackKingBeingCheckmateByOneWhiteKingAndTwoKnights()
+		{
+			clearAllPieces();
+			start.setTurn(Color.WHITE);
+			start.setCanCastleKingSide(Color.BLACK, false);
+			start.setCanCastleQueenSide(Color.BLACK, false);
+			start.setCanCastleKingSide(Color.WHITE, false);
+			start.setCanCastleQueenSide(Color.WHITE, false);
+			start.setPiece(7, 7, new Piece(Color.BLACK, PieceKind.KING));
+			start.setPiece(6, 5, new Piece(Color.WHITE, PieceKind.KING));
+			start.setPiece(5, 5, new Piece(Color.WHITE, PieceKind.KNIGHT));
+			start.setPiece(7, 5, new Piece(Color.WHITE, PieceKind.KNIGHT));
+			
+			State expected = start.copy();
+			expected.setTurn(Color.BLACK);
+			expected.setPiece(7, 5, null);
+			expected.setPiece(5, 6, new Piece(Color.WHITE, PieceKind.KNIGHT));
+			expected.setNumberOfMovesWithoutCaptureNorPawnMoved(1);
+			GameResult result = new GameResult(Color.WHITE, GameResultReason.CHECKMATE);
+			expected.setGameResult(result);
+			
+			Move moveWhiteKnight = new Move(new Position(7,5), new Position(5,6), null);
+			stateChanger.makeMove(start, moveWhiteKnight);
+			assertEquals(expected, start);
+		}
+		@Test
+		public void testBlackKingBeingCheckmateByOneWhiteKingAndTwoWhiteRooks()
+		{
+			clearAllPieces();
+			start.setTurn(Color.WHITE);
+			start.setCanCastleKingSide(Color.BLACK, false);
+			start.setCanCastleQueenSide(Color.BLACK, false);
+			start.setCanCastleKingSide(Color.WHITE, false);
+			start.setCanCastleQueenSide(Color.WHITE, false);
+			start.setPiece(1, 4, new Piece(Color.WHITE, PieceKind.KING));
+			start.setPiece(3, 4, new Piece(Color.BLACK, PieceKind.KING));
+			start.setPiece(4, 1, new Piece(Color.WHITE, PieceKind.ROOK));
+			start.setPiece(0, 0, new Piece(Color.WHITE, PieceKind.ROOK));
+			
+			State expected = start.copy();
+			expected.setTurn(Color.BLACK);
+			expected.setNumberOfMovesWithoutCaptureNorPawnMoved(1);
+			GameResult result = new GameResult(Color.WHITE, GameResultReason.CHECKMATE);
+			expected.setGameResult(result);
+			expected.setPiece(0, 0, null);
+			expected.setPiece(3, 0, new Piece(Color.WHITE, PieceKind.ROOK));
+			
+			Move moveWhiteKnight = new Move(new Position(0 , 0), new Position(3 , 0), null);
+			stateChanger.makeMove(start, moveWhiteKnight);
+			assertEquals(expected, start);
+		}
+		@Test
+		public void testBlackKingBeingCheckmateByOneWhiteKingAndOneWhiteQueen(){
+			clearAllPieces();
+			start.setTurn(Color.WHITE);
+			start.setCanCastleKingSide(Color.BLACK, false);
+			start.setCanCastleQueenSide(Color.BLACK, false);
+			start.setCanCastleKingSide(Color.WHITE, false);
+			start.setCanCastleQueenSide(Color.WHITE, false);
+			start.setPiece(7,0,new Piece(Color.BLACK, PieceKind.KING));
+			start.setPiece(5,1, new Piece(Color.WHITE, PieceKind.KING));
+			start.setPiece(6,7, new Piece(Color.WHITE, PieceKind.QUEEN));
+			
+			State expected = start.copy();
+			expected.setTurn(Color.BLACK);
+			expected.setNumberOfMovesWithoutCaptureNorPawnMoved(1);
+			GameResult result = new GameResult(Color.WHITE, GameResultReason.CHECKMATE);
+			expected.setGameResult(result);
+			expected.setPiece(6, 7, null);
+			expected.setPiece(7, 7, new Piece(Color.WHITE, PieceKind.QUEEN));
+			
+			Move moveWhiteKnight = new Move(new Position(6,7), new Position(7,7), null);
+			stateChanger.makeMove(start, moveWhiteKnight);
+			assertEquals(expected, start);		
+		}
+		@Test
+		public void testMoveOneWhiteQueenAndBlackKingDidntUnderCheckAndTheGameDidntEnd()
+		{
+			clearAllPieces();
+			start.setTurn(Color.WHITE);
+			start.setCanCastleKingSide(Color.BLACK, false);
+			start.setCanCastleQueenSide(Color.BLACK, false);
+			start.setCanCastleKingSide(Color.WHITE, false);
+			start.setCanCastleQueenSide(Color.WHITE, false);
+			start.setPiece(7, 4, new Piece(Color.BLACK, PieceKind.KING));
+			start.setPiece(5, 4, new Piece(Color.WHITE, PieceKind.KING));
+			start.setPiece(0, 0, new Piece(Color.WHITE, PieceKind.QUEEN));
+			
+			State expected = start.copy();
+			expected.setTurn(Color.BLACK);
+			expected.setNumberOfMovesWithoutCaptureNorPawnMoved(1);
+			expected.setPiece(0, 0, null);
+			expected.setPiece(6, 0, new Piece(Color.WHITE, PieceKind.QUEEN));
+			
+			Move moveWhiteQueen = new Move(new Position(0,0), new Position(6,0), null);
+			stateChanger.makeMove(start, moveWhiteQueen);
+			assertEquals(expected, start);
+		}
+		@Test
+		public void testMoveOneWhiteKingAndBlackKingDindntUnderCheckTheGameDidntEnd()
+		{
+			clearAllPieces();
+			start.setTurn(Color.WHITE);
+			start.setCanCastleKingSide(Color.BLACK, false);
+			start.setCanCastleQueenSide(Color.BLACK, false);
+			start.setCanCastleKingSide(Color.WHITE, false);
+			start.setCanCastleQueenSide(Color.WHITE, false);
+			start.setPiece(7, 4, new Piece(Color.BLACK, PieceKind.KING));
+			start.setPiece(5, 4, new Piece(Color.WHITE, PieceKind.KING));
+			start.setPiece(6, 0, new Piece(Color.WHITE, PieceKind.QUEEN));
+			
+			State expected = start.copy();
+			expected.setTurn(Color.BLACK);
+			expected.setNumberOfMovesWithoutCaptureNorPawnMoved(1);
+			expected.setPiece(5, 4, null);
+			expected.setPiece(5, 3, new Piece(Color.WHITE, PieceKind.KING));
+			
+			Move moveWhiteQueen = new Move(new Position(5,4), new Position(5,3), null);
+			stateChanger.makeMove(start, moveWhiteQueen);
+			assertEquals(expected, start);
+		}
+		@Test
+		public void testMoveOneWhiteQueenAndReachFiftyMoveRule()
+		{
+			clearAllPieces();
+			start.setTurn(Color.WHITE);
+			start.setCanCastleKingSide(Color.BLACK, false);
+			start.setCanCastleQueenSide(Color.BLACK, false);
+			start.setCanCastleKingSide(Color.WHITE, false);
+			start.setCanCastleQueenSide(Color.WHITE, false);
+			start.setNumberOfMovesWithoutCaptureNorPawnMoved(99);
+			start.setPiece(7, 4, new Piece(Color.BLACK, PieceKind.KING));
+			start.setPiece(0, 4, new Piece(Color.WHITE, PieceKind.KING));
+			start.setPiece(0, 3, new Piece(Color.WHITE, PieceKind.QUEEN));
+			
+			State expected = start.copy();
+			expected.setTurn(Color.BLACK);
+			expected.setNumberOfMovesWithoutCaptureNorPawnMoved(100);
+			expected.setPiece(0, 3, null);
+			expected.setPiece(1, 3, new Piece(Color.WHITE, PieceKind.QUEEN));
+			expected.setGameResult(new GameResult(null, GameResultReason.FIFTY_MOVE_RULE));
+			
+			Move moveWhiteQueen = new Move(new Position(0,3), new Position(1,3), null);
+			stateChanger.makeMove(start, moveWhiteQueen);
+			assertEquals(expected, start);
+		}
+		@Test
+		public void testMoveOneWhiteKingAndReachFiftyMoveRule()
+		{
+			clearAllPieces();
+			start.setTurn(Color.WHITE);
+			start.setCanCastleKingSide(Color.BLACK, false);
+			start.setCanCastleQueenSide(Color.BLACK, false);
+			start.setCanCastleKingSide(Color.WHITE, false);
+			start.setCanCastleQueenSide(Color.WHITE, false);
+			start.setNumberOfMovesWithoutCaptureNorPawnMoved(99);
+			start.setPiece(7, 4, new Piece(Color.BLACK, PieceKind.KING));
+			start.setPiece(0, 4, new Piece(Color.WHITE, PieceKind.KING));
+			
+			State expected = start.copy();
+			expected.setTurn(Color.BLACK);
+			expected.setNumberOfMovesWithoutCaptureNorPawnMoved(100);
+			expected.setPiece(0, 4, null);
+			expected.setPiece(1, 4, new Piece(Color.WHITE, PieceKind.KING));
+			expected.setGameResult(new GameResult(null, GameResultReason.FIFTY_MOVE_RULE));
+			
+			Move moveWhiteKing = new Move(new Position(0,4), new Position(1,4), null);
+			stateChanger.makeMove(start, moveWhiteKing);
+			assertEquals(expected, start);
+		}
+		@Test
+		public void testMoveOneWhiteRookAndReachFiftyMoveRule()
+		{
+			clearAllPieces();
+			start.setTurn(Color.WHITE);
+			start.setCanCastleKingSide(Color.BLACK, false);
+			start.setCanCastleQueenSide(Color.BLACK, false);
+			start.setCanCastleKingSide(Color.WHITE, false);
+			start.setCanCastleQueenSide(Color.WHITE, false);
+			start.setNumberOfMovesWithoutCaptureNorPawnMoved(99);
+			start.setPiece(7, 4, new Piece(Color.BLACK, PieceKind.KING));
+			start.setPiece(0, 4, new Piece(Color.WHITE, PieceKind.KING));
+			start.setPiece(0, 1, new Piece(Color.WHITE, PieceKind.ROOK));
+			
+			State expected = start.copy();
+			expected.setTurn(Color.BLACK);
+			expected.setNumberOfMovesWithoutCaptureNorPawnMoved(100);
+			expected.setPiece(0, 1, null);
+			expected.setPiece(0, 2, new Piece(Color.WHITE, PieceKind.ROOK));
+			expected.setGameResult(new GameResult(null, GameResultReason.FIFTY_MOVE_RULE));
+			
+			Move moveWhiteRook = new Move(new Position(0,1), new Position(0, 2), null);
+			stateChanger.makeMove(start, moveWhiteRook);
+			assertEquals(expected, start);
+		}
+		@Test
+		public void testMoveOneWhiteBishopAndReachFiftyMoveRule()
+		{
+			clearAllPieces();
+			start.setTurn(Color.WHITE);
+			start.setCanCastleKingSide(Color.BLACK, false);
+			start.setCanCastleQueenSide(Color.BLACK, false);
+			start.setCanCastleKingSide(Color.WHITE, false);
+			start.setCanCastleQueenSide(Color.WHITE, false);
+			start.setNumberOfMovesWithoutCaptureNorPawnMoved(99);
+			start.setPiece(7, 4, new Piece(Color.BLACK, PieceKind.KING));
+			start.setPiece(0, 4, new Piece(Color.WHITE, PieceKind.KING));
+			start.setPiece(0, 1, new Piece(Color.WHITE, PieceKind.BISHOP));
+			
+			State expected = start.copy();
+			expected.setTurn(Color.BLACK);
+			expected.setNumberOfMovesWithoutCaptureNorPawnMoved(100);
+			expected.setPiece(0, 1, null);
+			expected.setPiece(1, 0, new Piece(Color.WHITE, PieceKind.BISHOP));
+			expected.setGameResult(new GameResult(null, GameResultReason.FIFTY_MOVE_RULE));
+			
+			Move moveWhiteBishop = new Move(new Position(0, 1), new Position(1, 0), null);
+			stateChanger.makeMove(start, moveWhiteBishop);
+			assertEquals(expected, start);
+		}
+		@Test
+		public void MoveOneWhiteKnightAndReachFiftyMoveRule()
+		{
+			clearAllPieces();
+			start.setTurn(Color.WHITE);
+			start.setCanCastleKingSide(Color.BLACK, false);
+			start.setCanCastleQueenSide(Color.BLACK, false);
+			start.setCanCastleKingSide(Color.WHITE, false);
+			start.setCanCastleQueenSide(Color.WHITE, false);
+			start.setNumberOfMovesWithoutCaptureNorPawnMoved(99);
+			start.setPiece(7, 4, new Piece(Color.BLACK, PieceKind.KING));
+			start.setPiece(0, 4, new Piece(Color.WHITE, PieceKind.KING));
+			start.setPiece(0, 1, new Piece(Color.WHITE, PieceKind.KNIGHT));
+			
+			State expected = start.copy();
+			expected.setTurn(Color.BLACK);
+			expected.setNumberOfMovesWithoutCaptureNorPawnMoved(100);
+			expected.setPiece(0, 1, null);
+			expected.setPiece(2, 0, new Piece(Color.WHITE, PieceKind.KNIGHT));
+			expected.setGameResult(new GameResult(null, GameResultReason.FIFTY_MOVE_RULE));
+			
+			Move moveWhiteKnight = new Move(new Position(0, 1), new Position(2, 0), null);
+			stateChanger.makeMove(start, moveWhiteKnight);
+			assertEquals(expected, start);
+		}
+		@Test
+		public void testMoveOneWhitePawnAndGameDidntEnd(){
+			clearAllPieces();
+			start.setTurn(Color.WHITE);
+			start.setCanCastleKingSide(Color.BLACK, false);
+			start.setCanCastleQueenSide(Color.BLACK, false);
+			start.setCanCastleKingSide(Color.WHITE, false);
+			start.setCanCastleQueenSide(Color.WHITE, false);
+			start.setNumberOfMovesWithoutCaptureNorPawnMoved(99);
+			start.setPiece(7, 4, new Piece(Color.BLACK, PieceKind.KING));
+			start.setPiece(0, 4, new Piece(Color.WHITE, PieceKind.KING));
+			start.setPiece(1, 1, new Piece(Color.WHITE, PieceKind.PAWN));
+			
+			State expected = start.copy();
+			expected.setTurn(Color.BLACK);
+			expected.setNumberOfMovesWithoutCaptureNorPawnMoved(0);
+			expected.setPiece(1, 1, null);
+			expected.setPiece(2, 1, new Piece(Color.WHITE, PieceKind.PAWN));
+			
+			Move moveWhitePawn = new Move(new Position(1, 1), new Position(2, 1), null);
+			stateChanger.makeMove(start, moveWhitePawn);
+			assertEquals(expected, start);
+		}
+		@Test
+		public void testWhiteQueenDoOneCaptureAndGameDidntEnd()
+		{
+			clearAllPieces();
+			start.setTurn(Color.WHITE);
+			start.setCanCastleKingSide(Color.BLACK, false);
+			start.setCanCastleQueenSide(Color.BLACK, false);
+			start.setCanCastleKingSide(Color.WHITE, false);
+			start.setCanCastleQueenSide(Color.WHITE, false);
+			start.setNumberOfMovesWithoutCaptureNorPawnMoved(99);
+			start.setPiece(7, 4, new Piece(Color.BLACK, PieceKind.KING));
+			start.setPiece(6, 7, new Piece(Color.BLACK, PieceKind.QUEEN));
+			start.setPiece(0, 4, new Piece(Color.WHITE, PieceKind.KING));
+			start.setPiece(0, 1, new Piece(Color.WHITE, PieceKind.QUEEN));
+			
+			State expected = start.copy();
+			expected.setTurn(Color.BLACK);
+			expected.setNumberOfMovesWithoutCaptureNorPawnMoved(0);
+			expected.setPiece(0, 1, null);
+			expected.setPiece(6, 7, new Piece(Color.WHITE, PieceKind.QUEEN));
+			
+			Move moveWhiteQueen = new Move(new Position(0, 1), new Position(6, 7), null);
+			stateChanger.makeMove(start, moveWhiteQueen);
+			assertEquals(expected, start);
+		}
+		@Test
+		public void testWhiteKingDoOneCaptureAndGameDidntEnd()
+		{
+			clearAllPieces();
+			start.setTurn(Color.WHITE);
+			start.setCanCastleKingSide(Color.BLACK, false);
+			start.setCanCastleQueenSide(Color.BLACK, false);
+			start.setCanCastleKingSide(Color.WHITE, false);
+			start.setCanCastleQueenSide(Color.WHITE, false);
+			start.setNumberOfMovesWithoutCaptureNorPawnMoved(99);
+			start.setPiece(7, 4, new Piece(Color.BLACK, PieceKind.KING));
+			start.setPiece(1, 3, new Piece(Color.BLACK, PieceKind.QUEEN));
+			start.setPiece(0, 4, new Piece(Color.WHITE, PieceKind.KING));
+
+			
+			State expected = start.copy();
+			expected.setTurn(Color.BLACK);
+			expected.setNumberOfMovesWithoutCaptureNorPawnMoved(0);
+			expected.setPiece(0, 4, null);
+			expected.setPiece(1, 3, new Piece(Color.WHITE, PieceKind.KING));
+			
+			Move moveWhiteKing = new Move(new Position(0, 4), new Position(1, 3), null);
+			stateChanger.makeMove(start, moveWhiteKing);
+			assertEquals(expected, start);
+		}
+		@Test
+		public void testMoveWhiteQueenAndReachStaleMate()
+		{
+			clearAllPieces();
+			start.setTurn(Color.WHITE);
+			start.setCanCastleKingSide(Color.BLACK, false);
+			start.setCanCastleQueenSide(Color.BLACK, false);
+			start.setCanCastleKingSide(Color.WHITE, false);
+			start.setCanCastleQueenSide(Color.WHITE, false);
+			start.setPiece(7, 7, new Piece(Color.BLACK, PieceKind.KING));
+			start.setPiece(6, 5, new Piece(Color.WHITE, PieceKind.KING));
+			start.setPiece(0, 6, new Piece(Color.WHITE, PieceKind.QUEEN));
+			
+			State expected = start.copy();
+			expected.setGameResult(new GameResult(null, GameResultReason.STALEMATE));
+			expected.setNumberOfMovesWithoutCaptureNorPawnMoved(1);
+			expected.setTurn(Color.BLACK);
+			expected.setPiece(0, 6, null);
+			expected.setPiece(5, 6, new Piece(Color.WHITE, PieceKind.QUEEN));
+			
+			
+			Move moveWhiteQueen = new Move(new Position(0, 6), new Position(5, 6), null);
+			stateChanger.makeMove(start, moveWhiteQueen);
+			assertEquals(expected, start);
+		}
+		@Test
+		public void testMoveWhiteRookAndReachStaleMate()
+		{
+			clearAllPieces();
+			start.setTurn(Color.WHITE);
+			start.setCanCastleKingSide(Color.BLACK, false);
+			start.setCanCastleQueenSide(Color.BLACK, false);
+			start.setCanCastleKingSide(Color.WHITE, false);
+			start.setCanCastleQueenSide(Color.WHITE, false);
+			start.setPiece(7, 0, new Piece(Color.BLACK, PieceKind.KING));
+			start.setPiece(7, 1, new Piece(Color.BLACK, PieceKind.BISHOP));
+			start.setPiece(5, 1, new Piece(Color.WHITE, PieceKind.KING));
+			start.setPiece(1, 7, new Piece(Color.WHITE, PieceKind.ROOK));
+			
+			State expected = start.copy();
+			expected.setGameResult(new GameResult(null, GameResultReason.STALEMATE));
+			expected.setNumberOfMovesWithoutCaptureNorPawnMoved(1);
+			expected.setTurn(Color.BLACK);
+			expected.setPiece(1, 7, null);
+			expected.setPiece(7, 7, new Piece(Color.WHITE, PieceKind.ROOK));
+			
+			Move moveWhiteRook = new Move(new Position(1,7), new Position(7,7), null);
+			stateChanger.makeMove(start, moveWhiteRook);
+			assertEquals(expected, start);	
+		}
+		@Test
+		public void testMoveWhiteKingAndReachStaleMate(){
+			clearAllPieces();
+			start.setTurn(Color.WHITE);
+			start.setCanCastleKingSide(Color.BLACK, false);
+			start.setCanCastleQueenSide(Color.BLACK, false);
+			start.setCanCastleKingSide(Color.WHITE, false);
+			start.setCanCastleQueenSide(Color.WHITE, false);
+			start.setPiece(7, 2, new Piece(Color.BLACK, PieceKind.KING));
+			start.setPiece(6, 2, new Piece(Color.WHITE, PieceKind.PAWN));
+			start.setPiece(4, 2, new Piece(Color.WHITE, PieceKind.KING));
+			
+			State expected = start.copy();
+			expected.setGameResult(new GameResult(null, GameResultReason.STALEMATE));
+			expected.setNumberOfMovesWithoutCaptureNorPawnMoved(1);
+			expected.setTurn(Color.BLACK);
+			expected.setPiece(4, 2, null);
+			expected.setPiece(5, 2, new Piece(Color.WHITE, PieceKind.KING));
+			
+			Move moveWhiteKing = new Move(new Position(4, 2), new Position(5,2), null);
+			stateChanger.makeMove(start, moveWhiteKing);
+			assertEquals(expected, start);
+		}
+		@Test
+		public void testMoveWhiteBishopAndReachStaleMate()
+		{
+			clearAllPieces();
+			start.setTurn(Color.WHITE);
+			start.setCanCastleKingSide(Color.BLACK, false);
+			start.setCanCastleQueenSide(Color.BLACK, false);
+			start.setCanCastleKingSide(Color.WHITE, false);
+			start.setCanCastleQueenSide(Color.WHITE, false);
+			start.setPiece(7, 0, new Piece(Color.BLACK, PieceKind.KING));
+			start.setPiece(6, 0, new Piece(Color.WHITE, PieceKind.PAWN));
+			start.setPiece(5, 1, new Piece(Color.WHITE, PieceKind.KING));
+			start.setPiece(4, 2, new Piece(Color.WHITE, PieceKind.BISHOP));
+			
+			State expected = start.copy();
+			expected.setGameResult(new GameResult(null, GameResultReason.STALEMATE));
+			expected.setNumberOfMovesWithoutCaptureNorPawnMoved(1);
+			expected.setTurn(Color.BLACK);
+			expected.setPiece(4, 2, null);
+			expected.setPiece(5, 3, new Piece(Color.WHITE, PieceKind.BISHOP));
+			
+			Move moveWhiteBishop = new Move(new Position(4, 2), new Position(5,3), null);
+			stateChanger.makeMove(start, moveWhiteBishop);
+			assertEquals(expected, start);
+		}
+		@Test
+		public void testMoveWhiteKnightAndReachStaleMate()
+		{
+			clearAllPieces();
+			start.setTurn(Color.WHITE);
+			start.setCanCastleKingSide(Color.BLACK, false);
+			start.setCanCastleQueenSide(Color.BLACK, false);
+			start.setCanCastleKingSide(Color.WHITE, false);
+			start.setCanCastleQueenSide(Color.WHITE, false);
+			start.setPiece(7, 3, new Piece(Color.BLACK, PieceKind.KING));
+			start.setPiece(5, 3, new Piece(Color.WHITE, PieceKind.KING));
+			start.setPiece(7, 4, new Piece(Color.WHITE, PieceKind.BISHOP));
+			start.setPiece(5, 1, new Piece(Color.WHITE, PieceKind.KNIGHT));
+			start.setPiece(5, 0, new Piece(Color.WHITE, PieceKind.KNIGHT));
+			
+			State expected = start.copy();
+			expected.setGameResult(new GameResult(null, GameResultReason.STALEMATE));
+			expected.setNumberOfMovesWithoutCaptureNorPawnMoved(1);
+			expected.setTurn(Color.BLACK);
+			expected.setPiece(5, 0, null);
+			expected.setPiece(6, 2, new Piece(Color.WHITE, PieceKind.KNIGHT));
+			
+			Move moveWhiteKnight = new Move(new Position(5,0), new Position(6,2), null);
+			stateChanger.makeMove(start, moveWhiteKnight);
+			assertEquals(expected, start);
+		}
+}

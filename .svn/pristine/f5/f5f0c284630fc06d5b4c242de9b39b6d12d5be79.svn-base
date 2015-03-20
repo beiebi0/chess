@@ -1,0 +1,366 @@
+package org.shihweihuang.hw3;
+
+import java.util.HashSet;
+
+import org.shared.chess.Color;
+import org.shared.chess.GameResult;
+import org.shared.chess.Move;
+import org.shared.chess.Piece;
+import org.shared.chess.PieceKind;
+import org.shared.chess.State;
+import org.shihweihuang.hw3.Presenter.View;
+
+import com.google.gwt.core.client.GWT;
+import com.google.gwt.event.dom.client.HasAllDragAndDropHandlers;
+import com.google.gwt.event.dom.client.HasClickHandlers;
+import com.google.gwt.event.logical.shared.ValueChangeEvent;
+import com.google.gwt.event.logical.shared.ValueChangeHandler;
+import com.google.gwt.uibinder.client.UiBinder;
+import com.google.gwt.uibinder.client.UiField;
+import com.google.gwt.user.client.Element;
+import com.google.gwt.user.client.History;
+import com.google.gwt.user.client.ui.AbsolutePanel;
+import com.google.gwt.user.client.ui.Anchor;
+import com.google.gwt.user.client.ui.Button;
+import com.google.gwt.user.client.ui.Composite;
+import com.google.gwt.user.client.ui.Grid;
+import com.google.gwt.user.client.ui.Image;
+import com.google.gwt.user.client.ui.Label;
+import com.google.gwt.user.client.ui.ListBox;
+import com.google.gwt.user.client.ui.RootPanel;
+import com.google.gwt.user.client.ui.Widget;
+
+public class Graphics extends Composite implements View {
+	private static GameImages gameImages = GWT.create(GameImages.class);
+	private static GraphicsUiBinder uiBinder = GWT.create(GraphicsUiBinder.class);
+
+	interface GraphicsUiBinder extends UiBinder<Widget, Graphics> {
+	}
+
+	@UiField
+	GameCss css;
+	@UiField
+	Label gameStatus;
+	@UiField
+	Label whoseTurn;
+	@UiField
+	Grid gameGrid;
+	@UiField
+	Grid promotionGrid;
+	@UiField
+	Button restart;
+	@UiField
+	Button saveButton;
+	@UiField
+	Button loadButton;
+	@UiField
+	Button deleteButton;
+	@UiField
+	Label logM;
+	@UiField
+	ListBox stateList;
+	@UiField
+	Anchor login;
+	@UiField
+	Label userInfo;
+	@UiField
+	Label title;
+
+	private Image[][] board = new Image[8][8];
+	private Image[] promotionOptions = new Image[4];
+	AbsolutePanel ap = new AbsolutePanel();
+	Presenter presenter;
+
+	public Graphics(Presenter presenter) {
+		this.presenter = presenter;
+		initWidget(uiBinder.createAndBindUi(this));
+		gameGrid.resize(8, 8);
+		gameGrid.setCellPadding(0);
+		gameGrid.setCellSpacing(0);
+		gameGrid.setBorderWidth(0);
+		for (int row = 7; row >= 0; row--) {
+			for (int col = 0; col < 8; col++) {
+				final Image image = new Image();
+				board[row][col] = image;
+				image.setWidth("100%");
+				if (tileColor(row, col).isBlack()) {
+					image.setResource(gameImages.blackTile());
+				} else {
+					image.setResource(gameImages.whiteTile());
+				}
+
+				gameGrid.setWidget(row, col, image);
+			}
+		}
+		promotionGrid.resize(1, 4);
+		promotionGrid.setCellPadding(0);
+		promotionGrid.setCellSpacing(0);
+		promotionGrid.setBorderWidth(0);
+		promotionGrid.addStyleName(css.highlighted());
+		for (int i = 0; i < 4; i++) {
+			promotionOptions[i] = new Image();
+			promotionGrid.setWidget(0, i, promotionOptions[i]);
+		}
+		setPromotionGridVisible(false);
+		restart.setText("Restart");
+		
+		saveButton.setText("Save");
+		loadButton.setText("Load");
+		deleteButton.setText("Delete");
+		restart.setVisible(false);
+		saveButton.setVisible(false);
+		loadButton.setVisible(false);
+		deleteButton.setVisible(false);
+		stateList.setVisible(false);
+		whoseTurn.addStyleName(css.bigFont());
+		gameStatus.addStyleName(css.bigFont());
+		ap.add(gameGrid);
+		ap.setPixelSize(400, 400);
+		RootPanel.get().add(ap);
+	}
+
+	@Override
+	public void addHistorySupport(State state) {
+		History.newItem(state.toString());
+		// History system take state.toString as token
+		History.addValueChangeHandler(new ValueChangeHandler<String>() {
+			public void onValueChange(ValueChangeEvent<String> event) {
+				String historyToken = event.getValue();
+				State state = StateParser.parse(historyToken);
+				presenter.setState(state);
+				presenter.updateBoardAndHighlightNextMove(new HashSet<Move>());
+			}
+		});
+	}
+
+	private Color tileColor(int row, int col) {
+		if (row % 2 == 0 && col % 2 == 1 || row % 2 == 1 && col % 2 == 0) {
+			return Color.WHITE;
+		} else {
+			return Color.BLACK;
+		}
+	}
+
+	@Override
+	public void setPromotionGridVisible(boolean visible) {
+		promotionGrid.setVisible(visible);
+	}
+
+	@Override
+	public void setPiece(int row, int col, Piece piece) {
+		Image image = board[7 - row][col];
+		if (piece == null) {
+			final Element element = board[row][col].getElement();
+			element.setDraggable(Element.DRAGGABLE_FALSE);
+			if (tileColor(row, col).isBlack()) {
+				image.setResource(gameImages.blackTile());
+			} else {
+				image.setResource(gameImages.whiteTile());
+			}
+		} else {
+			final Element element = board[row][col].getElement();
+			element.setDraggable(Element.DRAGGABLE_TRUE);
+			PieceKind kind = piece.getKind();
+			if (kind == PieceKind.KING) {
+				if (piece.getColor().isBlack()) {
+					if (tileColor(row, col).isBlack()) {
+						image.setResource(gameImages.bKing_bTile());
+					} else {
+						image.setResource(gameImages.bKing_wTile());
+					}
+				} else {
+					if (tileColor(row, col).isBlack()) {
+						image.setResource(gameImages.wKing_bTile());
+					} else {
+						image.setResource(gameImages.wKing_wTile());
+					}
+				}
+			} else if (kind == PieceKind.QUEEN) {
+				if (piece.getColor().isBlack()) {
+					if (tileColor(row, col).isBlack()) {
+						image.setResource(gameImages.bQueen_bTile());
+					} else {
+						image.setResource(gameImages.bQueen_wTile());
+					}
+				} else {
+					if (tileColor(row, col).isBlack()) {
+						image.setResource(gameImages.wQueen_bTile());
+					} else {
+						image.setResource(gameImages.wQueen_wTile());
+					}
+				}
+			} else if (kind == PieceKind.ROOK) {
+				if (piece.getColor().isBlack()) {
+					if (tileColor(row, col).isBlack()) {
+						image.setResource(gameImages.bRook_bTile());
+					} else {
+						image.setResource(gameImages.bRook_wTile());
+					}
+				} else {
+					if (tileColor(row, col).isBlack()) {
+						image.setResource(gameImages.wRook_bTile());
+					} else {
+						image.setResource(gameImages.wRook_wTile());
+					}
+				}
+			} else if (kind == PieceKind.KNIGHT) {
+				if (piece.getColor().isBlack()) {
+					if (tileColor(row, col).isBlack()) {
+						image.setResource(gameImages.bKnight_bTile());
+					} else {
+						image.setResource(gameImages.bKnight_wTile());
+					}
+				} else {
+					if (tileColor(row, col).isBlack()) {
+						image.setResource(gameImages.wKnight_bTile());
+					} else {
+						image.setResource(gameImages.wKnight_wTile());
+					}
+				}
+			} else if (kind == PieceKind.BISHOP) {
+				if (piece.getColor().isBlack()) {
+					if (tileColor(row, col).isBlack()) {
+						image.setResource(gameImages.bBishop_bTile());
+					} else {
+						image.setResource(gameImages.bBishop_wTile());
+					}
+				} else {
+					if (tileColor(row, col).isBlack()) {
+						image.setResource(gameImages.wBishop_bTile());
+					} else {
+						image.setResource(gameImages.wBishop_wTile());
+					}
+				}
+			} else if (kind == PieceKind.PAWN) {
+				if (piece.getColor().isBlack()) {
+					if (tileColor(row, col).isBlack()) {
+						image.setResource(gameImages.bPawn_bTile());
+					} else {
+						image.setResource(gameImages.bPawn_wTile());
+					}
+				} else {
+					if (tileColor(row, col).isBlack()) {
+						image.setResource(gameImages.wPawn_bTile());
+					} else {
+						image.setResource(gameImages.wPawn_wTile());
+					}
+				}
+			}
+		}
+	}
+
+	@Override
+	public void setHighlighted(int row, int col, boolean highlighted) {
+		Element element = board[7 - row][col].getElement();
+		if (highlighted) {
+			element.setClassName(css.highlighted());
+		} else {
+			element.removeClassName(css.highlighted());
+		}
+	}
+
+	@Override
+	public void setWhoseTurn(String turnMessage) {
+		whoseTurn.setText(turnMessage);
+	}
+
+	@Override
+	public void setGameResult(String gameResult) {
+		gameStatus.setText(gameResult);
+	}
+
+	@Override
+	public HasClickHandlers getBoardImage(int row, int col) {
+		return board[row][col];
+	}
+
+	@Override
+	public HasClickHandlers getRestartButton() {
+		return restart;
+	}
+
+	@Override
+	public HasClickHandlers getPromotionButton(int index) {
+		return promotionOptions[index];
+	}
+
+	@Override
+	public void setPromotionGrid(Color color) {
+		if (color.isBlack()) {
+			promotionOptions[0].setResource(gameImages.bQueen_bTile());
+			promotionOptions[1].setResource(gameImages.bBishop_bTile());
+			promotionOptions[2].setResource(gameImages.bKnight_bTile());
+			promotionOptions[3].setResource(gameImages.bRook_bTile());
+		} else {
+			promotionOptions[0].setResource(gameImages.wQueen_wTile());
+			promotionOptions[1].setResource(gameImages.wBishop_wTile());
+			promotionOptions[2].setResource(gameImages.wKnight_wTile());
+			promotionOptions[3].setResource(gameImages.wRook_wTile());
+		}
+	}
+
+	@Override
+	public HasAllDragAndDropHandlers getDragImag(int row, int col) {
+		return board[row][col];
+	}
+
+	@Override
+	public void setLog(String log) {
+		logM.setText(log);
+	}
+
+	@Override
+	public AbsolutePanel getAp() {
+		return ap;
+	}
+
+	@Override
+	public HasClickHandlers getSaveButton() {
+		return saveButton;
+	}
+
+	@Override
+	public HasClickHandlers getLoadButton() {
+		return loadButton;
+	}
+
+	@Override
+	public HasClickHandlers getDeleteButton() {
+		return deleteButton;
+	}
+
+	@Override
+	public void setDisableStorageButtons() {
+		saveButton.setVisible(false);
+		loadButton.setVisible(false);
+	}
+
+	@Override
+	public ListBox getStateList() {
+		return stateList;
+	}
+
+	@Override
+	public void addHistory(State state) {
+		History.newItem(state.toString());
+	}
+
+	@Override
+	public Anchor getLogin() {
+		// TODO Auto-generated method stub
+		return login;
+	}
+
+	@Override
+	public void setUserInfo(String info) {
+		// TODO Auto-generated method stub
+		userInfo.setText(info);
+	}
+
+	@Override
+	public void setStartDate(String date) {
+		// TODO Auto-generated method stub
+		title.setText(date);
+	}
+
+}

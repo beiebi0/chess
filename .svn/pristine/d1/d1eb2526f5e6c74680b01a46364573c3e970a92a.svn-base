@@ -1,0 +1,112 @@
+package org.ashishmanral.hw9;
+
+import org.shared.chess.Color;
+import org.shared.chess.Piece;
+import org.shared.chess.PieceKind;
+
+public class PieceSquareTable {
+	
+	private static byte[][] pawnPieceSquareTable={
+			{0,  0,  0,  0,  0,  0,  0,  0},
+			{50, 50, 50, 50, 50, 50, 50, 50},
+			{10, 10, 20, 30, 30, 20, 10, 10},
+			{5,  5, 10, 25, 25, 10,  5,  5},
+			{0,  0,  0, 20, 20,  0,  0,  0},
+			{5, -5,-10,  0,  0,-10, -5,  5},
+			{5, 10, 10,-20,-20, 10, 10,  5},
+			{0,  0,  0,  0,  0,  0,  0,  0}
+	};
+	
+	private static byte[][] rookPieceSquareTable={
+			{0,  0,  0,  0,  0,  0,  0,  0},
+			{  5, 10, 10, 10, 10, 10, 10,  5},
+			{ -5,  0,  0,  0,  0,  0,  0, -5},
+			{-5,  0,  0,  0,  0,  0,  0, -5},
+			{ -5,  0,  0,  0,  0,  0,  0, -5},
+			{ -5,  0,  0,  0,  0,  0,  0, -5},
+			{ -5,  0,  0,  0,  0,  0,  0, -5},
+			{  0,  0,  0,  5,  5,  0,  0,  0}
+	};
+	
+	private static byte[][] knightPieceSquareTable={
+			{-50,-40,-30,-30,-30,-30,-40,-50},
+			{-40,-20,  0,  0,  0,  0,-20,-40},
+			{-30,  0, 10, 15, 15, 10,  0,-30},
+			{-30,  5, 15, 20, 20, 15,  5,-30},
+			{-30,  0, 15, 20, 20, 15,  0,-30},
+			{-30,  5, 10, 15, 15, 10,  5,-30},
+			{-40,-20,  0,  5,  5,  0,-20,-40},
+			{-50,-40,-30,-30,-30,-30,-40,-50}
+	};
+	
+	private static byte[][] bishopPieceSquareTable={
+			{-20,-10,-10,-10,-10,-10,-10,-20},
+			{-10,  0,  0,  0,  0,  0,  0,-10},
+			{-10,  0,  5, 10, 10,  5,  0,-10},
+			{-10,  5,  5, 10, 10,  5,  5,-10},
+			{-10,  0, 10, 10, 10, 10,  0,-10},
+			{-10, 10, 10, 10, 10, 10, 10,-10},
+			{-10,  5,  0,  0,  0,  0,  5,-10},
+			{-20,-10,-10,-10,-10,-10,-10,-20}
+	};
+	
+	private static byte[][] queenPieceSquareTable={
+			{-20,-10,-10, -5, -5,-10,-10,-20},
+			{-10,  0,  0,  0,  0,  0,  0,-10},
+			{-10,  0,  5,  5,  5,  5,  0,-10},
+			{ -5,  0,  5,  5,  5,  5,  0, -5},
+			{  0,  0,  5,  5,  5,  5,  0, -5},
+			{-10,  5,  5,  5,  5,  5,  0,-10},
+			{-10,  0,  5,  0,  0,  0,  0,-10},
+			{-20,-10,-10, -5, -5,-10,-10,-20}
+	};
+	
+	private static byte[][] kingPieceSquareTableMiddlegame={
+			{-30,-40,-40,-50,-50,-40,-40,-30},
+			{-30,-40,-40,-50,-50,-40,-40,-30},
+			{-30,-40,-40,-50,-50,-40,-40,-30},
+			{-30,-40,-40,-50,-50,-40,-40,-30},
+			{-20,-30,-30,-40,-40,-30,-30,-20},
+			{-10,-20,-20,-20,-20,-20,-20,-10},
+			{ 20, 20,  0,  0,  0,  0, 20, 20},
+			{ 20, 30, 10,  0,  0, 10, 30, 20}
+	};
+	
+	private static byte[][] kingPieceSquareTableEndgame={
+			{-50,-40,-30,-20,-20,-30,-40,-50},
+			{-30,-20,-10,  0,  0,-10,-20,-30},
+			{-30,-10, 20, 30, 30, 20,-10,-30},
+			{-30,-10, 30, 40, 40, 30,-10,-30},
+			{-30,-10, 30, 40, 40, 30,-10,-30},
+			{-30,-10, 20, 30, 30, 20,-10,-30},
+			{-30,-30,  0,  0,  0,  0,-30,-30},
+			{-50,-30,-30,-30,-30,-30,-30,-50}
+	};
+	
+	public static int getValueForMiddlegame(int row, int col, Piece piece){
+		int multiplier = piece.getColor().equals(Color.WHITE)?1:-1;
+		switch(piece.getKind()){
+			case PAWN : return multiplier * pawnPieceSquareTable[7-row][col];
+			case ROOK : return multiplier * rookPieceSquareTable[7-row][col];
+			case KNIGHT : return multiplier * knightPieceSquareTable[7-row][col];
+			case BISHOP : return multiplier * bishopPieceSquareTable[7-row][col];
+			case QUEEN : return multiplier * queenPieceSquareTable[7-row][col];
+			case KING  : return multiplier * kingPieceSquareTableMiddlegame[7-row][col];
+		}
+		return 0;
+	}
+	
+	public static int getValueForEndgame(int row, int col, Piece piece){
+		int multiplier = piece.getColor().equals(Color.WHITE)?1:-1;
+		switch(piece.getKind()){
+			case PAWN : return multiplier * pawnPieceSquareTable[7-row][col];
+			case ROOK : return multiplier * rookPieceSquareTable[7-row][col];
+			case KNIGHT : return multiplier * knightPieceSquareTable[7-row][col];
+			case BISHOP : return multiplier * bishopPieceSquareTable[7-row][col];
+			case QUEEN : return multiplier * queenPieceSquareTable[7-row][col];
+			case KING  : return multiplier * kingPieceSquareTableEndgame[7-row][col];
+		}
+		return 0;
+	}
+	
+}

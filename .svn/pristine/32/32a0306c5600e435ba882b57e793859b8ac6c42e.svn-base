@@ -1,0 +1,39 @@
+package org.ashishmanral.hw6.server;
+
+import com.google.appengine.api.channel.ChannelMessage;
+import com.google.appengine.api.channel.ChannelService;
+import com.google.appengine.api.channel.ChannelServiceFactory;
+
+/**
+ * PlayerManager.java	
+ * @author Ashish
+ * This class manages all the players that are currently playing Chess. It has a playerCount
+ * that acts as the count on the number of players as well as playerId/ClientId. If this count
+ * is divisible by 2, then a new board is created and current player becomes 1st player for
+ * this board. Else current player is added to a board where one player is waiting.
+ */
+public class PlayerManager {
+
+  private static int playerCount=0;
+  
+  public static void addPlayer() {
+    if (playerCount%2 == 0) { 
+      BoardManager.increamentBoardId();
+      BoardDetails newBoard = new BoardDetails();
+      newBoard.setPlayer1(new Integer(playerCount++).toString());
+      BoardManager.setBoard(newBoard);
+    }
+    else {
+      BoardDetails existingBoard = BoardManager.getBoard(BoardManager.getBoardId());
+      existingBoard.setPlayer2(new Integer(playerCount++).toString());
+      // Inform player 1 that game is starting.
+      ChannelService channelService = ChannelServiceFactory.getChannelService();
+	  channelService.sendMessage(new ChannelMessage(existingBoard.getPlayer1Id(), new String("start")));
+    }
+  }
+  
+  public static int getPlayerId(){
+	  return playerCount;
+  }
+  
+}

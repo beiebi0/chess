@@ -1,0 +1,55 @@
+package org.vorasahil.hw7.client;
+
+import java.io.Serializable;
+
+/**
+ * Message Object, used to register to a game.
+ * 
+ * @author Sahil Vora
+ * 
+ */
+public class Register implements Serializable {
+
+	private static final long serialVersionUID = 42L;
+	private String token;
+	private String matchesString;
+	private long currentMatchId;
+	private int rank;
+	
+	public void setRank(int rank){
+		this.rank=rank;
+	}
+	
+	public int getRank(){
+		return rank;
+	}
+	
+	public void setCurrentMatchId(long currentMatchId) {
+		this.currentMatchId = currentMatchId;
+	}
+
+	public long getCurrentMatchId() {
+		return this.currentMatchId;
+	}
+
+	public Register() {
+		currentMatchId=-1;
+	}
+
+	public String getMatchesString() {
+		return matchesString;
+	}
+
+	public void setMatchesString(String matchesString) {
+		this.matchesString = matchesString;
+	}
+
+	public void setToken(String token) {
+		this.token = token;
+	}
+
+	public String getToken() {
+		return token;
+	}
+
+}

@@ -1,0 +1,134 @@
+package org.bohuang.hw2_5;
+
+import java.util.HashSet;
+import java.util.Set;
+
+import org.bohuang.hw2.StateChangerImpl;
+import org.shared.chess.Move;
+import org.shared.chess.Piece;
+import org.shared.chess.PieceKind;
+import org.shared.chess.Position;
+import org.shared.chess.State;
+import org.shared.chess.StateExplorer;
+
+public class StateExplorerImpl implements StateExplorer{
+
+	StateChangerImpl stateChangerImpl = new StateChangerImpl();
+	@Override
+	public Set<Move> getPossibleMoves(State state) {
+		// TODO Auto-generated method stubSet posMove = Sets.newHashSet() ;
+		State tempState = state.copy();
+		Set<Move> posMove = new HashSet<Move>() ;
+		
+		Set<Position> posStart = new HashSet<Position>() ;
+		posStart = getPossibleStartPositions(state);
+		
+		for(Position p:posStart){
+			if(tempState.getPiece(p)!=null &&
+					tempState.getPiece(p).getColor().equals(tempState.getTurn())){
+				posMove.addAll(getPossibleMovesFromPosition(tempState,p));
+			}
+		}	
+		
+		return posMove;
+	}
+
+	@Override
+	public Set<Move> getPossibleMovesFromPosition(State state, Position position) {
+		// TODO Auto-generated method stub
+		State tempState = state.copy();
+		Set<Move> posMove = new HashSet<Move>() ;
+		
+		if(state.getGameResult()!=null){
+			return posMove;
+		}
+		
+		for(int m = 0 ; m <= 7 ; m++){
+			for(int n = 0 ; n <= 7 ; n++){
+				Piece piece = state.getPiece(position);
+				
+				if(piece.getKind().equals(PieceKind.PAWN)&&
+						((piece.getColor().isWhite()&&position.getRow()==6)||
+								(piece.getColor().isBlack()&&position.getRow()==1))){
+					for(int o = 0 ; o <= 3 ; o++){
+						
+						switch (o){
+						case 0:{
+							Move move = new Move(position,new Position(m,n),PieceKind.BISHOP);
+							State afterMove = tempState.copy();
+							stateChangerImpl.moveNow(afterMove,move);
+							if(stateChangerImpl.moveLegal(tempState,move,tempState.getTurn())&&
+									!stateChangerImpl.checkedAfterMove(afterMove,state.getTurn())){
+								posMove.add(move);
+						}
+							break;
+						}
+						case 1:{
+							Move move = new Move(position,new Position(m,n),PieceKind.KNIGHT);
+							State afterMove = tempState.copy();
+							stateChangerImpl.moveNow(afterMove,move);
+							if(stateChangerImpl.moveLegal(tempState,move,tempState.getTurn())&&
+									!stateChangerImpl.checkedAfterMove(afterMove,state.getTurn())){
+								posMove.add(move);
+						}
+							break;
+						}
+						case 2:{
+							Move move = new Move(position,new Position(m,n),PieceKind.QUEEN);
+							State afterMove = tempState.copy();
+							stateChangerImpl.moveNow(afterMove,move);
+							if(stateChangerImpl.moveLegal(tempState,move,tempState.getTurn())&&
+									!stateChangerImpl.checkedAfterMove(afterMove,state.getTurn())){
+								posMove.add(move);
+						}
+							break;
+						}
+						case 3:{
+							Move move = new Move(position,new Position(m,n),PieceKind.ROOK);
+							State afterMove = tempState.copy();
+							stateChangerImpl.moveNow(afterMove,move);
+							if(stateChangerImpl.moveLegal(tempState,move,tempState.getTurn())&&
+									!stateChangerImpl.checkedAfterMove(afterMove,state.getTurn())){
+								posMove.add(move);
+						}
+							break;
+						}						
+					}				
+				}				
+				}else{
+					Move move = new Move(position,new Position(m,n),null);
+					State afterMove = tempState.copy();
+					stateChangerImpl.moveNow(afterMove,move);
+					if(stateChangerImpl.moveLegal(tempState,move,tempState.getTurn())&&
+							!stateChangerImpl.checkedAfterMove(afterMove,state.getTurn())){
+						posMove.add(move);
+				}
+				}
+			}
+		}
+		//System.out.println(posMove.toString());
+		return posMove;
+	}
+
+	@Override
+	public Set<Position> getPossibleStartPositions(State state) {
+		// TODO Auto-generated method stub
+		Set<Position> posPosition = new HashSet<Position>() ;
+		State tempState = state.copy();
+		
+		for(int i = 0 ; i <= 7 ; i++){
+			for(int j = 0 ; j <= 7 ; j++){
+				if(tempState.getPiece(i, j)!=null &&
+						tempState.getPiece(i,j).getColor().equals(tempState.getTurn())){
+					if(!getPossibleMovesFromPosition(state,new Position(i,j)).isEmpty()){
+						posPosition.add(new Position(i,j));
+					}
+				}
+			}
+		}
+		
+		return posPosition;
+	}
+
+
+}

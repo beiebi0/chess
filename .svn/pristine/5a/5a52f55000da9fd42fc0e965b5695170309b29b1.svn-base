@@ -1,0 +1,17 @@
+package org.yuehlinchung.hw6.client;
+
+import org.yuehlinchung.hw6.shared.LoginInfo;
+import org.yuehlinchung.hw6.shared.Match;
+
+import com.google.gwt.user.client.rpc.AsyncCallback;
+
+public interface GameServiceAsync {
+	public void login(String requestUri, AsyncCallback<LoginInfo> async);
+	public void findGame(LoginInfo loginInfo, String newState, AsyncCallback async);
+	public void cancelFindGame(LoginInfo loginInfo, AsyncCallback async);
+	public void saveState(Long id, String self, String opponent, String state, String turn,
+			boolean over, String result, AsyncCallback<Long> async);
+	public void deleteState(Long id, String self, AsyncCallback async);
+	public void getGame(Long id, AsyncCallback<Match> async);
+	public void updateInfo(String self, AsyncCallback<LoginInfo> async);
+}

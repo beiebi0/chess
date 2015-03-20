@@ -1,0 +1,36 @@
+package org.leozis.hw3;
+
+import org.leozis.hw2.StateChangerImpl;
+import org.leozis.hw2_5.StateExplorerImpl;
+import org.shared.chess.State;
+import org.shared.chess.StateChanger;
+import org.shared.chess.StateExplorer;
+
+import com.google.gwt.appengine.channel.client.Channel;
+import com.google.gwt.appengine.channel.client.ChannelFactoryImpl;
+import com.google.gwt.appengine.channel.client.ChannelImpl;
+import com.google.gwt.core.client.EntryPoint;
+import com.google.gwt.user.client.History;
+import com.google.gwt.user.client.ui.RootPanel;
+import com.googlecode.mgwt.ui.client.MGWT;
+import com.googlecode.mgwt.ui.client.MGWTSettings;
+
+public class ChessEntryPoint implements EntryPoint {
+
+	  @Override
+	  public void onModuleLoad() {
+		MGWT.applySettings(MGWTSettings.getAppSetting());
+		State state;
+		StateChanger stateChanger = new StateChangerImpl();
+		StateExplorer stateExplorer = new StateExplorerImpl();
+	    state = History.getToken().isEmpty() ? new State() : StateEncoder.decode(History.getToken());
+		Presenter presenter = new Presenter(state, stateChanger, stateExplorer);
+	    final Graphics graphics = new Graphics(presenter);
+	    
+	    presenter.setView(graphics);
+	    presenter.setState(state);
+	    
+	    
+	    RootPanel.get().add(graphics);
+	  }
+}

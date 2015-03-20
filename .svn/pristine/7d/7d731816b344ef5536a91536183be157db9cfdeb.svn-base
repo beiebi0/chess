@@ -1,0 +1,59 @@
+package org.leozis.hw6.server;
+
+import java.io.Serializable;
+
+import org.shared.chess.Color;
+
+
+public class Player implements Serializable {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+	private String clientId;
+	private Color color;
+	private String channelId;
+	private String user;
+	private int elo;
+	private boolean ready = false;
+	
+	public String getClientId() {
+		return clientId;
+	}
+	public void setClientId(String clientId) {
+		this.clientId = clientId;
+	}
+	public Color getColor() {
+		return color;
+	}
+	public void setColor(Color color) {
+		this.color = color;
+	}
+	public String getChannelId() {
+		return channelId;
+	}
+	public void setChannelId(String channelId) {
+		this.channelId = channelId;
+	}
+	public String getUser() {
+		return user;
+	}
+	public void setUser(String user) {
+		this.user = user;
+	}
+	public boolean isReady() {
+		return ready;
+	}
+	public void setReady(boolean ready) {
+		this.ready = ready;
+	}
+	public int getElo() {
+		return elo;
+	}
+	public void setElo(int elo) {
+		this.elo = elo;
+	}
+
+	
+	
+}

@@ -1,0 +1,229 @@
+package org.zhihanli.hw3;
+
+import org.junit.Before;
+import org.junit.Test;
+import org.mockito.Mockito;
+import static org.mockito.Mockito.times;
+import static org.shared.chess.Color.BLACK;
+import static org.shared.chess.Color.WHITE;
+import static org.shared.chess.PieceKind.BISHOP;
+import static org.shared.chess.PieceKind.KING;
+import static org.shared.chess.PieceKind.KNIGHT;
+import static org.shared.chess.PieceKind.PAWN;
+import static org.shared.chess.PieceKind.QUEEN;
+import static org.shared.chess.PieceKind.ROOK;
+
+import org.shared.chess.Color;
+import org.shared.chess.GameResult;
+import org.shared.chess.GameResultReason;
+import org.shared.chess.Piece;
+import org.shared.chess.PieceKind;
+import org.shared.chess.Position;
+import org.shared.chess.State;
+import static org.junit.Assert.assertEquals;
+
+/**
+ * Tests for the Presenter class.
+ */
+public class PresenterTest {
+	Presenter presenter;
+	Presenter.View view;
+
+	@Before
+	public void setup() {
+		view = Mockito.mock(Presenter.View.class);
+		presenter = new Presenter();
+		presenter.setView(view);
+
+	}
+
+	@Test
+	public void testSetState() {
+		State state = new State();
+		presenter.setState(state);
+		Mockito.verify(view).setWhoseTurn(Color.WHITE);
+		Mockito.verify(view).setGameResult(null);
+		Mockito.verify(view).setPiece(0, 0,
+				new Piece(Color.WHITE, PieceKind.ROOK));
+		Mockito.verify(view).setPiece(4, 4, null);
+	}
+
+	@Test
+	public void testClickBoardOneInitialClick() {
+		presenter.setState(new State());
+		presenter.clickBoard(2, 2);
+		Mockito.verify(view).setHighlighted(true, 2, 2, true);
+	}
+
+	@Test
+	public void testClickBoardTwoClickNoActualMove() {
+		presenter.setState(new State());
+		presenter.clickBoard(1, 1);
+		presenter.clickBoard(6, 1);
+		Mockito.verify(view).setHighlighted(true, 1, 1, true);
+		Mockito.verify(view, times(5)).setHighlighted(true, 1, 1, false);
+		Mockito.verify(view).setHighlighted(true, 6, 1, true);
+	}
+
+	@Test
+	public void testClickBoardTwoClickWithMove() {
+		presenter.setState(new State());
+
+		presenter.clickBoard(1, 1);
+		presenter.clickBoard(2, 1);
+
+		Mockito.verify(view).setHighlighted(true, 1, 1, true);
+		Mockito.verify(view, times(6)).setHighlighted(true, 1, 1, false);
+		Mockito.verify(view, times(2)).setHighlighted(true, 2, 1, true);
+
+		Mockito.verify(view).setHighlighted(true, 3, 1, true);
+		Mockito.verify(view, times(1)).setWhoseTurn(Color.WHITE);
+
+		Mockito.verify(view).setWhoseTurn(Color.BLACK);
+		Mockito.verify(view, times(2)).setGameResult(null);
+		Mockito.verify(view, times(2)).setPiece(2, 1,
+				new Piece(Color.WHITE, PieceKind.PAWN));
+		Mockito.verify(view).setPiece(1, 1, null);
+	}
+
+	@Test
+	public void testSerializeDeserializeOne() {
+		State start = new State();
+		start.setPiece(4, 7, new Piece(BLACK, BISHOP));
+		start.setPiece(2, 4, new Piece(BLACK, BISHOP));
+		start.setPiece(2, 7, new Piece(BLACK, KING));
+		start.setPiece(0, 7, new Piece(WHITE, KING));
+
+		State expected = start.copy();
+		expected.setPiece(4, 7, null);
+		expected.setPiece(2, 5, new Piece(BLACK, BISHOP));
+		expected.setTurn(WHITE);
+		expected.setNumberOfMovesWithoutCaptureNorPawnMoved(1);
+		expected.setGameResult(new GameResult(BLACK, GameResultReason.CHECKMATE));
+
+		assertEquals(expected,
+				presenter.deserialize(presenter.serialize(expected)));
+	}
+
+	@Test
+	public void testSerializeDeserializeTwo() {
+
+		State start = new State();
+		State expected = start.copy();
+		expected.setTurn(BLACK);
+		expected.setPiece(1, 0, null);
+		expected.setPiece(3, 0, new Piece(WHITE, PAWN));
+		expected.setNumberOfMovesWithoutCaptureNorPawnMoved(0);
+		expected.setEnpassantPosition(new Position(3, 0));
+
+		assertEquals(start, presenter.deserialize(presenter.serialize(start)));
+	}
+
+	@Test
+	public void testSerializeDeserializeThree() {
+		State start = new State();
+		State expected = start.copy();
+		expected.setTurn(WHITE);
+		expected.setPiece(7, 4, null);
+		expected.setPiece(7, 6, new Piece(BLACK, KING));
+		expected.setPiece(7, 7, null);
+		expected.setPiece(7, 5, new Piece(BLACK, ROOK));
+		expected.setNumberOfMovesWithoutCaptureNorPawnMoved(1);
+		expected.setCanCastleKingSide(BLACK, false);
+		expected.setCanCastleQueenSide(BLACK, false);
+		expected.setEnpassantPosition(null);
+
+		assertEquals(expected,
+				presenter.deserialize(presenter.serialize(expected)));
+	}
+
+	@Test
+	public void testPromotionBoardDisplay() {
+		State start = new State();
+		start.setPiece(7, 0, null);
+		start.setPiece(6, 0, null);
+		start.setPiece(1, 0, null);
+		start.setPiece(6, 0, new Piece(Color.WHITE, PieceKind.PAWN));
+		presenter.setState(start);
+		presenter.clickBoard(6, 0);
+		presenter.clickBoard(7, 0);
+
+		Mockito.verify(view).showPromotionGrid();
+	}
+
+	@Test
+	public void testPromotionBoardHide() {
+		State start = new State();
+		start.setPiece(7, 0, null);
+		start.setPiece(6, 0, null);
+		start.setPiece(1, 0, null);
+		start.setPiece(6, 0, new Piece(Color.WHITE, PieceKind.PAWN));
+		presenter.setState(start);
+		presenter.clickBoard(6, 0);
+		presenter.clickBoard(7, 0);
+		presenter.clickPromotionBoard(3);
+
+		Mockito.verify(view).hidePromotionGrid();
+	}
+
+	@Test
+	public void testEndOfGameDisplayCheckMate() {
+		Piece[][] board = new Piece[State.ROWS][State.COLS];
+		State start = new State(BLACK, board, new boolean[2], new boolean[2],
+				null, 0, null);
+		start.setPiece(7, 3, new Piece(BLACK, KING));
+		start.setPiece(2, 4, new Piece(BLACK, BISHOP));
+		start.setPiece(2, 5, new Piece(BLACK, PAWN));
+		start.setPiece(3, 6, new Piece(BLACK, ROOK));
+		start.setPiece(0, 7, new Piece(WHITE, KING));
+		
+		presenter.setState(start);
+		presenter.clickBoard(3, 6);
+		presenter.clickBoard(3, 7);
+		
+		Mockito.verify(view).setGameResult(
+				new GameResult(BLACK, GameResultReason.CHECKMATE));
+	}
+	
+	@Test
+	public void testEndOfGameDisplayFiftyMoveRule() {
+		Piece[][] board = new Piece[State.ROWS][State.COLS];
+		State start = new State(BLACK, board, new boolean[2], new boolean[2],
+				null, 0, null);
+		
+		start.setNumberOfMovesWithoutCaptureNorPawnMoved(99);
+		start.setPiece(6, 4, new Piece(BLACK, KNIGHT));
+		start.setPiece(4, 5, new Piece(BLACK, KING));
+		start.setPiece(2, 3, new Piece(WHITE, KNIGHT));
+		start.setPiece(2, 7, new Piece(WHITE, KNIGHT));
+		start.setPiece(1, 5, new Piece(WHITE, KING));
+		
+		presenter.setState(start);
+		presenter.clickBoard(6, 4);
+		presenter.clickBoard(5, 6);
+		
+		Mockito.verify(view).setGameResult(
+				new GameResult(null, GameResultReason.FIFTY_MOVE_RULE));
+	}
+	
+	@Test
+	public void testEndOfGameDisplayStaleMate() {
+		Piece[][] board = new Piece[State.ROWS][State.COLS];
+		State start = new State(BLACK, board, new boolean[2], new boolean[2],
+				null, 0, null);
+		
+		start.setPiece(7, 7, new Piece(WHITE, KING));
+		start.setPiece(5, 6, new Piece(BLACK, QUEEN));
+		start.setPiece(6, 4, new Piece(BLACK, KING));
+
+		
+		presenter.setState(start);
+		presenter.clickBoard(6, 4);
+		presenter.clickBoard(6, 5);
+		
+		Mockito.verify(view).setGameResult(
+				new GameResult(null, GameResultReason.STALEMATE));
+	}
+
+
+}

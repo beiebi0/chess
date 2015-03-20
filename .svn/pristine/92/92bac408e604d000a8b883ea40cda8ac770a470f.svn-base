@@ -1,0 +1,86 @@
+package org.kuangchelee.hw7;
+
+import java.util.Date;
+
+import com.google.gwt.user.client.rpc.IsSerializable;
+import com.googlecode.objectify.annotation.Entity;
+import com.googlecode.objectify.annotation.Id;
+
+@Entity
+public class MatchInfo implements IsSerializable{
+	@Id private Long matchID;
+	private String WhiteUID;
+	private String BlackUID;
+	private String WhiteChID;
+	private String BlackChID;
+	private String state;
+	private boolean deleteFlag;
+	private Date startDate;
+	public MatchInfo(){}
+	public MatchInfo(String WhiteUID, 
+					 String BlackUID, 
+					 String WhiteChID, 
+					 String BlackChID, 
+					 String state){
+		this.WhiteUID = WhiteUID;
+		this.BlackUID = BlackUID;
+		this.WhiteChID = WhiteChID;
+		this.BlackChID = BlackChID;
+		this.state = state;
+		deleteFlag = false;
+		startDate = new Date();
+	}
+	public MatchInfo(Long matchID,
+			String WhiteUID, 
+			String BlackUID, 
+			String WhiteChID, 
+			String BlackChID, 
+			String state,
+			boolean deleteFlag
+			){
+		this.matchID = matchID;
+		this.WhiteUID = WhiteUID;
+		this.BlackUID = BlackUID;
+		this.WhiteChID = WhiteChID;
+		this.BlackChID = BlackChID;
+		this.state = state;
+		this.deleteFlag = deleteFlag;
+		this.startDate = new Date();
+	}
+	public Long getMatchID(){
+		return matchID;
+	}
+	public boolean isWhite(String user){
+		return WhiteUID.equals(user) ? true : false;
+	}
+	public String getOpponent(String User){
+		return User.equals(WhiteUID) ? BlackUID : WhiteUID;
+	}
+	public String getWhiteUID(){
+		return WhiteUID;
+	}
+	public String getBlackUID(){
+		return BlackUID;
+	}
+	public String getWhiteChID(){
+		return WhiteChID;
+	}
+	public String getBlackChID(){
+		return BlackChID;
+	}
+	public String getState(){
+		return state;
+	}
+	public Date getDate(){
+		return startDate;
+	}
+	public void setState(String state){
+		this.state = state;
+	}
+	public boolean isDelete(){
+		return deleteFlag;
+	}
+	public void setDeleteFlag(boolean bool){
+		deleteFlag = bool;
+	}
+}

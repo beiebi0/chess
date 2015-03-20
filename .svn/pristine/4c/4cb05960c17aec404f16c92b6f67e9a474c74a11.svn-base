@@ -1,0 +1,70 @@
+package org.yuehlinchung.hw6.client;
+
+import com.google.gwt.i18n.client.Messages;
+
+public interface ChessMessages  extends Messages {
+	@DefaultMessage("Rank: {0}")
+	String rank(int rank);
+	@DefaultMessage("English")
+	String english();
+	@DefaultMessage("Chinese")
+	String chinese();
+	@DefaultMessage("Email: {0}")
+	String email(String email);
+	@DefaultMessage("Player: {0}")
+	String name(String name);
+	@DefaultMessage("Please sign in to your Google Account to access the ChessGame application.")
+	String autoSignIn();
+	@DefaultMessage("Sign In")
+	String signIn();
+	@DefaultMessage("Sign Out")
+	String signOut();
+	@DefaultMessage("Auto Matching Game")
+	String autoMatchingGame();
+	@DefaultMessage("Cancel Matching Game")
+	String cancelMatchingGame();
+	@DefaultMessage("Delete")
+	String delete();
+	@DefaultMessage("Start a match/game")
+	String startMatchGame();
+	@DefaultMessage("Play against the computer")
+	String playWithAI();
+	@DefaultMessage("Friend''s Matching:")
+	String friendsMatching();
+	@DefaultMessage("Looking for a game...")
+	String lookinForGame();
+	@DefaultMessage("or")
+	String or();
+	@DefaultMessage("Enter other''s email to start a match/game")
+	String enterEmail();
+	@DefaultMessage("Auto matching the game with {0}\n{1}")
+	String notificationMatchText(String opponent, String tmpText);
+	@DefaultMessage("{0} updated the game: {1}\n{2}")
+	String notificationUpdateText(String opponent, String id, String tmpText);
+	@DefaultMessage("ID: {0} / {1}")
+	String gameStatus(Long id, String opponent);
+	@DefaultMessage("ID: {0}")
+	String gameId(Long id);
+	@DefaultMessage("{0} Won!")
+	String setWon(String getTurn);
+	@DefaultMessage("No one won!")
+	String setNoWin();
+	@DefaultMessage("Turn of {0}")
+	String setTurn(String getTurn);
+	@DefaultMessage("Checkmate! Black Wins!")
+	String grCheckmateB();
+	@DefaultMessage("Checkmate! White Wins!")
+	String grCheckmateW();
+	@DefaultMessage("Fifty Move Rule, no one wins!")
+	String grFifty();
+	@DefaultMessage("Stalemate, no one wins!")
+	String grStalement();
+	@DefaultMessage("Threefold Repetition Rule, no one wins!")
+	String grThreefole();
+	@DefaultMessage("Game Result")
+	String gr();
+	@DefaultMessage("Please don''t sent to yourself. Thanks!")
+	String error();
+	@DefaultMessage("The move will sent after you get connected to the internet")
+	String internetError();
+}

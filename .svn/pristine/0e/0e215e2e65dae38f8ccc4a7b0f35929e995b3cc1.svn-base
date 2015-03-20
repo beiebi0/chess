@@ -1,0 +1,175 @@
+package org.kuangchelee.hw3;
+
+import org.shared.chess.*;
+
+public class StateEncoder{
+	public String Encode(State state){
+		String string = "";
+		// Encode Turn
+		string += state.getTurn().toString();
+		// & For Separation
+		string += '&';
+		
+		// Encode Board
+		for(int i = 0; i < State.ROWS; i++){
+			for(int j = 0; j < State.COLS; j++){
+				if(state.getPiece(i, j) != null){
+					string += (state.getPiece(i, j).getColor() == Color.WHITE) ? 'W' : 'B';
+					string += PieceKindToChar(state.getPiece(i, j).getKind());
+				}
+				else
+					// 0 Represent Empty Cell
+					string += "0";
+				if((i != State.ROWS - 1) || (j != State.COLS - 1))
+					string += ",";
+			}
+		}
+		string += '&';
+		
+		// Encode CanCastleKingSide & CanCastleQueenSide
+		string += (state.isCanCastleKingSide(Color.WHITE) == true) ? '1' : '0';
+		string += (state.isCanCastleKingSide(Color.BLACK) == true) ? '1' : '0';
+		string += (state.isCanCastleQueenSide(Color.WHITE) == true) ? '1' : '0';
+		string += (state.isCanCastleQueenSide(Color.BLACK) == true) ? '1' : '0';
+		string += '&';
+		
+		// Encode Enpassant Position
+		Position position = state.getEnpassantPosition();
+		if(position == null)
+			string += "null";
+		else
+			string += Integer.toString(position.getRow()) + Integer.toString(position.getCol());
+		string += '&';
+		
+		// Encode numberOfMovesWithoutCaptureNorPawnMoved
+		string += Integer.toString(state.getNumberOfMovesWithoutCaptureNorPawnMoved());
+		
+		// Encode Game Winner
+		if(state.getGameResult() != null){
+			string += '&';
+			string += (state.getGameResult().getWinner() == null) ? "null" :state.getGameResult().getWinner().toString() ;
+			string += "&";
+
+			// Encode Game Result Reason
+			string += state.getGameResult().getGameResultReason();
+		}
+		return string;
+	}
+	public State Decode(String string){
+		State state = new State();
+		Color winner = null;
+		GameResultReason reason = null;
+		
+		String[] substrings = string.split("&"); 
+		for(int j = 0; j < substrings.length; j++){
+			
+			// Decode Turn
+			if(j == 0){
+				Color turn = (substrings[j].equals("W")) ? Color.WHITE : Color.BLACK;
+				state.setTurn(turn);
+			}
+			// Decode Board
+			else if(j == 1){
+				int i = 0;
+				Piece piece;
+				Color color = null;
+				PieceKind piecekind;
+				for(String square : substrings[j].split(",")){
+					if(square.equals("0"))
+						piece = null;
+					else{
+						color = (square.charAt(0) == 'W') ? Color.WHITE : Color.BLACK;
+						piecekind = CharToPieceKind(square.charAt(1));
+						piece = new Piece(color, piecekind);
+					}
+					state.setPiece(i / 8, i % 8, piece);
+					i++;
+				}
+			}
+			// Decode CanCastleKingSide & CanCastleQueenSide
+			else if(j == 2){
+				boolean canCastleKingSide[] = new boolean[2];
+				boolean canCastleQueenSide[] = new boolean[2];
+				canCastleKingSide[0] = (substrings[j].charAt(0) == '1') ? true : false;
+				canCastleKingSide[1] = (substrings[j].charAt(1) == '1') ? true : false;
+				canCastleQueenSide[0] = (substrings[j].charAt(2) == '1') ? true : false;
+				canCastleQueenSide[1] = (substrings[j].charAt(3) == '1') ? true : false;
+				state.setCanCastleKingSide(Color.WHITE, canCastleKingSide[0]);
+				state.setCanCastleKingSide(Color.BLACK, canCastleKingSide[1]);
+				state.setCanCastleQueenSide(Color.WHITE, canCastleQueenSide[0]);
+				state.setCanCastleQueenSide(Color.BLACK, canCastleQueenSide[1]);
+			}
+			// Decode Enpassant Position
+			else if(j == 3){
+				if(substrings[j].equals("null"))
+					state.setEnpassantPosition(null);
+				else{
+					int row = Integer.parseInt(String.valueOf(substrings[j].charAt(0)));
+					int col = Integer.parseInt(String.valueOf(substrings[j].charAt(1)));
+					Position Enpos = new Position(row, col);
+					state.setEnpassantPosition(Enpos);
+				}
+			}
+			// Decode numberOfMovesWithoutCaptureNorPawnMoved
+			else if(j == 4){
+				state.setNumberOfMovesWithoutCaptureNorPawnMoved(Integer.parseInt(substrings[j]));
+			}
+			// Decode Game Winner
+			else if(j == 5){
+				if(substrings[j].equals("null"))
+					winner = null;
+				else
+					winner = substrings[j].equals("W") ? Color.WHITE : Color.BLACK; 
+			}
+			// Decode Game Result Reason
+			else if(j == 6){
+				if(substrings[j].equals("CHECKMATE"))
+					reason = GameResultReason.CHECKMATE;
+				else if(substrings[j].equals("FIFTY_MOVE_RULE"))
+					reason = GameResultReason.FIFTY_MOVE_RULE;
+				else if(substrings[j].equals("STALEMATE"))
+					reason = GameResultReason.STALEMATE;
+				else if(substrings[j].equals("THREEFOLD_REPETITION_RULE"))
+					reason = GameResultReason.THREEFOLD_REPETITION_RULE;
+				state.setGameResult(new GameResult(winner, reason));
+			}
+		}
+		return state;
+	}
+	public char PieceKindToChar(PieceKind piecekind){
+		switch(piecekind){
+		case KING:
+			return 'K';
+		case QUEEN:
+			return 'Q';
+		case BISHOP:
+			return 'B';
+		case KNIGHT:
+			return 'N';
+		case ROOK:
+			return 'R';
+		case PAWN:
+			return 'P';
+		default:
+			return 'F';
+		}
+	}
+	public PieceKind CharToPieceKind(char c){
+		switch(c){
+		case 'K':
+			return PieceKind.KING;
+		case 'Q':
+			return PieceKind.QUEEN;
+		case 'B':
+			return PieceKind.BISHOP;
+		case 'N':
+			return PieceKind.KNIGHT;
+		case 'R':
+			return PieceKind.ROOK;
+		case 'P':
+			return PieceKind.PAWN;
+		default:
+			return null;
+		}
+	}
+}

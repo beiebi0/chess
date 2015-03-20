@@ -1,0 +1,22 @@
+package org.kuangchelee.hw6;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+
+import org.kuangchelee.hw7.MatchInfo;
+
+import com.google.gwt.user.client.rpc.AsyncCallback;
+
+public interface ChessServiceAsync{
+	public void logIn(String curURL, AsyncCallback<UserInfo> Async);
+	public void join(UserInfo userinfo, String Opponent, String newState, AsyncCallback<String> Async);
+	public void loadState(Long MID, AsyncCallback<MatchInfo> Async);
+	public void saveState(Long MID, String state, int winner, AsyncCallback<String> Async);
+	@SuppressWarnings("rawtypes")
+	public void sendState(String state, String opponentID, AsyncCallback Async);
+	public void updateMatchList(UserInfo User, AsyncCallback<HashMap<Long, String>> Async);
+	public void deleteMatch(String UID, Long MID, AsyncCallback<String> Async);
+	public void saveEmails(ArrayList<String> contacts, AsyncCallback<String> Async);
+	public void getEmails(String str, AsyncCallback<ArrayList<String>> Async);
+}

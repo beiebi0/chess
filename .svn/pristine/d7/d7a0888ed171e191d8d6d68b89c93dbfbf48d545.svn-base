@@ -1,0 +1,59 @@
+package org.leozis.hw5;
+
+import org.leozis.hw3.Presenter;
+import org.shared.chess.Move;
+
+import com.google.gwt.animation.client.Animation;
+import com.google.gwt.dom.client.Element;
+import com.google.gwt.dom.client.Style;
+import com.google.gwt.media.client.Audio;
+
+public class PieceAnimation extends Animation
+{
+	private final Element element;
+	private int fromX;
+	private int fromY;
+	private int toX;
+	private int toY;
+	private Presenter p;
+	private Move m;
+
+	public PieceAnimation(Element element, Presenter p, Move m)
+	{
+		this.element = element;
+		this.p = p;
+		this.m = m;
+	}
+
+	public void moveTo(int x, int y, int milliseconds)
+	{
+		this.toX = x;
+		this.toY = y;
+		fromX = element.getAbsoluteLeft();
+		fromY = element.getAbsoluteTop();
+		run(milliseconds);
+	}
+
+	@Override
+	protected void onUpdate(double progress)
+	{
+		double posX = fromX+(progress*(this.toX - fromX));
+		double posY = fromY+(progress*(this.toY - fromY));
+		this.element.getStyle().setPosition(Style.Position.ABSOLUTE);
+		this.element.getStyle().setLeft(posX, Style.Unit.PX);
+		this.element.getStyle().setTop(posY, Style.Unit.PX);
+	}
+
+	@Override
+	protected void onComplete()
+	{
+		super.onComplete();
+		this.element.getStyle().setLeft(this.toX, Style.Unit.PX);
+		this.element.getStyle().setTop(this.toY, Style.Unit.PX);
+		this.p.doMove(this.m);
+		Audio audio = PieceAudio.createAudio();
+		if(audio != null){
+			audio.play();
+		}
+	}
+}

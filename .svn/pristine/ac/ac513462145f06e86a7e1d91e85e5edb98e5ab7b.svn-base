@@ -1,0 +1,72 @@
+package org.yuehlinchung.hw6.shared;
+
+import java.util.Date;
+
+import com.google.gwt.user.client.rpc.IsSerializable;
+import com.googlecode.objectify.annotation.Entity;
+import com.googlecode.objectify.annotation.Id;
+
+@Entity
+public class Match implements IsSerializable{
+	@Id Long id;
+	String player1;
+	String player2;
+	public String state;
+	public String turn;
+	public boolean over;
+	private Date startDate;
+	private String result;
+	private int count = 0;
+	
+	public Match() {}
+		
+	public Match(String player1, String player2, String state, String turn, boolean over, String result, Date startDate) {
+		this.player1 = player1;
+		this.player2 = player2;
+		this.state = state;
+		this.turn = turn;
+		this.over = over;
+		this.startDate = startDate;
+		this.result = result;
+	}
+	
+	public Long getId() {
+		return id;
+	}
+	
+	public String getPlayer1() {
+		return player1;
+	}
+
+	public String getPlayer2() {
+		return player2;
+	}
+	
+	public void noPlayer1() {
+		player1 = null;
+	}
+	
+	public void noPlayer2() {
+		player2 = null;
+	}
+	
+	public Date getStartDate() {
+		return startDate;
+	}
+	
+	public void setResult(String result) {
+		this.result = result;
+	}
+	
+	public String getResult() {
+		return result;
+	}
+	
+	public void delete() {
+		count++;
+	}
+	
+	public int getDelete() {
+		return count;
+	}
+}

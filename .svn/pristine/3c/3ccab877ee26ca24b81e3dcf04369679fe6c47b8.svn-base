@@ -1,0 +1,23 @@
+package org.bohuang.hw6;
+
+import java.io.IOException;
+
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import com.google.appengine.api.channel.ChannelService;
+import com.google.appengine.api.channel.ChannelServiceFactory;
+import com.google.appengine.api.users.UserService;
+import com.google.appengine.api.users.UserServiceFactory;
+
+public class ChessServlet extends HttpServlet {
+	  @Override
+	  public void doGet(HttpServletRequest req, HttpServletResponse resp) throws IOException {
+	    // Game creation, user sign-in, etc. omitted for brevity.
+	    
+	    ChannelService channelService = ChannelServiceFactory.getChannelService();
+
+	    
+	  }
+	}

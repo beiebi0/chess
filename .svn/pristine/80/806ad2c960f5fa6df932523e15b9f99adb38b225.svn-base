@@ -1,0 +1,41 @@
+package org.harshmehta.hw5;
+
+import com.google.gwt.dom.client.AudioElement;
+import com.google.gwt.dom.client.MediaElement;
+import com.google.gwt.media.client.Audio;
+
+/**
+ * This class deals with the sounds used in the game.
+ * @author Harsh
+ *
+ */
+public class GameAudio {
+  
+  /**
+   * Creates and returns an Audio object of the requested sound (file)
+   * @param file The name of the sound to return
+   * @return The Audio object loaded with the sound clip
+   */
+  public static Audio createAudio(String file) {
+    Audio audio = Audio.createIfSupported();
+    {
+      if (audio == null) {
+        return null;
+      }
+      if (MediaElement.CAN_PLAY_PROBABLY.equals(audio.canPlayType(AudioElement.TYPE_MP3))) {
+        audio.setSrc("harshmehta_sounds/"+file+".mp3");
+      }
+      else if (MediaElement.CAN_PLAY_PROBABLY.equals(audio.canPlayType(AudioElement.TYPE_WAV))) {
+        audio.setSrc("harshmehta_sounds/"+file+".wav");
+      }
+      else if (MediaElement.CAN_PLAY_MAYBE.equals(audio.canPlayType(AudioElement.TYPE_MP3))) {
+        audio.setSrc("harshmehta_sounds/"+file+".mp3");
+      }
+      else if (MediaElement.CAN_PLAY_MAYBE.equals(audio.canPlayType(AudioElement.TYPE_WAV))) {
+        audio.setSrc("harshmehta_sounds/"+file+".wav");
+      }
+      audio.load();
+    }
+    return audio;
+  }
+}

@@ -1,0 +1,35 @@
+<!DOCTYPE ui:UiBinder SYSTEM "http://dl.google.com/gwt/DTD/xhtml.ent">
+<ui:UiBinder xmlns:ui="urn:ui:com.google.gwt.uibinder"
+  xmlns:g="urn:import:com.google.gwt.user.client.ui">
+  <ui:style field="css" type="org.leozis.hw3.GameCss">
+    .highlighted {
+      outline: dotted green 2px;
+    }
+     .selected {
+      outline: solid blue 2px;
+    }
+    .dragover{
+	  outline: solid yellow 2px;
+	}
+    td img {
+      display: block;
+    }
+  </ui:style>
+  <g:HTMLPanel>
+    <g:AbsolutePanel ui:field="absolutePanel"/>
+   <g:Label ui:field="date" text="Todays Date"/>
+  <g:Label ui:field="user1" text="User1 not signed in"/>
+  <g:Label ui:field="user2" text="User2 not signed in"/>
+    <g:Label ui:field="gameStatus" text="Status"/>
+
+    <g:Grid ui:field="promoteGrid"/>
+    <g:Button ui:field="singleplayer" text = "Single Player"/>
+    <g:Button ui:field="save" text = "Save"/>
+    <g:Button ui:field="load" text = "Load"/>
+    <g:Button ui:field="newgame" text = "New Game"/>
+    <g:Anchor ui:field="signout" text = "Sign out"/>
+    
+
+    
+  </g:HTMLPanel>
+</ui:UiBinder> 

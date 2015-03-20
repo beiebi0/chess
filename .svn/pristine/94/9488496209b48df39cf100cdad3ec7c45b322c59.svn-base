@@ -1,0 +1,289 @@
+package org.yuehlinchung.hw3;
+
+import java.util.Set;
+import org.shared.chess.Color;
+import org.shared.chess.GameResult;
+import org.shared.chess.Piece;
+import org.shared.chess.PieceKind;
+import org.shared.chess.State;
+import org.shared.chess.Position;
+import org.shared.chess.Move;
+import org.shared.chess.GameResultReason;
+import org.yuehlinchung.hw2.StateChangerImpl;
+import org.yuehlinchung.hw2_5.StateExplorerImpl;
+
+import com.google.common.collect.Sets;
+
+public class Presenter {
+  
+  public interface View {
+    /**
+     * Renders the piece at this position.
+     * If piece is null then the position is empty.
+     */
+    void setPiece(int row, int col, Piece piece);
+    /**
+     * Turns the highlighting on or off at this cell.
+     * Cells that can be clicked should be highlighted.
+     */
+    void setHighlighted(int row, int col, boolean highlighted);
+    /**
+     * Indicate whose turn it is.
+     */
+    void setWhoseTurn(Color color);
+    /**
+     * Indicate whether the game is in progress or over.
+     */
+    void setGameResult(GameResult gameResult);
+    
+    void displayPromoteOption();
+    
+    void hidePromoteOption();
+    
+    void addHistoryToken(String token);
+  }
+  
+  private View view;
+  private State state;
+  private Set<Position> highlightedPositions = Sets.newHashSet();
+  private Set<Move> possibleMovesFromPosition = Sets.newHashSet();
+  private Set<Position> possibleStartPositions = Sets.newHashSet();
+  private int currentMove = 0;
+  private Position startPosition;
+  private Position toPosition;
+  private StateChangerImpl changer = new StateChangerImpl();
+  private StateExplorerImpl explorer = new StateExplorerImpl();
+  private int[][][] times = new int[8][8][12];
+        
+  public void clearHighlights() {
+	  for (Position position : highlightedPositions) {
+		  view.setHighlighted(position.getRow(), position.getCol(), false);
+	  }
+	  highlightedPositions.clear();
+  }
+  
+  private void highlightNextStep() {
+	  currentMove++;
+	  // Highlight next step in the move
+	  for (Move move : possibleMovesFromPosition) {
+		  Position position = move.getTo();
+		  view.setHighlighted(position.getRow(), position.getCol(), true);
+		  highlightedPositions.add(position);
+	  }
+  }
+  
+  private void showStartingPositions() {
+	  currentMove = 0;
+	  for (Position position : possibleStartPositions) {
+		  view.setHighlighted(position.getRow(), position.getCol(), true);
+		  highlightedPositions.add(position);
+	  }
+  }
+  
+  public void initState() {
+	this.state = new State();
+	//Threefold repetition initialize
+	for (int i = 0; i < 8; i++) {
+		for (int j = 0; j < 8; j++) {
+			for (int k = 0; k < 12; k++) {
+				times[i][j][k] = 0;
+			}
+		}
+	}
+	view.addHistoryToken(StateHistory.encode(state));
+  }
+    
+
+  public void setView(View view) {
+    this.view = view;
+  }
+    
+  public void setState(State changeState) {
+	this.state = changeState.copy();
+	view.setWhoseTurn(state.getTurn());
+	// Check GameResult
+	checkThreeFold();
+	view.setGameResult(state.getGameResult());
+	view.hidePromoteOption();
+	// Render the pieces for this state
+	for (int r = 0; r < 8; r++) {
+		for (int c = 0; c < 8; c++) {
+			view.setHighlighted(r, c, false);
+		    Piece piece = state.getPiece(r, c);
+		    view.setPiece(r, c, piece);
+		}
+	}
+	clearHighlights();
+	possibleStartPositions = explorer.getPossibleStartPositions(state);
+	showStartingPositions();
+  }
+    
+  public void clickedOn(int row, int col) {
+	  row = reverseR(row);
+	  Position clickedPosition = new Position(row, col);
+	  view.hidePromoteOption();
+	  if (currentMove == 0) {
+		  if (!state.getTurn().equals(state.getPiece(clickedPosition).getColor())
+				  || state.getPiece(clickedPosition) == null) {
+			  return;
+		  }
+		  possibleMovesFromPosition = 
+				  explorer.getPossibleMovesFromPosition(state, clickedPosition);
+		  if (!possibleMovesFromPosition.isEmpty()) {
+			  clearHighlights();
+			  startPosition = clickedPosition;
+			  highlightNextStep();
+		  } else {
+			  view.hidePromoteOption();
+			  clearHighlights();
+			  showStartingPositions();
+		  }
+	  } else if (currentMove != 0) {
+		  State newState = state.copy();
+		  Piece piece = state.getPiece(startPosition);
+		  if (piece.getKind().equals(PieceKind.PAWN)
+				  && ((piece.getColor().equals(Color.WHITE) 
+						  && row == 7 && startPosition.getRow() == 6)
+				  || (piece.getColor().equals(Color.BLACK) 
+						  && row == 0 && startPosition.getRow() == 1))) {
+			  toPosition = clickedPosition;
+			  view.displayPromoteOption();
+		  } else {
+			  for (Position position : highlightedPositions) {
+				  if (clickedPosition.equals(position)) {
+					  currentMove = 0;
+					  Move move = new Move(startPosition, clickedPosition, null);
+					  // Threefold Repetition
+					  threeFold(row, col, piece);
+					  // Make Move
+					  changer.makeMove(newState, move);
+					  this.state = newState.copy();
+					  // Add History Token
+					  view.addHistoryToken(StateHistory.encode(state));
+				  } else {
+					  clearHighlights();
+					  showStartingPositions();
+				  }
+			  }
+		  }
+	  } else {
+		  clearHighlights();
+		  showStartingPositions();
+	  }
+  }
+  
+  public void pawnPromoteMove(PieceKind kind) {
+	  State newState = state.copy();
+	  view.hidePromoteOption();
+	  for (Position position : highlightedPositions) {
+		  if (toPosition.equals(position)) {
+			  currentMove = 0;
+			  Move move = new Move(startPosition, toPosition, kind);
+			  // Threefold Repetition
+			  threeFold(toPosition.getRow(), toPosition.getCol(), state.getPiece(startPosition));
+			  // Make Move
+			  changer.makeMove(newState, move);
+			  this.state = newState.copy();
+			  // Add History Token
+			  view.addHistoryToken(StateHistory.encode(state));
+		  } else {
+			  clearHighlights();
+			  showStartingPositions();
+		  }
+	  }
+  }
+  
+  private void checkThreeFold() {
+	  for (int i = 0; i < 8; i++) {
+			for (int j = 0; j < 8; j++) {
+				for (int k = 0; k < 12; k++) {
+					if (times[i][j][k] >= 3) {
+						state.setGameResult(new GameResult(null, GameResultReason.THREEFOLD_REPETITION_RULE));
+					}
+				}
+			}
+		}
+  }
+
+  // BLACK WHITE
+  // PAWN ROOK KNIGHT BISHOP QUEEN KING
+  private void threeFold(int row, int col, Piece piece) {
+	  Color color = piece.getColor();
+	  PieceKind kind = piece.getKind();
+	  switch (kind) {
+	  case PAWN:
+		  if (color == Color.BLACK) {
+			  times[row][col][0]++;
+		  } else if (color == Color.WHITE){
+			  times[row][col][1]++;
+		  }
+		  break;
+	  case ROOK:
+		  if (color == Color.BLACK) {
+			  times[row][col][2]++;
+		  } else if (color == Color.WHITE){
+			  times[row][col][3]++;
+		  }
+		  break;
+	  case KNIGHT:
+		  if (color == Color.BLACK) {
+			  times[row][col][4]++;
+		  } else if (color == Color.WHITE){
+			  times[row][col][5]++;
+		  }
+		  break;
+	  case BISHOP:
+		  if (color == Color.BLACK) {
+			  times[row][col][6]++;
+		  } else if (color == Color.WHITE){
+			  times[row][col][7]++;
+		  }
+		  break;
+	  case QUEEN:
+		  if (color == Color.BLACK) {
+			  times[row][col][8]++;
+		  } else if (color == Color.WHITE){
+			  times[row][col][9]++;
+		  }
+		  break;
+	  case KING:
+		  if (color == Color.BLACK) {
+			  times[row][col][10]++;
+		  } else if (color == Color.WHITE){
+			  times[row][col][11]++;
+		  }
+		  break;
+	  }
+  }
+  
+  public int reverseR(int row) {
+	  int r = 0;
+		switch (row) {
+		case 0:
+			r = 7;
+			break;
+		case 1:
+			r = 6;
+			break;
+		case 2:
+			r = 5;
+			break;
+		case 3:
+			r = 4;
+			break;
+		case 4:
+			r = 3;
+			break;
+		case 5:
+			r = 2;
+			break;
+		case 6:
+			r = 1;
+			break;
+		case 7:
+			r = 0;
+			break;
+		}
+		return r;
+  }
+}

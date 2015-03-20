@@ -1,0 +1,531 @@
+package org.shihweihuang.hw3;
+
+import java.util.Set;
+
+import org.shared.chess.Color;
+import org.shared.chess.Piece;
+import org.shared.chess.State;
+import org.shihweihuang.hw6.client.ChessPlatformService;
+import org.shihweihuang.hw6.client.ChessPlatformServiceAsync;
+import org.shihweihuang.hw6.client.LoginInfo;
+import org.shihweihuang.hw6.client.LoginService;
+import org.shihweihuang.hw6.client.LoginServiceAsync;
+import org.shihweihuang.hw7.Match;
+import org.shihweihuang.hw8.MyMessage;
+
+import com.google.gwt.appengine.channel.client.Channel;
+import com.google.gwt.appengine.channel.client.ChannelError;
+import com.google.gwt.appengine.channel.client.ChannelFactoryImpl;
+import com.google.gwt.appengine.channel.client.Socket;
+import com.google.gwt.appengine.channel.client.SocketListener;
+import com.google.gwt.core.client.EntryPoint;
+import com.google.gwt.core.client.GWT;
+import com.google.gwt.event.dom.client.ChangeEvent;
+import com.google.gwt.event.dom.client.ChangeHandler;
+import com.google.gwt.event.dom.client.ClickEvent;
+import com.google.gwt.event.dom.client.ClickHandler;
+import com.google.gwt.user.client.Window;
+import com.google.gwt.user.client.rpc.AsyncCallback;
+import com.google.gwt.user.client.rpc.ServiceDefTarget;
+import com.google.gwt.user.client.ui.Anchor;
+import com.google.gwt.user.client.ui.Button;
+import com.google.gwt.user.client.ui.HorizontalPanel;
+import com.google.gwt.user.client.ui.Label;
+import com.google.gwt.user.client.ui.ListBox;
+import com.google.gwt.user.client.ui.MultiWordSuggestOracle;
+import com.google.gwt.user.client.ui.Panel;
+import com.google.gwt.user.client.ui.RootPanel;
+import com.google.gwt.user.client.ui.SuggestBox;
+import com.google.gwt.user.client.ui.TextBox;
+import com.googlecode.gwtphonegap.client.PhoneGap;
+import com.googlecode.gwtphonegap.client.PhoneGapAvailableEvent;
+import com.googlecode.gwtphonegap.client.PhoneGapAvailableHandler;
+import com.googlecode.gwtphonegap.client.PhoneGapTimeoutEvent;
+import com.googlecode.gwtphonegap.client.PhoneGapTimeoutHandler;
+import com.googlecode.gwtphonegap.client.contacts.Contact;
+import com.googlecode.gwtphonegap.client.contacts.ContactError;
+import com.googlecode.gwtphonegap.client.contacts.ContactField;
+import com.googlecode.gwtphonegap.client.contacts.ContactFindCallback;
+import com.googlecode.gwtphonegap.client.contacts.ContactFindOptions;
+import com.googlecode.gwtphonegap.collection.shared.CollectionFactory;
+import com.googlecode.gwtphonegap.collection.shared.LightArray;
+
+public class ChessEntryPoint implements EntryPoint {
+	String url;
+	String token;
+	Anchor languageSelector = new Anchor();
+	Button connectButton = new Button();
+	Button removeMatchButton = new Button();
+	Button autoMatchButton = new Button();
+	Button singlePlayerButton = new Button();
+	SuggestBox matchRequestName;
+	// TextBox matchRequestName = new TextBox();
+	Label connectLabel = new Label();
+	Panel connectPanel = new HorizontalPanel();
+	Panel matchPanel = new HorizontalPanel();
+	ListBox matchListBox = new ListBox();
+	Socket socket;
+	boolean isConnect = false;
+	Presenter presenter;
+	LoginInfo loginInfo;
+	double ranking;
+	State emptyState = new State(Color.WHITE, new Piece[8][8], new boolean[] {
+			true, true }, new boolean[] { true, true }, null, 0, null);
+	ChessPlatformServiceAsync chessPlatformService;
+	MyMessage messages = (MyMessage) GWT.create(MyMessage.class);
+
+	final PhoneGap phoneGap = GWT.create(PhoneGap.class);
+	MultiWordSuggestOracle oracle = new MultiWordSuggestOracle();
+
+	public void onModuleLoad() {
+		// loadChess(new Match(), emptyState, Color.WHITE, true);
+		phoneGap.addHandler(new PhoneGapAvailableHandler() {
+
+			@Override
+			public void onPhoneGapAvailable(PhoneGapAvailableEvent event) {
+				// start your app - phonegap is ready
+
+				// Window.alert("phonegap is ready");
+				createOracle();
+
+			}
+		});
+
+		phoneGap.addHandler(new PhoneGapTimeoutHandler() {
+
+			@Override
+			public void onPhoneGapTimeout(PhoneGapTimeoutEvent event) {
+				// can not start phonegap - something is for with your setup
+				Window.alert("cannot load phonegap");
+			}
+		});
+
+		phoneGap.initializePhoneGap();
+		/*
+		 * Window.alert("after phonegap init"); matchRequestName = new
+		 * SuggestBox(createOracle());
+		 * 
+		 * connectLabel.setText(messages.enterEmail());
+		 * connectPanel.add(connectLabel); connectPanel.add(matchRequestName);
+		 * connectPanel.add(connectButton); connectPanel.add(autoMatchButton);
+		 * connectButton.setText(messages.match()); matchPanel.add(matchListBox);
+		 * matchPanel.add(removeMatchButton);
+		 * languageSelector.setText(messages.language());
+		 * singlePlayerButton.setText(messages.singlePlayer());
+		 * singlePlayerButton.addClickHandler(new ClickHandler() {
+		 * 
+		 * @Override public void onClick(ClickEvent event) {
+		 * clickSinglePlayerButton(); }
+		 * 
+		 * }); removeMatchButton.setText(messages.removeMatch());
+		 * removeMatchButton.addClickHandler(new ClickHandler() {
+		 * 
+		 * @Override public void onClick(ClickEvent event) { //
+		 * clickRemoveMatchButton(); }
+		 * 
+		 * }); autoMatchButton.setText(messages.autoMatchStart());
+		 * autoMatchButton.addClickHandler(new ClickHandler() {
+		 * 
+		 * @Override public void onClick(ClickEvent event) { //
+		 * clickAutoMatchButton(); }
+		 * 
+		 * }); connectButton.addClickHandler(new ClickHandler() {
+		 * 
+		 * @Override public void onClick(ClickEvent event) { // clickConnect(); }
+		 * 
+		 * }); matchListBox.addItem(messages.selectMatch());
+		 * matchListBox.addChangeHandler(new ChangeHandler() {
+		 * 
+		 * @Override public void onChange(ChangeEvent event) { String matchID =
+		 * matchListBox.getValue(matchListBox.getSelectedIndex()); //
+		 * loadBoard(matchID); }
+		 * 
+		 * }); // Check login status using login service. // LoginServiceAsync
+		 * loginService = GWT.create(LoginService.class); //
+		 * loginService.login(GWT.getHostPageBaseURL() + "shihweihuang.html", // new
+		 * AsyncCallback<LoginInfo>() { // // public void onFailure(Throwable error)
+		 * { // } // // public void onSuccess(LoginInfo result) { // loginInfo =
+		 * result; // // if (loginInfo.isLoggedIn()) { // setupChannel(); // //
+		 * chessPlatformService.getMatchList(loginInfo, // new
+		 * AsyncCallback<Set<String>>() { // @Override // public void
+		 * onSuccess(Set<String> matchList) { // for (String matchID : matchList) {
+		 * // matchListBox.addItem(matchID); // } // } // // @Override // public
+		 * void onFailure(Throwable caught) { // // } // });
+		 * Window.alert("before load chess"); loadChess(new Match(), emptyState,
+		 * Color.WHITE, true); Window.alert("after load chess"); // } else { //
+		 * Window.Location.replace(loginInfo.getLoginUrl()); // } // } // });
+		 */
+	}
+
+	private void afterInit() {
+		Window.alert("123");
+		matchRequestName = new SuggestBox(oracle);
+		connectLabel.setText(messages.enterEmail());
+		connectPanel.add(connectLabel);
+		connectPanel.add(matchRequestName);
+		connectPanel.add(connectButton);
+		connectPanel.add(autoMatchButton);
+		connectButton.setText(messages.match());
+		matchPanel.add(matchListBox);
+		matchPanel.add(removeMatchButton);
+		languageSelector.setText(messages.language());
+		singlePlayerButton.setText(messages.singlePlayer());
+		singlePlayerButton.addClickHandler(new ClickHandler() {
+			@Override
+			public void onClick(ClickEvent event) {
+				clickSinglePlayerButton();
+			}
+
+		});
+		removeMatchButton.setText(messages.removeMatch());
+		removeMatchButton.addClickHandler(new ClickHandler() {
+			@Override
+			public void onClick(ClickEvent event) {
+				clickRemoveMatchButton();
+			}
+
+		});
+		autoMatchButton.setText(messages.autoMatchStart());
+		autoMatchButton.addClickHandler(new ClickHandler() {
+			@Override
+			public void onClick(ClickEvent event) {
+				clickAutoMatchButton();
+			}
+
+		});
+		connectButton.addClickHandler(new ClickHandler() {
+			@Override
+			public void onClick(ClickEvent event) {
+				clickConnect();
+			}
+
+		});
+		matchListBox.addItem(messages.selectMatch());
+		matchListBox.addChangeHandler(new ChangeHandler() {
+
+			@Override
+			public void onChange(ChangeEvent event) {
+				String matchID = matchListBox.getValue(matchListBox.getSelectedIndex());
+				 loadBoard(matchID);
+			}
+
+		});
+		// Check login status using login service.
+		LoginServiceAsync loginService = GWT.create(LoginService.class);
+		((ServiceDefTarget) loginService)
+				.setServiceEntryPoint("shihweichess12345.appspot.com/shihweihuang/login");
+//		loginService.login(GWT.getHostPageBaseURL() + "shihweihuang.html",
+		
+		Window.alert("123123");
+		
+				loginService.login("shihweichess12345.appspot.com/shihweihuang.html",
+				new AsyncCallback<LoginInfo>() {
+
+					public void onFailure(Throwable error) {
+						Window.alert("failure");
+					}
+
+					public void onSuccess(LoginInfo result) {
+						loginInfo = result;
+						Window.alert("success");
+						if (loginInfo.isLoggedIn()) {
+							setupChannel();
+
+							chessPlatformService.getMatchList(loginInfo,
+									new AsyncCallback<Set<String>>() {
+										@Override
+										public void onSuccess(Set<String> matchList) {
+											for (String matchID : matchList) {
+												matchListBox.addItem(matchID);
+											}
+										}
+
+										@Override
+										public void onFailure(Throwable caught) {
+
+										}
+									});
+							// Window.alert("before load chess");
+							loadChess(new Match(), emptyState, Color.WHITE, true);
+							// Window.alert("after load chess");
+						} else {
+							Window.alert("not login");
+							Window.Location.replace(loginInfo.getLoginUrl());
+						}
+					}
+				});
+
+	}
+
+	protected void clickSinglePlayerButton() {
+		Color color = Math.random() < 0.5 ? Color.WHITE : Color.BLACK;
+		loadChess(new Match(), new State(), Color.WHITE, true);
+
+	}
+
+	private void openChannel(String token) {
+		Channel channel = new ChannelFactoryImpl().createChannel(token);
+		socket = channel.open(new SocketListener() {
+			@Override
+			public void onOpen() {
+				isConnect = true;
+				// Window.alert(messages.connectToSever());
+
+			}
+
+			@Override
+			public void onMessage(String message) {
+				processMessage(message);
+			}
+
+			@Override
+			public void onError(ChannelError error) {
+
+			}
+
+			@Override
+			public void onClose() {
+
+			}
+		});
+
+	}
+
+	private void loadChess(Match match, State state, Color color,
+			boolean isSinglePlayer) {
+		
+		Window.alert("1234");
+		if (messages.language().equals("English")) {
+			languageSelector.setHref(GWT.getHostPageBaseURL()
+					+ "shihweihuang.html?locale=en");
+		} else {
+			languageSelector.setHref(GWT.getHostPageBaseURL()
+					+ "shihweihuang.html?locale=tw");
+		}
+		RootPanel.get().clear();
+		presenter = new Presenter();
+		final Graphics graphics = new Graphics(presenter);
+		presenter.setView(graphics);
+		RootPanel.get().add(languageSelector);
+		RootPanel.get().add(singlePlayerButton);
+		RootPanel.get().add(graphics);
+		RootPanel.get().add(matchPanel);
+//		 if (loginInfo.isLoggedIn()) {
+		RootPanel.get().add(connectPanel);
+//		 }
+
+		presenter.setChessPlatformService(chessPlatformService);
+		presenter.setMessages(messages);
+		presenter.setLoginInfo(loginInfo);
+		presenter.setMatchID(match.getMatchID());
+		presenter.setRanking(ranking);
+		presenter.setStartDate(match.getStartDate());
+		presenter.setColor(color);
+		presenter.setState(state);
+		presenter.setSinglePlayer(isSinglePlayer);
+		presenter.setState();
+		presenter.addHandlers();
+
+		if (loginInfo.isLoggedIn()) {
+			presenter.setLogin(messages.signOut(), loginInfo.getLogoutUrl());
+		} else {
+			presenter.setLogin(messages.signIn(), loginInfo.getLoginUrl());
+		}
+
+	}
+
+	private void setupChannel() {
+
+		if (chessPlatformService == null) {
+			chessPlatformService = GWT.create(ChessPlatformService.class);
+			((ServiceDefTarget) chessPlatformService)
+					.setServiceEntryPoint("shihweichess12345.appspot.com/shihweihuang/ChessPlatform");
+		}
+
+		AsyncCallback<String> callback = new AsyncCallback<String>() {
+			@Override
+			public void onSuccess(String result) {
+				while (socket == null) {
+					openChannel(result);
+				}
+			}
+
+			@Override
+			public void onFailure(Throwable caught) {
+
+			}
+		};
+		chessPlatformService.getToken(loginInfo, callback);
+
+	}
+
+	private void processMessage(String message) {
+
+		if (message.contains("NEWMATCH")) {
+			String matchID = message.substring(message.indexOf(":") + 1);
+			matchListBox.addItem(matchID);
+			presenter.printLog(messages.newMatch(matchID));
+			autoMatchButton.setText(messages.autoMatchStart());
+			matchRequestName.setText("QQQ");
+		}
+		if (message.contains("NEWMOVEON")) {
+			String[] matchInfo = message.split("@@");
+			String matchID = matchInfo[1];
+			State state = StateParser.parse(matchInfo[2]);
+			String currentMatchID = presenter.getMatchID();
+			if (matchID.equals(currentMatchID)) {
+				presenter.setState(state);
+				presenter.setState();
+			} else {
+				presenter.printLog(messages.newMoveOn(matchID));
+			}
+		}
+	}
+
+	private void loadBoard(final String matchID) {
+
+		chessPlatformService.getMatch(matchID, new AsyncCallback<Match>() {
+
+			@Override
+			public void onSuccess(Match match) {
+				String stateString = match.getState();
+				State state = StateParser.parse(stateString);
+				Color playerColor;
+				if (match.getwPlayer().equals(loginInfo.getEmailAddress())) {
+					playerColor = Color.WHITE;
+				} else {
+					playerColor = Color.BLACK;
+				}
+				loadChess(match, state, playerColor, false);
+
+			}
+
+			@Override
+			public void onFailure(Throwable caught) {
+				Window.alert(caught.getMessage());
+			}
+		});
+	}
+
+	private void clickRemoveMatchButton() {
+		String matchID = matchListBox.getItemText(matchListBox.getSelectedIndex());
+		matchListBox.removeItem(matchListBox.getSelectedIndex());
+		chessPlatformService.removeMatch(loginInfo, matchID,
+				new AsyncCallback<Void>() {
+
+					@Override
+					public void onSuccess(Void result) {
+						Window.alert(messages.matchRemoved());
+					}
+
+					@Override
+					public void onFailure(Throwable caught) {
+
+					}
+				});
+	}
+
+	private void clickConnect() {
+		chessPlatformService.matchPlayer(loginInfo, matchRequestName.getText(),
+				new AsyncCallback<Void>() {
+
+					@Override
+					public void onSuccess(Void result) {
+
+					}
+
+					@Override
+					public void onFailure(Throwable caught) {
+
+					}
+				});
+	}
+
+	private void clickAutoMatchButton() {
+		if (autoMatchButton.getText().equals(messages.autoMatchStart())) {
+			autoMatchButton.setText(messages.autoMatchStop());
+			matchRequestName.setText(messages.searching());
+			chessPlatformService.matchPlayer(loginInfo, "",
+					new AsyncCallback<Void>() {
+
+						@Override
+						public void onSuccess(Void result) {
+
+						}
+
+						@Override
+						public void onFailure(Throwable caught) {
+
+						}
+					});
+		} else {
+			autoMatchButton.setText(messages.autoMatchStart());
+			matchRequestName.setText("");
+			chessPlatformService.removeFromWaitList(loginInfo,
+					new AsyncCallback<Void>() {
+
+						@Override
+						public void onSuccess(Void result) {
+
+						}
+
+						@Override
+						public void onFailure(Throwable caught) {
+
+						}
+					});
+		}
+	}
+
+	void createOracle() {
+		// final MultiWordSuggestOracle oracle = new MultiWordSuggestOracle();
+
+		LightArray<String> fields = CollectionFactory.<String> constructArray();
+		fields.push("emails");
+		// fields.push("displayName"); //search in displayname
+		// fields.push("name");
+		ContactFindOptions findOptions = new ContactFindOptions("gmail", true);
+		// Window.alert("before find");
+		phoneGap.getContacts().find(fields, new ContactFindCallback() {
+
+			@Override
+			public void onSuccess(LightArray<Contact> contacts) {
+				// TODO Auto-generated method stub
+				for (int i = 0; i < contacts.length(); i++) {
+					Contact contact = contacts.get(i);
+					LightArray<ContactField> emails = contact.getEmails();
+					for (int j = 0; j < emails.length(); j++) {
+						oracle.add(emails.get(j).getValue());
+					}
+				}
+				// Window.alert("success");
+				afterInit();
+			}
+
+			@Override
+			public void onFailure(ContactError error) {
+				// TODO Auto-generated method stub
+				// Window.alert("failure");
+			}
+		}, findOptions);
+		//
+
+		// oracle.add("Afghanistan");
+		// oracle.add("Albania");
+		// oracle.add("Algeria");
+		// oracle.add("American Samoa");
+		// oracle.add("Andorra");
+		// oracle.add("Angola");
+		// oracle.add("jrtjr");
+		// oracle.add("trudnfs");
+		// oracle.add("tdyerrg");
+		// oracle.add("ndgrtre");
+		// oracle.add("jrtjttttttr");
+		// oracle.add("trud42nfs");
+		// oracle.add("tdyer123rg");
+		// oracle.add("ndgrtr123e");
+		//
+		// return oracle;
+	}
+
+}

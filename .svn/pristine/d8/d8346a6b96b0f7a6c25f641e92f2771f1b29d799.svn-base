@@ -1,0 +1,144 @@
+<!DOCTYPE ui:UiBinder SYSTEM "http://dl.google.com/gwt/DTD/xhtml.ent">
+<ui:UiBinder xmlns:ui="urn:ui:com.google.gwt.uibinder"
+  xmlns:g="urn:import:com.google.gwt.user.client.ui"
+  ui:generateFormat='com.google.gwt.i18n.rebind.format.PropertiesFormat'
+  ui:generateKeys="com.google.gwt.i18n.rebind.keygen.MD5KeyGenerator">
+  
+  <ui:image field="background" src="board.jpg" />
+  <ui:image field="promotepiecesbg" src="promotepiecesbg.png" />
+  <ui:style field="css" type="org.harshmehta.hw3.GameCss">
+    .highlighted {
+	    outline: solid green 2px;
+    }
+    .selected {
+      opacity: 0.5;
+    }
+    @sprite .board {
+      gwt-image: "background";
+      z-index: -1;
+    }
+    @sprite .promotepieces {
+      gwt-image: "promotepiecesbg";
+      z-index: -1;
+      visibility: hidden;
+    }
+    td img {
+      display: block
+    }
+    .grid {
+      margin-top: 20px;
+      margin-left: 20px;
+      border-spacing: 0px;
+      border-collapse: collapse;
+    }
+    .grid2 {
+      margin-top: 0px;
+      margin-left: 0px;
+      border-spacing: 0px;
+      border-collapse: collapse;
+    }
+    .hide {
+	    visibility: hidden;
+	  }
+	  .show {
+      visibility: visible;
+    }
+    .gameText {
+	    font-size: 1.2em;
+	    color: red;
+	  }
+	  .outerContainer div {
+	    display: inline-block;
+	  }
+	  .boardContainer {
+	    height: 500px;
+	    width: 450px;
+	  }
+	  .textContainer {
+	    position: absolute;
+      height: 500px;
+    }
+  </ui:style>
+  <g:HTMLPanel>
+    
+    <!--
+    <g:Button ui:field="newGameButton" text="New Game!"/>
+    <br />
+    <br />
+    <g:Button ui:field="saveButton" text="Save this game!"/>
+    <g:Button ui:field="loadButton" text="Load previously saved game"/>
+    <br />
+    -->
+    <br />
+    <g:HorizontalPanel spacing="10">
+      <g:TextBox ui:field="emailBox">
+        <ui:msg description="Email Field">Opponent's email address</ui:msg>
+      </g:TextBox>
+      <g:Button ui:field="playButton" >
+        <ui:msg description="Play Button">Play!</ui:msg>
+      </g:Button>
+    </g:HorizontalPanel>
+    <g:HorizontalPanel spacing="10">
+      <g:Button ui:field="automatchButton" >
+        <ui:msg description="Auto Match Button">Random Matchup!</ui:msg>
+      </g:Button>
+    </g:HorizontalPanel>
+    <g:HorizontalPanel spacing="10">
+      <g:Button ui:field="aiWhiteButton" >
+        <ui:msg description="AI White Button">Play against White AI</ui:msg>
+      </g:Button>
+      <g:Button ui:field="aiBlackButton" >
+        <ui:msg description="AI Black Button">Play against Black AI</ui:msg>
+      </g:Button>
+    </g:HorizontalPanel>
+    <g:HorizontalPanel spacing="10">
+	    <g:ListBox ui:field="matchList">
+	      <g:item>
+	        --Select Match--
+	      </g:item>
+	    </g:ListBox>
+	    <g:Button ui:field="deleteButton">
+	      <ui:msg description="Delete Match Button">Delete Match</ui:msg>
+	    </g:Button>
+    </g:HorizontalPanel>
+    <br />
+    
+    <div class="{css.outerContainer}">
+      <div class="{css.boardContainer}">
+        <div class="{css.board}">
+          <g:Grid ui:field="gameGrid" styleName="{css.grid}"/>
+        </div>
+        <div class="{css.promotepieces}">
+          <g:Grid ui:field="promotePiecesGrid" styleName="{css.grid2}"></g:Grid>
+        </div>
+      </div>
+      <div class="{css.textContainer}">
+        <ui:msg description="Your Details">Your Details:</ui:msg>
+        <div class="{css.gameText}">
+          <g:Label ui:field="yourInfo"/>
+        </div>
+        <br />
+        <ui:msg description="Opponent">Opponent:</ui:msg>
+        <div class="{css.gameText}">
+          <g:Label ui:field="opponent"/>
+        </div>
+        <br />
+        <ui:msg description="Current Turn">Current Turn:</ui:msg>
+        <div class="{css.gameText}">
+          <g:Label ui:field="gameTurn"/>
+        </div>
+        <br />
+        <ui:msg description="Your Turn">Your Turn:</ui:msg>
+        <div class="{css.gameText}">
+          <g:Label ui:field="yourTurn"/>
+        </div>
+        <br />
+        <ui:msg description="Game Status">Game Status:</ui:msg>
+        <div class="{css.gameText}">
+          <g:Label ui:field="gameStatus"/>
+        </div>
+        <br />
+      </div>
+    </div>
+  </g:HTMLPanel>
+</ui:UiBinder> 

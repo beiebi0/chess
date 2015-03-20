@@ -1,0 +1,38 @@
+package org.vorasahil.hw6.server;
+
+import org.vorasahil.hw6.client.Update;
+import org.vorasahil.hw6.client.UpdateService;
+
+import com.google.appengine.api.channel.ChannelService;
+
+import com.google.appengine.api.channel.ChannelMessage;
+import com.google.appengine.api.channel.ChannelServiceFactory;
+import com.google.gwt.user.server.rpc.RemoteServiceServlet;
+
+public class UpdateServiceImpl extends RemoteServiceServlet implements
+		UpdateService {
+
+	/**
+	 *Updates the other user. 
+	 */
+	private static final long serialVersionUID = 1L;
+
+	@Override
+	public Boolean getUpdate(Update update) {
+		int gameId = update.getGameId();
+		int playerId = update.getPlayerId();
+		Game game = GameManager.getGame(gameId);
+		if (game.getTurn() != playerId) {
+			return new Boolean(false);
+		}
+
+		ChannelService channelService = ChannelServiceFactory
+				.getChannelService();
+		game.toggleTurn();
+		channelService.sendMessage(new ChannelMessage(game.getPlayer(game
+				.getTurn()), update.getState()));
+
+		return new Boolean(true);
+	}
+
+}

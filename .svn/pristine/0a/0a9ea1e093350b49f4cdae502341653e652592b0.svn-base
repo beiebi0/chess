@@ -1,0 +1,31 @@
+package org.kuangchelee.hw6;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+
+import org.kuangchelee.hw7.MatchInfo;
+import org.kuangchelee.hw11.ContactList;
+
+import com.google.gwt.user.client.rpc.RemoteService;
+import com.google.gwt.user.client.rpc.RemoteServiceRelativePath;
+
+@RemoteServiceRelativePath("kuangcheleeServlet")
+public interface ChessService extends RemoteService{
+//	public static class App{
+//		private static final ChessServiceAsync ourInstance = (ChessServiceAsync)GWT.create(ChessService.class);
+//		public static ChessServiceAsync getInstance(){
+//			return ourInstance;
+//		}
+//	}
+	public UserInfo logIn(String curURL);
+	public String join(UserInfo userinfo, String Opponent, String newState);
+	public MatchInfo loadState(Long MID);
+	public String saveState(Long MID, String state, int winner);
+	public void sendState(String state, String opponentID);
+	public HashMap<Long, String> updateMatchList(UserInfo User);
+	public String deleteMatch(String UID, Long MID);
+	public String saveEmails(ArrayList<String> contacts);
+	public ArrayList<String> getEmails(String str);
+	//public void matchUp();
+}

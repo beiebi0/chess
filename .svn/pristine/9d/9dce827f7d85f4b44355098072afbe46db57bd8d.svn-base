@@ -1,0 +1,11 @@
+package org.ashishmanral.hw2;
+import org.ashishmanral.hw1.AbstractStateChangerOtherPiecesMovementTest;
+import org.ashishmanral.hw2.StateChangerImpl;
+import org.shared.chess.StateChanger;
+
+public class StateChangerImplOtherPieceMovement extends AbstractStateChangerOtherPiecesMovementTest{
+  @Override
+  public StateChanger getStateChanger() {
+    return new StateChangerImpl();
+  }
+}

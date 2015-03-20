@@ -1,0 +1,55 @@
+package org.leozis.hw8;
+
+import com.google.gwt.i18n.client.LocalizableResource.DefaultLocale;
+import com.google.gwt.i18n.client.LocalizableResource.Generate;
+import com.google.gwt.i18n.client.Messages;
+
+@DefaultLocale("en_US")
+@Generate(format ={"com.google.gwt.i18n.server.PropertyCatalogFactory"})
+public interface ChessMessages extends Messages {
+	  @DefaultMessage("Draw")
+	  String draw();
+	  
+	  @DefaultMessage("White''s Turn!")
+	  String whiteTurn();
+	  
+	  @DefaultMessage("Black''s Turn!")
+	  String blackTurn();
+	    
+	  @DefaultMessage("White Wins By Checkmate!")
+	  String whiteWins();
+	  
+	  @DefaultMessage("Black Wins by Checkmate!")
+	  String blackWins();
+	  
+	  @DefaultMessage("Draw by Fifty Moves")
+	  String fiftyMoveRule();
+	  
+	  @DefaultMessage("Draw by Stalemate")
+	  String stalemate();
+	  
+	  @DefaultMessage("It is {0} turn")
+	  String turn(String username);
+	  
+	  @DefaultMessage("{0} Won The Game")
+	  String won(String username);
+	  
+	  @DefaultMessage("{0} not signed in")
+	  String notsignedin(String username);
+	  
+	  @DefaultMessage("SINGLE PLAYER GAME HAS STARTED")
+	  String singleplayerstarted();
+	  
+	  @DefaultMessage("save")
+	  String save();
+	  
+	  @DefaultMessage("load")
+	  String load();
+	  
+	  @DefaultMessage("single player")
+	  String singleplayer();
+	  
+	  @DefaultMessage("new game")
+	  String newgame();
+}
+

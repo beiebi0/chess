@@ -1,0 +1,32 @@
+package org.shihweihuang.hw6.client;
+
+import org.shared.chess.Move;
+import org.shared.chess.PieceKind;
+import org.shared.chess.Position;
+
+public class MoveSerializer {
+	public static String serialize(Move move) {
+		String pieceKind = move.getPromoteToPiece() == null? "null": move.getPromoteToPiece().toString();
+		return move.getFrom().getRow() + "," + move.getFrom().getCol() + ","
+				+ move.getTo().getRow() + "," + move.getTo().getCol() + ","
+				+ pieceKind + ", MOVE";
+	}
+	
+	public static Move deserialize(String string){
+		String[] tokens = string.split(",");
+		PieceKind promoteTo;
+		if (tokens[4].equals("QUEEN")){
+			promoteTo = PieceKind.QUEEN;
+		} else if (tokens[4].equals("BISHOP")){
+			promoteTo = PieceKind.BISHOP;
+		} else if (tokens[4].equals("KNIGHT")){
+			promoteTo = PieceKind.KNIGHT;
+		} else if (tokens[4].equals("ROOK")){
+			promoteTo = PieceKind.ROOK;
+		} else {
+			promoteTo = null;
+		}
+		return new Move(new Position(Integer.parseInt(tokens[0]), Integer.parseInt(tokens[1])), new Position(Integer.parseInt(tokens[2]), Integer.parseInt(tokens[3])), promoteTo);
+	}
+
+}

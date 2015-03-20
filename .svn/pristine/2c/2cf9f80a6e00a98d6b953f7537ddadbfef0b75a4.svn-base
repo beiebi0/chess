@@ -1,0 +1,81 @@
+package org.ashishmanral.hw6.client;
+import java.io.Serializable;
+import org.shared.chess.Color;
+
+/**
+ * UserDetails.java
+ * @author Ashish
+ * This class contains the dettails of the user who will be playing Chess.
+ */
+@SuppressWarnings("serial")
+public class UserDetails implements Serializable {
+
+  private boolean loginStatus;
+  private String loginUrl;
+  private String logoutUrl;
+  private String emailId;
+  private String token;
+  private Color playerColor;
+  private int boardId;
+
+  public boolean isLoggedIn(){ 
+    return loginStatus;
+  }
+
+  public String getLoginUrl() {
+	return loginUrl;
+  }
+  
+  public String getLogoutUrl() {
+    return logoutUrl;
+  }
+  
+  public String getEmailId() {
+    return emailId;
+  }
+  
+  public String getToken() {
+    return token;
+  }
+
+  public Color getPlayerColor() {
+    return playerColor;
+  }
+
+  public int getBoardId(){
+    return boardId;
+  }
+  
+  public void login() {
+    this.loginStatus = true;
+  }
+  
+  public void logoff() {
+    this.loginStatus = false;
+  }
+  
+  public void setLoginUrl(String loginUrl) {
+    this.loginUrl = loginUrl;
+  }
+
+  public void setLogoutUrl(String logoutUrl) {
+    this.logoutUrl = logoutUrl;
+  }
+
+  public void setEmailId(String emailId) {
+    this.emailId = emailId;
+  }
+  
+  public void setToken(String token) {
+    this.token = token;
+  }
+
+  public void setPlayerColor(Color playerColor) {
+    this.playerColor = playerColor;
+  }
+  
+  public void setBoardId(int boardId){
+    this.boardId = boardId;
+  }
+
+}

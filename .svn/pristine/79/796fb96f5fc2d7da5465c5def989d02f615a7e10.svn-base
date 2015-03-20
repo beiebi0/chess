@@ -1,0 +1,12 @@
+package org.alishah.hw2_5;
+
+import org.shared.chess.AbstractStateExplorerTest;
+import org.shared.chess.StateExplorer;
+import org.harshmehta.hw2_5.StateExplorerImpl;
+
+public class StateExplorerImplTest extends AbstractStateExplorerTest {
+  @Override
+  public StateExplorer getStateExplorer() {
+    return new StateExplorerImpl();
+  }
+}

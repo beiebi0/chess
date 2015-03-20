@@ -1,0 +1,218 @@
+package org.kuangchelee.hw2_5;
+
+import static org.shared.chess.Color.BLACK;
+import static org.shared.chess.Color.WHITE;
+import static org.shared.chess.PieceKind.BISHOP;
+import static org.shared.chess.PieceKind.KNIGHT;
+import static org.shared.chess.PieceKind.QUEEN;
+import static org.shared.chess.PieceKind.ROOK;
+
+import java.util.Set;
+import java.util.Iterator;
+import org.kuangchelee.hw2.StateChangerImpl;
+import org.shared.chess.Color;
+import org.shared.chess.IllegalMove;
+import org.shared.chess.Move;
+import org.shared.chess.PieceKind;
+import org.shared.chess.Position;
+import org.shared.chess.State;
+import org.shared.chess.StateExplorer;
+import com.google.common.collect.Sets;
+//import com.google.appengine.labs.repackaged.com.google.common.collect.Sets;
+
+public class StateExplorerImpl implements StateExplorer {
+	@Override
+	public Set<Move> getPossibleMoves(State state) {
+		// TODO
+		Set<Move> Moves = Sets.newHashSet();
+		for(int i = 0; i < State.ROWS; i++){
+			for(int j = 0; j < State.COLS; j++){
+				if(state.getPiece(i, j) != null){
+					if(state.getPiece(i, j).getColor() == state.getTurn()){
+						Moves.addAll(getPossibleMovesFromPosition(state, new Position(i, j)));
+					}
+				}
+			}
+		}
+		return Moves;
+	}
+	@Override
+	public Set<Move> getPossibleMovesFromPosition(State inputState, Position start) {
+		// TODO
+		if(inputState.getPiece(start) == null){
+			return null;
+		}
+		Set<Move> Moves = Sets.newHashSet();
+		StateChangerImpl stateChanger = new StateChangerImpl();
+		Color color = inputState.getTurn();
+		State state = inputState.copy();
+		int row = start.getRow();
+		int col = start.getCol();
+		if(state.getPiece(row, col).getColor() == color){
+			switch(state.getPiece(row, col).getKind()){
+			case KING:
+				for(int i = -1; i < 2; i++){
+					  for(int j = -2; j <= 2; j++){
+						  if((j == -2 || j == 2) && !(i == 0 || i == 7)){
+							  continue;
+						  }
+						  if(stateChanger.isKingInDanger(state, color) && j == 2){
+							  continue;
+						  }
+						  Move move = new Move(new Position(row,col), new Position(row + i,col + j), null);
+						  try{
+							  stateChanger.tryMove(state, move);
+						  }
+						  catch(IllegalMove illegalMove){
+							  continue;
+						  }
+						  Moves.add(move);
+					  }
+				  }
+				break;
+			case QUEEN:
+				for(int i = 0; i < State.ROWS; i++){
+					for(int j = 0; j < State.COLS; j++){
+						if(row != i && col == j){
+							Move move = new Move(new Position(row, col), new Position(i, col), null);
+							try{
+								stateChanger.tryMove(state, move);
+							}
+							catch(IllegalMove illegalMove){
+								continue;
+							}
+							Moves.add(move);							
+						}
+						else if(row == i && col != j){
+							Move move = new Move(new Position(row, col), new Position(row, j), null);
+							try{
+								stateChanger.tryMove(state, move);
+							}
+							catch(IllegalMove illegalMove){
+								continue;
+							}
+							Moves.add(move);							
+						}
+						else if(Math.abs(row - i) == Math.abs(col - j)){
+							Move move = new Move(new Position(row, col), new Position(i, j), null);
+							try{
+								stateChanger.tryMove(state, move);
+							}
+							catch(IllegalMove illegalMove){
+								continue;
+							}
+							Moves.add(move);							
+						}
+					}
+				}
+				break;
+			case ROOK:
+				for(int i = 0; i < State.ROWS; i++){
+					for(int j = 0; j < State.COLS; j++){
+						if(row != i && col == j){
+							Move move = new Move(new Position(row, col), new Position(i, col), null);
+							try{
+								stateChanger.tryMove(state, move);
+							}
+							catch(IllegalMove illegalMove){
+								continue;
+							}
+							Moves.add(move);							
+						}
+						else if(row == i && col != j){
+							Move move = new Move(new Position(row, col), new Position(row, j), null);
+							try{
+								stateChanger.tryMove(state, move);
+							}
+							catch(IllegalMove illegalMove){
+								continue;
+							}
+							Moves.add(move);							
+						}
+					}
+				}
+				break;
+			case BISHOP:
+				for(int i = 0; i < State.ROWS; i++){
+					for(int j = 0; j < State.COLS; j++){
+						if(Math.abs(row - i) == Math.abs(col - j)){
+							Move move = new Move(new Position(row, col), new Position(i, j), null);
+							try{
+								stateChanger.tryMove(state, move);
+							}
+							catch(IllegalMove illegalMove){
+								continue;
+							}
+							Moves.add(move);							
+						}
+					}
+				}
+				break;
+			case KNIGHT:
+				for(int i = 0; i < State.ROWS; i++){
+					for(int j = 0; j < State.COLS; j++){
+						if((Math.abs(row - i) == 2 && Math.abs(col - j) == 1)
+								|| (Math.abs(row - i) == 1 && Math.abs(col - j) == 2)){
+							Move move = new Move(new Position(row, col), new Position(i, j), null);
+							try{
+								stateChanger.tryMove(state, move);
+							}
+							catch(IllegalMove illegalMove){
+								continue;
+							}
+							Moves.add(move);							
+						}
+					}
+				}
+				break;
+			case PAWN:
+				PieceKind PromoteKinds[] = {QUEEN, ROOK, BISHOP, KNIGHT};
+				  for(int i = 0; i < State.ROWS; i++){
+					  for(int j = 0; j < State.COLS; j++){
+						  if((Math.abs(row - i) == 1 && col == j)
+								  || (Math.abs(row - i) == 2 && col == j)
+								  || (Math.abs(row - i) == 1 && Math.abs(col - j) == 1)){
+							  if(state.getTurn() == WHITE && row == 6 && i == 7 
+									  || state.getTurn() == BLACK && row == 1 && i == 0){
+								  for(int k = 0; k < PromoteKinds.length; k++){
+									  Move move = new Move(new Position(row, col), new Position(i, j), PromoteKinds[k]);
+									  try{
+										  stateChanger.tryMove(state, move);
+									  }
+									  catch(IllegalMove illegalMove){
+										  continue;
+									  }
+									  Moves.add(move);
+								  }
+							  }
+							  else{
+								  Move move = new Move(new Position(row, col), new Position(i, j), null);
+								  try{
+									  stateChanger.tryMove(state, move);
+								  }
+								  catch(IllegalMove illegalMove){
+									  continue;
+								  }
+								  Moves.add(move);
+							  }
+						  }
+					  }
+				  }
+				break;
+			}
+		}
+		return Moves;
+	}
+	@Override
+	public Set<Position> getPossibleStartPositions(State state) {
+		// TODO
+		Set<Position> Positions = Sets.newHashSet();
+		Set<Move> Moves = Sets.newHashSet();
+		Moves = getPossibleMoves(state);
+		Iterator<Move> i = Moves.iterator();
+		while(i.hasNext()){
+			Positions.add(i.next().getFrom());
+		}
+		return Positions;
+	}
+}

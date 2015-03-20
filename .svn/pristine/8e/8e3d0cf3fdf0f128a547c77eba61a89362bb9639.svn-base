@@ -1,0 +1,5 @@
+package org.alexanderoskotsky.hw5;
+
+public interface Callback {
+	void execute();
+}

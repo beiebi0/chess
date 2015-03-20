@@ -1,0 +1,420 @@
+package org.sanjana.hw1;
+
+import static org.junit.Assert.*;
+import static org.shared.chess.Color.BLACK;
+import static org.shared.chess.Color.WHITE;
+import static org.shared.chess.PieceKind.BISHOP;
+import static org.shared.chess.PieceKind.KING;
+import static org.shared.chess.PieceKind.KNIGHT;
+import static org.shared.chess.PieceKind.PAWN;
+import static org.shared.chess.PieceKind.QUEEN;
+import static org.shared.chess.PieceKind.ROOK;
+import static org.shared.chess.State.COLS;
+import static org.shared.chess.State.ROWS;
+
+import org.junit.Test;
+import org.shared.chess.AbstractStateChangerTest;
+import org.shared.chess.IllegalMove;
+import org.shared.chess.Move;
+import org.shared.chess.Piece;
+import org.shared.chess.PieceKind;
+import org.shared.chess.Position;
+import org.shared.chess.State;
+
+public abstract class AbstractCapturingForWhiteTest extends AbstractStateChangerTest {
+
+	/*
+	 * 	Begin tests by Sanjana Agarwal
+	 * 
+	 * */
+
+	void initforsanjana()
+	{
+		//	  Piece[][] board = new Piece[ROWS][COLS];
+		//	  State copied = new State(Color.WHITE, board, new boolean[]{true, true}, new boolean[]{true, true}, null, 0, null);
+		start=new State();
+		for (int row = 0; row<ROWS; ++row) 
+			for (int col = 0; col<COLS; ++col) 
+				start.setPiece(row,col,null);
+		start.setPiece(new Position(7,4),new Piece(BLACK,KING));
+		start.setPiece(new Position(0,4),new Piece(WHITE,KING));
+	}
+
+	//If White bishop tries to capture a black knight i.e a legal capture
+	@Test()
+	public void testBishopLegalCapture() {
+		initforsanjana();
+		Move move = new Move(new Position(3,0), new Position(5,2), null);
+
+		Piece whitebishop=new Piece(WHITE,PieceKind.BISHOP);
+		start.setPiece(3,0,whitebishop);
+		Piece blackknight= new Piece(BLACK, PieceKind.KNIGHT);
+		start.setPiece(5,2,blackknight);
+		State expected = start.copy();
+
+		assertEquals(blackknight.getColor(),BLACK);
+		expected.setTurn(BLACK);
+		expected.setPiece(3,0, null);
+		expected.setPiece(5,2, whitebishop);
+		expected.setNumberOfMovesWithoutCaptureNorPawnMoved(0);
+		stateChanger.makeMove(start, move);
+		assertEquals(expected, start);		   		   
+	}
+
+	//If white bishop tries to capture a black queen but there's another piece in the path
+	// that is an illegal capture
+	@Test(expected = IllegalMove.class)
+	public void testBishopIllegalCapture() {
+		initforsanjana(); 	
+		Piece whitebishop=new Piece(WHITE,BISHOP);
+		start.setPiece(5,2,whitebishop);
+		Piece blackbishop=new Piece(BLACK,BISHOP);
+		start.setPiece(6,1,blackbishop);
+		Piece blackqueen=new Piece(BLACK,QUEEN);
+		start.setPiece(7,0,blackqueen);
+		Move move = new Move(new Position(5, 2), new Position(7,0), null);
+		stateChanger.makeMove(start, move);		    
+	}
+
+	//If white knight tries to capture the black bishop this will expose the white king
+	//to check from black rook, making this an illegal capture but still a legal move as in
+	//no exception will be thrown
+
+	@Test()
+	public void testIllegalCaptureSituationalPin() {
+
+		initforsanjana();
+		Move move = new Move(new Position(3,1), new Position(4,3), null);
+		Piece whiteknight=new Piece(WHITE,PieceKind.KNIGHT);
+		start.setPiece(3,1,whiteknight);
+		Piece blackrook=new Piece(BLACK,PieceKind.ROOK);
+		start.setPiece(7,1,blackrook);
+		Piece blackbishop=new Piece(BLACK,PieceKind.BISHOP);
+		start.setPiece(4,3,blackbishop);
+		State expected = start.copy();
+
+		expected.setTurn(BLACK);
+		expected.setPiece(3,1, null);
+		expected.setPiece(4,3,whiteknight);
+		expected.setNumberOfMovesWithoutCaptureNorPawnMoved(0);
+		stateChanger.makeMove(start, move);		 
+		assertEquals(expected, start);		
+	}
+
+	//A king tries to capture a black piece, which is on a square that is attacked by a piece of the opponent;
+	//regardless whether this piece is `pinned' (would cause check to its own king) when moved or not.
+	//Such a move would still be regarded as moving the king into check. hence illegal capture
+
+	@Test(expected = IllegalMove.class)
+	public void testIllegalCaptureKingExposedTOCheck() {
+
+		initforsanjana();
+		start.setPiece(0,4,null); //setting old white king to null first
+		Piece blackrook=new Piece(BLACK,PieceKind.ROOK);
+		start.setPiece(4, 3,blackrook);
+		Piece blackbishop=new Piece(BLACK,BISHOP);
+		start.setPiece(4,6,blackbishop);
+		Piece whitequeen=new Piece(WHITE,PieceKind.QUEEN);
+		start.setPiece(0,3,whitequeen);
+		Piece whiteking=new Piece(WHITE,KING);
+		start.setPiece(3,6,whiteking);
+
+		//if king tries to capture the bishop it could expose itself to check from black rook
+		//even though the rook is pinned to its' king. It will still be an illegal capture
+
+		Move move = new Move(new Position(3,6), new Position(4,6), null);
+		stateChanger.makeMove(start, move);		    
+	}
+
+	//If white king, black knight and black king are in one row next to each other;
+	// and the white king tries to capture the knight standing next to its' black king
+	//i.e an illegal capture
+
+	@Test(expected = IllegalMove.class)
+	public void testKingIllegalCheckCapture() {
+
+		initforsanjana();
+		start.setPiece(0,4,null);		//set old king positions to null
+		start.setPiece(7,4,null);
+		Piece whiteking=new Piece(WHITE,KING);
+		start.setPiece(1,4,whiteking);
+		Piece blackking=new Piece(BLACK,KING);
+		start.setPiece(1,6,blackking);
+		Piece blackknight=new Piece(BLACK,PieceKind.KNIGHT);
+		start.setPiece(1,5,blackknight);
+
+		//white king will come in check if it moves to capture black knight.
+		Move move = new Move(new Position(1,4), new Position(1,5), null);
+		stateChanger.makeMove(start, move);		    
+	}
+
+	//If White king tries to capture a black piece i.e a legal capture
+	@Test()
+	public void testKingLegalCapturesPiece() {
+		initforsanjana();
+		Move move = new Move(new Position(0,4), new Position(1,4), null);
+
+		Piece whiteking=start.getPiece(0,4);
+		Piece blackrook=new Piece(BLACK,PieceKind.ROOK);
+		start.setPiece(1,4,blackrook);
+		State expected = start.copy();
+
+		assertEquals(blackrook.getColor(),BLACK);
+		expected.setTurn(BLACK);
+		expected.setPiece(0,4, null);
+		expected.setPiece(1,4,whiteking);
+		expected.setCanCastleQueenSide(WHITE, false);
+		expected.setCanCastleKingSide(WHITE, false);
+		expected.setNumberOfMovesWithoutCaptureNorPawnMoved(0);
+		stateChanger.makeMove(start, move);
+		assertEquals(expected, start);		   		   
+	}
+
+	//If white king tries to capture a black piece exposing itself to check i.e. an illegal capture
+	@Test(expected = IllegalMove.class)
+	public void testKingMovesInCheckIllegalCapture() {
+		initforsanjana();
+		start.setPiece(0,4,null);
+		Piece whiteking=new Piece(WHITE,KING);
+		start.setPiece(1,4,whiteking);
+		Piece blackbishop=new Piece(BLACK,BISHOP);
+		start.setPiece(2,5,blackbishop);
+		Piece blackknight =new Piece(BLACK,KNIGHT);
+		start.setPiece(4,6,blackknight);
+
+		//If king captures bishop it exposes itself to check, making this an illegal capture
+		Move move = new Move(new Position(1,4), new Position(2,5), null);
+		stateChanger.makeMove(start, move);		    
+	}
+
+	//If white knight tries to capture a piece by an illegal move i.e. an illegal capture
+	@Test(expected = IllegalMove.class)
+	public void testKnightIllegalMoveCapture() {
+		initforsanjana();  
+		
+		Piece whiteknight=new Piece(WHITE,KNIGHT);
+		start.setPiece(4,6,whiteknight);
+		Move move = new Move(new Position(4,6), new Position(7,4), null);
+		stateChanger.makeMove(start, move);		    
+	}
+
+	//If White knight tries to capture a black piece i.e a legal capture
+	@Test()
+	public void testKnightLegalCapturesPiece() {
+		initforsanjana();
+		Move move = new Move(new Position(4,7), new Position(6,6), null);
+
+		Piece whiteknight=new Piece(WHITE,KNIGHT);
+		start.setPiece(4,7,whiteknight);
+		Piece whitepawn=new Piece(WHITE,PAWN);
+		start.setPiece(5,7,whitepawn);
+		Piece blackqueen=new Piece(BLACK,QUEEN);
+		start.setPiece(6,7,blackqueen);
+		Piece blackrook=new Piece(BLACK,ROOK);
+		start.setPiece(6,6,blackrook);
+		State expected = start.copy();
+
+		assertEquals(blackrook.getColor(),BLACK);
+		expected.setTurn(BLACK);
+		expected.setPiece(4,7, null);
+		expected.setPiece(6,6,whiteknight);
+		expected.setNumberOfMovesWithoutCaptureNorPawnMoved(0);
+		stateChanger.makeMove(start, move);
+		assertEquals(expected, start);		   		   
+	}
+
+	//If white pawn tries to capture a black piece backwards i.e illegal capture
+	@Test(expected = IllegalMove.class)
+	public void testPawnIllegalCaptureWhitePieceBackwards() 
+	{
+		initforsanjana();
+		start.setPiece(0, 3,new Piece(BLACK,QUEEN));
+		start.setPiece(1,4,new Piece(WHITE,PAWN));
+		Move move = new Move(new Position(1, 4), new Position(0,3), null);
+		stateChanger.makeMove(start, move); 
+	}
+
+	//If white pawn tries to capture another white piece i.e an illegal capture
+	@Test(expected = IllegalMove.class)
+	public void testPawnIllegalCaptureWhitePiece() {
+
+		initforsanjana();
+		Piece whiteknight=new Piece(WHITE,KNIGHT);
+		start.setPiece(2,5,whiteknight);
+		start.setPiece(1,4,new Piece(WHITE,PAWN));
+		Move move = new Move(new Position(1, 4), new Position(2, 5), null);
+		stateChanger.makeMove(start, move); 
+	}
+	//If white pawn tries to capture a black piece in forward direction i.e an illegal capture
+	@Test(expected = IllegalMove.class)
+	public void testPawnIllegalForwardCapture() {
+		initforsanjana();
+		Piece whitepawn=new Piece(WHITE,PieceKind.PAWN);
+		start.setPiece(3,5,whitepawn);
+		Piece blackbishop=new Piece(BLACK,PieceKind.BISHOP);
+		start.setPiece(4,5,blackbishop);
+		Move move = new Move(new Position(3, 5), new Position(4, 5), null);
+		stateChanger.makeMove(start, move); 
+	}
+
+	//If White pawn tries to capture a black piece, in a legal capture
+	@Test()
+	public void testPawnLegalCapturesPiece() {
+
+		initforsanjana();
+		Move move = new Move(new Position(1, 1), new Position(2, 2), null);
+
+		Piece whitepawn=new Piece(WHITE, PieceKind.PAWN);
+		start.setPiece(1,1,whitepawn);
+		Piece blackpawn= new Piece(BLACK,PieceKind.PAWN);
+		start.setPiece(2,2,blackpawn);
+		State expected = start.copy();
+
+		assertEquals(blackpawn.getColor(),BLACK);
+		expected.setTurn(BLACK);
+		expected.setPiece(1, 1, null);
+		expected.setPiece(2, 2,whitepawn);
+		expected.setNumberOfMovesWithoutCaptureNorPawnMoved(0);
+		stateChanger.makeMove(start, move);
+		assertEquals(expected, start);	    	   
+	}
+
+	//If a white pawn captures a black piece legally but stands in-front of another
+	//white pawn. It is still a legal capture and is called doubling or doubled pawns.
+	@Test()
+	public void testPawnLegalCapturePieceDoubling() {
+		initforsanjana();
+		Move move = new Move(new Position(1, 1), new Position(2, 2), null);
+
+		Piece whitepawn=new Piece(WHITE, PieceKind.PAWN);
+		start.setPiece(1,1,whitepawn);
+		Piece blackpawn= new Piece(BLACK,PieceKind.PAWN);
+		start.setPiece(2,2,blackpawn);
+		start.setPiece(1,2,new Piece(WHITE, PieceKind.PAWN));
+		State expected = start.copy();
+
+		assertEquals(blackpawn.getColor(),BLACK);
+		expected.setTurn(BLACK);
+		expected.setPiece(1, 1, null);
+		expected.setPiece(2, 2,whitepawn);
+		expected.setNumberOfMovesWithoutCaptureNorPawnMoved(0);
+		stateChanger.makeMove(start, move);
+		assertEquals(expected, start);	    	
+	}
+
+	//If white pawn tries to capture a black piece in forward direction i.e an illegal capture
+	@Test(expected = IllegalMove.class)
+	public void testPawnIllegalSidewaysCapture() {
+		initforsanjana();
+		Piece whitepawn=new Piece(WHITE,PieceKind.PAWN);
+		start.setPiece(3,5,whitepawn);
+		Piece blackpawn=new Piece(BLACK,PieceKind.PAWN);
+		start.setPiece(3,6,blackpawn);
+		Move move = new Move(new Position(3, 5), new Position(3,6), null);
+		stateChanger.makeMove(start, move); 
+	}
+
+	//If white Queen tries to capture a black piece,but its path is blocked 
+	//by another white piece i.e an illegal capture
+	@Test(expected = IllegalMove.class)
+	public void testQueenIllegalBlockedCapture() {
+
+		initforsanjana();
+		Piece whitequeen=new Piece(WHITE,PieceKind.QUEEN);
+		start.setPiece(0,3,whitequeen);
+		Piece whitepawn=new Piece(WHITE,PieceKind.PAWN); 
+		start.setPiece(4,3,whitepawn);
+		Piece blackrook=new Piece(BLACK,PieceKind.ROOK);
+		start.setPiece(7,3,blackrook);
+
+		Move move = new Move(new Position(0,3), new Position(7,3), null);
+		stateChanger.makeMove(start, move);		    
+	}
+
+	//If white Queen tries to capture a its own king i.e. an illegal capture
+	@Test(expected = IllegalMove.class)
+	public void testQueenIllegalCapture() {
+
+		initforsanjana();
+		Piece whitequeen=new Piece(WHITE,PieceKind.QUEEN);
+		start.setPiece(0,6,whitequeen);
+		Move move = new Move(new Position(0,6), new Position(0,4), null);
+		stateChanger.makeMove(start, move);		    
+	}
+
+	//If white Queen tries to capture a piece when it is not her turn i.e an illegal capture
+	@Test(expected = IllegalMove.class)
+	public void testQueenIllegalTurnCapture() {
+
+		initforsanjana();
+		start.setTurn(BLACK);
+		Piece whitequeen=new Piece(WHITE,PieceKind.QUEEN);
+		start.setPiece(0,3,whitequeen);
+		Move move = new Move(new Position(0,3), new Position(3,6), null);
+		stateChanger.makeMove(start, move);		    
+	}
+
+	//If White queen tries to capture a black piece i.e a legal capture
+	@Test()
+	public void testQueenLegalCapturesPiece() {
+
+		initforsanjana();
+		Move move = new Move(new Position(0,3), new Position(7,3), null);
+
+		Piece whitequeen=new Piece(WHITE,PieceKind.QUEEN);
+		start.setPiece(0,3,whitequeen);
+		Piece blackrook=new Piece(BLACK,PieceKind.ROOK);
+		start.setPiece(7,3,blackrook);
+		State expected = start.copy();
+
+		assertEquals(blackrook.getColor(),BLACK);
+		expected.setTurn(BLACK);
+		expected.setPiece(0,3, null);
+		expected.setPiece(7,3,whitequeen);
+		expected.setNumberOfMovesWithoutCaptureNorPawnMoved(0);
+		stateChanger.makeMove(start, move);
+		assertEquals(expected, start);		   		   
+	}
+	//If white rook tries to capture a black knight but there's another piece in the path
+	//i.e an illegal capture
+	@Test(expected = IllegalMove.class)
+	public void testRookIllegalCapturePiece() {
+
+		initforsanjana();
+		Piece whiterook=new Piece(WHITE,PieceKind.ROOK);
+		start.setPiece(5,4,whiterook);
+		Piece blackknight=new Piece(BLACK,PieceKind.KNIGHT);
+		start.setPiece(5,6,blackknight);
+		Piece whitepawn=new Piece(WHITE,PieceKind.PAWN);
+		start.setPiece(5,5,whitepawn);
+		Move move = new Move(new Position(5, 4), new Position(5,6), null);
+		stateChanger.makeMove(start, move);		    
+	}
+
+	//If White rook tries to capture a black piece i.e a legal capture
+	@Test()
+	public void testRookLegalCapturesPiece() {
+
+		initforsanjana();
+		Move move = new Move(new Position(4,4), new Position(4,7), null);
+
+		Piece whiterook=new Piece(WHITE,PieceKind.ROOK);
+		start.setPiece(4,4,whiterook);
+		Piece blackbishop= new Piece(BLACK, PieceKind.BISHOP);
+		start.setPiece(4,7,blackbishop);
+		State expected = start.copy();
+
+		assertEquals(blackbishop.getColor(),BLACK);
+		expected.setTurn(BLACK);
+		expected.setPiece(4,4, null);
+		expected.setPiece(4,7, whiterook);
+		expected.setNumberOfMovesWithoutCaptureNorPawnMoved(0);
+		stateChanger.makeMove(start, move);
+		assertEquals(expected, start);		   		   
+	}
+
+	/* 
+	 *  End tests by Sanjana Agarwal
+	 */
+
+}

@@ -1,0 +1,17 @@
+package org.zhaohuizhang.hw6.client;
+
+import org.zhaohuizhang.hw8.ResultOfPlayer;
+
+import com.google.gwt.user.client.rpc.AsyncCallback;
+
+public interface ChessGameServiceAsync {
+	void login(String requestUri, AsyncCallback<LoginInfo> callback);
+	void sendMove(String moveStr, AsyncCallback<Void> callback);
+	void sendState(String stateStr, AsyncCallback<Void> callback);
+	void matchPlayers(AsyncCallback<Void> callback);
+	void connectToServer(AsyncCallback<String> callback);
+    void updateMatch(String email, String state, String turn, boolean isOver, AsyncCallback<Void> callback);
+    void getAllMatches(AsyncCallback<String[]> callback);
+    void getPlayerInfo(AsyncCallback<String[]> callback);
+    void updateRank(String opponentEmail, ResultOfPlayer result, AsyncCallback<String> callback);
+}

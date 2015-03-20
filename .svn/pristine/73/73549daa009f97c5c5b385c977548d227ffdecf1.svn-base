@@ -1,0 +1,811 @@
+package org.bohuang.hw3;
+
+import java.util.Date;
+import java.util.Random;
+
+import org.bohuang.hw3.Presenter.View;
+import org.bohuang.hw6.client.ChessConstant;
+import org.bohuang.hw6.client.ChessMessages;
+import org.shared.chess.Color;
+import org.shared.chess.GameResult;
+import org.shared.chess.GameResultReason;
+import org.shared.chess.Piece;
+import org.shared.chess.Position;
+import org.shared.chess.State;
+
+import com.allen_sauer.gwt.dnd.client.DragEndEvent;
+import com.allen_sauer.gwt.dnd.client.DragHandler;
+import com.allen_sauer.gwt.dnd.client.PickupDragController;
+import com.allen_sauer.gwt.dnd.client.VetoDragException;
+import com.allen_sauer.gwt.dnd.client.drop.GridConstrainedDropController;
+import com.google.gwt.animation.client.Animation;
+import com.google.gwt.canvas.client.Canvas;
+import com.google.gwt.core.client.GWT;
+import com.google.gwt.dom.client.AudioElement;
+import com.google.gwt.event.dom.client.ClickEvent;
+import com.google.gwt.event.dom.client.ClickHandler;
+import com.google.gwt.event.dom.client.DragOverEvent;
+import com.google.gwt.event.dom.client.DragOverHandler;
+import com.google.gwt.event.dom.client.DragStartEvent;
+import com.google.gwt.event.dom.client.DragStartHandler;
+import com.google.gwt.event.dom.client.DropEvent;
+import com.google.gwt.event.dom.client.DropHandler;
+import com.google.gwt.media.client.Audio;
+import com.google.gwt.storage.client.Storage;
+import com.google.gwt.uibinder.client.UiBinder;
+import com.google.gwt.uibinder.client.UiField;
+import com.google.gwt.user.client.Element;
+import com.google.gwt.user.client.Timer;
+import com.google.gwt.user.client.ui.AbsolutePanel;
+import com.google.gwt.user.client.ui.Button;
+import com.google.gwt.user.client.ui.Composite;
+import com.google.gwt.user.client.ui.Grid;
+import com.google.gwt.user.client.ui.Image;
+import com.google.gwt.user.client.ui.Label;
+import com.google.gwt.user.client.ui.Panel;
+import com.google.gwt.user.client.ui.Widget;
+
+public class Graphics extends Composite implements View {
+  private static GameImages gameImages = GWT.create(GameImages.class);
+  private static GraphicsUiBinder uiBinder = GWT.create(GraphicsUiBinder.class);
+  private ChessConstant constants = GWT.create(ChessConstant.class);
+  private ChessMessages messages = GWT.create(ChessMessages.class);
+  private PickupDragController dragController;
+  
+  
+  //private int count = 0;
+
+  interface GraphicsUiBinder extends UiBinder<Widget, Graphics> {
+  }
+
+  @UiField Panel mid;
+  @UiField GameCss css;
+  @UiField Label gameStatus;
+  @UiField Grid topGrid;
+  @UiField Grid gameGrid; 
+  @UiField Grid botGrid;
+  @UiField Label OpponentStatus;
+  @UiField Label GameIdStatus;
+  @UiField Label YourColorStatus;
+  @UiField Label yourRankStatus;
+  @UiField Button PlayAgainsBot;
+  @UiField Label BotStatus;
+  @UiField Label StartDate;
+
+/*  @UiField Button resetButton;
+  @UiField Button saveButton;
+  @UiField Button loadButton;
+  @UiField TextBox textBox;
+  @UiField ListBox listBox;
+  @UiField Button matchButton;*/
+  
+/*  public Button getMatchButton() {
+	return matchButton;
+}
+
+@UiField Label opponentStatus;*/
+  
+
+  private Image[][] board = new Image[8][8];  
+  public Presenter presenter = new Presenter();
+  final Canvas canvas = Canvas.createIfSupported();
+  //Audio audio = creatAudioClick();
+  
+  Storage storage = Storage.getLocalStorageIfSupported();
+  
+  StateSerializer serializer = new StateSerializer();
+  
+  State state;
+  Color playerColor;
+  Color turn;
+  Long matchId;
+  public Graphics() {	
+			  
+    initWidget(uiBinder.createAndBindUi(this));   
+    setChessWidget();
+	//setSaveAndLoadButton();    	
+    setPromoteGrid();   
+    setBoard();
+    /*State state;
+    if (!History.getToken().isEmpty())
+		state = serializer.stringToState(History.getToken());
+	else
+		state = new State();*/
+    presenter.setView(this);
+    /*presenter.setNewState(state);*/
+    presenter.setState();
+        
+  }
+
+
+
+  @Override
+  public void setPiece(int row, int col, Piece piece) {
+	  final int r = row;
+	  final int c = col;
+	  switch(piece.getKind()){
+	  case PAWN:{
+		  if (row % 2 == 0 && col % 2 == 1 || row % 2 == 1 && col % 2 == 0) {
+			  if(piece.getColor().isBlack()){
+				  board[row][col].setResource(gameImages.blackPawnb());				  
+			  }
+			  else{
+				  board[row][col].setResource(gameImages.whitePawnb());
+			  }	          
+	        } 
+		  else {
+	        	if(piece.getColor().isBlack()){
+	  			  board[row][col].setResource(gameImages.blackPawnw());	  			  
+	  		  }
+	  		  else{
+	  			  board[row][col].setResource(gameImages.whitePawnw());
+	  		  }         
+	        }		  
+		  break;
+	  }
+	  case ROOK:{
+		  if (row % 2 == 0 && col % 2 == 1 || row % 2 == 1 && col % 2 == 0) {
+			  if(piece.getColor().isBlack()){
+				  board[row][col].setResource(gameImages.blackRookb());				  
+			  }
+			  else{
+				  board[row][col].setResource(gameImages.whiteRookb());
+			  }	          
+	        } 
+		  else {
+	        	if(piece.getColor().isBlack()){
+	  			  board[row][col].setResource(gameImages.blackRookw());	  			  
+	  		  }
+	  		  else{
+	  			  board[row][col].setResource(gameImages.whiteRookw());
+	  		  }         
+	        }		  
+		  break;
+	  }
+	  case KNIGHT:{
+		  if (row % 2 == 0 && col % 2 == 1 || row % 2 == 1 && col % 2 == 0) {
+			  if(piece.getColor().isBlack()){
+				  board[row][col].setResource(gameImages.blackKnightb());				  
+			  }
+			  else{
+				  board[row][col].setResource(gameImages.whiteKnightb());
+			  }	          
+	        } 
+		  else {
+	        	if(piece.getColor().isBlack()){
+	  			  board[row][col].setResource(gameImages.blackKnightw());	  			  
+	  		  }
+	  		  else{
+	  			  board[row][col].setResource(gameImages.whiteKnightw());
+	  		  }         
+	        }		  
+		  break;
+	  }
+	  case BISHOP:{
+		  if (row % 2 == 0 && col % 2 == 1 || row % 2 == 1 && col % 2 == 0) {
+			  if(piece.getColor().isBlack()){
+				  board[row][col].setResource(gameImages.blackBishopb());				  
+			  }
+			  else{
+				  board[row][col].setResource(gameImages.whiteBishopb());
+			  }	          
+	        } 
+		  else {
+	        	if(piece.getColor().isBlack()){
+	  			  board[row][col].setResource(gameImages.blackBishopw());	  			  
+	  		  }
+	  		  else{
+	  			  board[row][col].setResource(gameImages.whiteBishopw());
+	  		  }         
+	        }		  
+		  break;
+	  }
+	  case QUEEN:{
+		  if (row % 2 == 0 && col % 2 == 1 || row % 2 == 1 && col % 2 == 0) {
+			  if(piece.getColor().isBlack()){
+				  board[row][col].setResource(gameImages.blackQueenb());				  
+			  }
+			  else{
+				  board[row][col].setResource(gameImages.whiteQueenb());
+			  }	          
+	        } 
+		  else {
+	        	if(piece.getColor().isBlack()){
+	  			  board[row][col].setResource(gameImages.blackQueenw());	  			  
+	  		  }
+	  		  else{
+	  			  board[row][col].setResource(gameImages.whiteQueenw());
+	  		  }         
+	        }		  
+		  break;
+	  }
+	  case KING:{
+		  if (row % 2 == 0 && col % 2 == 1 || row % 2 == 1 && col % 2 == 0) {
+			  if(piece.getColor().isBlack()){
+				  board[row][col].setResource(gameImages.blackKingb());				  
+			  }
+			  else{
+				  board[row][col].setResource(gameImages.whiteKingb());
+			  }	          
+	        } 
+		  else {
+	        	if(piece.getColor().isBlack()){
+	  			  board[row][col].setResource(gameImages.blackKingw());	  			  
+	  		  }
+	  		  else{
+	  			  board[row][col].setResource(gameImages.whiteKingw());
+	  		  }         
+	        }		  
+		  break;
+	  }
+	  default:
+		  break;
+	  }
+	  
+		  board[row][col].getElement().setDraggable(Element.DRAGGABLE_TRUE);		  
+		  board[row][col].addDragStartHandler(new DragStartHandler(){
+
+			@Override
+			public void onDragStart(DragStartEvent event) {
+				if((presenter.getPlayerColor()==Presenter.state.getTurn())
+						||Presenter.gameId==null){
+					
+					presenter.selectGrid(r, c);
+        		}
+				
+			}
+			  
+		  });
+	  
+	  
+  }
+
+  @Override
+  public void setHighlighted(int row, int col, boolean highlighted) {
+    Element element = board[row][col].getElement();
+    if (highlighted) {
+      element.setClassName(css.highlighted());
+    } else {
+      element.removeClassName(css.highlighted());
+    }
+  }  
+  
+  public void setSelected(int row, int col, boolean highlighted) {
+	    Element element = board[row][col].getElement();
+	    if (highlighted) {
+	      element.setClassName(css.selected());
+	    } else {
+	      element.removeClassName(css.selected());
+	    }
+	  }  
+
+  @Override
+  public void setWhoseTurn(Color color) {
+	  if(presenter.getGameId()!=null){
+		  if(color.isBlack()){
+			  gameStatus.setText(messages.blackplayerturn());
+		  }else if(color.isWhite()){
+			  gameStatus.setText(messages.whiteplayerturn());
+		  }
+	  }else{
+		  gameStatus.setText(messages.notmatched());
+	  }
+	  
+	  
+  }
+
+  @Override
+  public void setGameResult(GameResult gameResult) {
+    // TODO
+	  if(gameResult!=null){
+		  String s = "";
+		  if(gameResult.getWinner().isWhite()){
+			  s = s + messages.whiteplayerwin();
+		  }else if(gameResult.getWinner().isBlack()){
+			  s = s + messages.blackplayerwin();
+		  }else{
+			  s = s + messages.drawgame();
+		  }
+		  
+		  if(gameResult.getGameResultReason().equals(GameResultReason.CHECKMATE)){
+			  s = s + " " + messages.checkmate();
+		  }else if(gameResult.getGameResultReason().equals(GameResultReason.STALEMATE)){
+			  s = s + " " + messages.stalemate();
+		  }else if(gameResult.getGameResultReason().equals(GameResultReason.FIFTY_MOVE_RULE)){
+			  s = s + " " + messages.fiftymove();
+		  }
+		  
+		  gameStatus.setText(s);
+		  //resetButton.setVisible(true);
+	  }
+	  
+  }
+
+  @Override
+  public void reDraw() {
+	  //History.newItem(serializer.stateToString(presenter.getState()));	
+	 /* setWhoseTurn(state.getTurn());	  
+	  setYourColorStatus();
+	  setGameIdStatus();*/
+	  setBoard();	
+  }
+
+
+	public void setBoard(){
+		for (int row = 0; row < 8; row++) {
+	      for (int col = 0; col < 8; col++) {
+	        final Image image = new Image();
+	        board[row][col] = image;
+	        final int i = row ;
+	        final int j = col ;
+	        
+	        image.setWidth("100");
+	        if (row % 2 == 0 && col % 2 == 1 || row % 2 == 1 && col % 2 == 0) {
+	          image.setResource(gameImages.blackTile());
+	          
+	        } else {
+	          image.setResource(gameImages.whiteTile());           
+	        }
+	        
+	        	image.addClickHandler(new ClickHandler(){
+		        	@Override
+		        	public void onClick(ClickEvent event){
+		        		if(presenter.getPlayerColor()==Presenter.state.getTurn()
+							||Presenter.gameId==null){
+		        			Element element = board[i][j].getElement();
+			        		if(element.getClassName()==css.highlighted()){
+
+			        			Position p = presenter.last;
+			        			CustomAnimation animation = 
+			        					new CustomAnimation(board[7-p.getRow()][p.getCol()],i,j,0);
+			        			
+			        			animation.moveTo(element.getAbsoluteLeft(), element.getAbsoluteTop(), 1000);
+
+
+			        			
+			        			//presenter.makeMove(i,j,null);
+			        		}
+			        		else{
+			        			presenter.selectGrid(i,j);
+			        		}    
+		        		}
+		        		    		
+		        		
+		        		//audio.play();
+		        	}			
+		        	
+		        });
+		        image.addDragOverHandler(new DragOverHandler(){
+
+					@Override
+					public void onDragOver(DragOverEvent event) {
+						// TODO Auto-generated method stub
+						
+					}
+		        	
+		        });
+		        image.addDropHandler(new DropHandler(){
+
+					@Override
+					public void onDrop(DropEvent event) {
+						// TODO Auto-generated method stub
+						if(presenter.getPlayerColor()==Presenter.state.getTurn()
+							||Presenter.gameId==null){
+							Element element = board[i][j].getElement();
+			        		if(element.getClassName()==css.highlighted()){
+			        			presenter.makeMove(i,j,null);
+			        			//audio.play();
+			        		}
+			        		else{
+			        			presenter.selectGrid(i,j);
+			        		}  
+		        		}
+						  
+					}
+		        	
+		        });
+	  	  
+	        
+	        gameGrid.setWidget(row, col, image);
+	      }
+	}
+	}
+
+	@Override
+	public void setStatus(String s) {
+		gameStatus.setText(s);
+	}
+
+	@Override
+	public void setBotVisible() {
+		// TODO Auto-generated method stub
+		if(topGrid.isVisible()){
+			topGrid.setVisible(false);
+		}else{
+			topGrid.setVisible(true);
+		}
+	
+	}
+
+	@Override
+	public void setTopVisible() {
+		if(botGrid.isVisible()){
+			botGrid.setVisible(false);
+		}else{
+			botGrid.setVisible(true);
+		}
+	
+	}
+
+	/*public void makeHistory(State state) {
+		// TODO Auto-generated method stub
+		//resetButton.setVisible(false);
+		presenter.setNewState(state);
+		presenter.setHistory();
+	}*/
+
+	public Audio creatAudioClick(){
+		Audio audio = Audio.createIfSupported();
+		if (audio == null){
+		return null;
+	}
+	
+	audio.addSource("bohuang_audio/click.mp3",AudioElement.TYPE_MP3);
+	audio.addSource("bohuang_audio/click.wav",AudioElement.TYPE_WAV);
+	
+	audio.setControls(true);
+	audio.load();
+	return audio;
+	
+	}
+
+	public class CustomAnimation extends Animation{
+
+	    private final Image element;
+	    private int startL;
+	    private int startT;
+	    private int finalL;
+	    private int finalT;
+	    private int x;
+	    private int y;
+	    private int normalMoveOrPromotion;
+	 
+	    public CustomAnimation(Image element,int i, int j, int normalMoveOrPromotion)
+	    {
+	        this.element = element;
+	        this.x = i;
+	        this.y = j;
+	        this.normalMoveOrPromotion = normalMoveOrPromotion;
+	    }
+	 
+	    public void moveTo(int x, int y, int milliseconds)
+	    {
+	        this.finalL = x;
+	        this.finalT = y;
+	 
+	        startL = element.getElement().getAbsoluteLeft();
+	        
+	        startT = element.getElement().getAbsoluteTop();
+	        
+	        run(milliseconds);
+	    }
+	 
+	    @Override
+	    protected void onUpdate(double progress)
+	    {
+	        double offset_left = (progress * (this.finalL - startL));
+	        double offset_top = (progress * (this.finalT - startT));
+	        this.element.getElement().getStyle().setProperty("position", "absolute");
+	        this.element.getElement().getStyle().setProperty("left", (startL+offset_left)+"px");
+	        this.element.getElement().getStyle().setProperty("top", (startT+offset_top)+"px");
+	    }
+	    
+	    @Override
+	    protected void onComplete()
+	    {
+	    	if (normalMoveOrPromotion==0)
+	    		presenter.makeMove(x, y, null);
+	    	/*else
+	    		presenter.promotion(normalMoveOrPromotion);*/
+	    }
+	}
+
+
+
+/*	@Override
+	public String getHistoryToken() {
+		return History.getToken();
+	}
+
+	@Override
+	public void addHistoryToken(String token) {
+		History.newItem(token);
+	}*/
+
+	@Override
+	public void setChessWidget() {
+		// TODO Auto-generated method stub
+/*		saveButton.setText("Save");
+		loadButton.setText("Load");
+		textBox.setWidth("150px");
+		listBox.setWidth("150px");
+		
+		for(int i = 0 ; i < storage.getLength() ; i++){
+			listBox.addItem(storage.key(i));
+		}*/
+		
+		canvas.setCoordinateSpaceHeight(480);
+		canvas.setCoordinateSpaceWidth(480);
+		
+/*		resetButton.setVisible(true);
+	    resetButton.setText("Reset");*/
+	    
+	    gameGrid.resize(8, 8);
+	    gameGrid.setCellPadding(0);
+	    gameGrid.setCellSpacing(0);
+	    gameGrid.setBorderWidth(0);        
+	    
+	    topGrid.setVisible(false);
+	    topGrid.resize(1, 4);
+	    topGrid.setCellPadding(0);
+	    topGrid.setCellSpacing(0);
+	    topGrid.setBorderWidth(0);
+	    
+	    botGrid.setVisible(false);
+	    botGrid.resize(1, 4);
+	    botGrid.setCellPadding(0);
+	    botGrid.setCellSpacing(0);
+	    botGrid.setBorderWidth(0);
+	    
+	    PlayAgainsBot.setText(messages.againstBot());
+	    
+	    PlayAgainsBot.addClickHandler(new ClickHandler(){
+
+			@Override
+			public void onClick(ClickEvent event) {
+				presenter.againstBot = true;	
+				if(presenter.againstBot){
+					BotStatus.setText(messages.againstBot());
+				}else{
+					
+				}
+				Random rand = new Random();
+				rand.setSeed(System.currentTimeMillis());
+				boolean bow = rand.nextBoolean();
+				if(bow){
+					 presenter.BotMove();
+				}
+				
+			}
+	    	
+	    });
+	
+	}
+	
+	public void setPromoteGrid(){
+		for (int i = 0 ; i < 2 ; i++){
+	    	for (int j = 0 ; j < 4 ; j++){
+	    		if(i==0){
+	    			final int k = j;
+	    			Image image = new Image();
+	    			switch(j){
+	    			case 0:{
+	    				image.setResource(gameImages.whiteRookw());
+	    				break;
+	    			}
+	    			case 1:{
+	    				image.setResource(gameImages.whiteKnightw());
+	    				break;
+	    			}
+	    			case 2:{
+	    				image.setResource(gameImages.whiteBishopw());
+	    				break;
+	    			}
+	    			case 3:{
+	    				image.setResource(gameImages.whiteQueenw());
+	    				break;
+	    			}
+	    			}
+	    			image.addClickHandler(new ClickHandler(){
+						@Override
+						public void onClick(ClickEvent event) {
+							presenter.promoteTo(k);
+							setBotVisible();
+						}    				
+	    			});
+	    			topGrid.setWidget(0, j, image);    			
+	    		}
+	    		else{
+	    			final int k = j;
+	    			Image image = new Image();
+	    			switch(j){
+	    			case 0:{
+	    				image.setResource(gameImages.blackRookw());
+	    				break;
+	    			}
+	    			case 1:{
+	    				image.setResource(gameImages.blackKnightw());
+	    				break;
+	    			}
+	    			case 2:{
+	    				image.setResource(gameImages.blackBishopw());
+	    				break;
+	    			}
+	    			case 3:{
+	    				image.setResource(gameImages.blackQueenw());
+	    				break;
+	    			}
+	    			}
+	    			image.addClickHandler(new ClickHandler(){
+						@Override
+						public void onClick(ClickEvent event) {
+							presenter.promoteTo(k);
+							setTopVisible();
+						}    				
+	    			});
+	    			botGrid.setWidget(0, j, image);    	
+	    		}
+	    	}
+	    }
+		
+		
+	}
+
+
+
+	@Override
+	public void setOpponentStatus() {
+		// TODO Auto-generated method stub
+		if(Presenter.opponentId!=null){
+			OpponentStatus.setText(messages.opponentId(presenter.opponentId));
+			}else{
+				GameIdStatus.setText(messages.notmatched());
+			}
+	}
+
+
+
+	@Override
+	public void setGameIdStatus() {
+		// TODO Auto-generated method stub
+		if(Presenter.gameId!=null){
+			GameIdStatus.setText(messages.gameId(Presenter.gameId));
+			}else{
+				GameIdStatus.setText(messages.notmatched());
+			}
+		//GameIdStatus.setText(presenter.getGameId());
+	}
+
+
+
+	@Override
+	public void setYourColorStatus() {
+		// TODO Auto-generated method stub
+		if(Presenter.playerColor!=null){
+		if(Presenter.playerColor.isBlack()){
+			YourColorStatus.setText(messages.blackside());
+		}else if(Presenter.playerColor.isWhite()){
+			YourColorStatus.setText(messages.whiteside());
+		}else{
+			YourColorStatus.setText(messages.notmatched());
+		}
+		}else{
+			YourColorStatus.setText(messages.notmatched());
+		}
+	}
+
+
+
+	@Override
+	public void setYourRank() {
+		if(Presenter.getPlayerRank()!=null){
+			yourRankStatus.setText(messages.yourrank(presenter.getPlayerRank().toString()));
+		}
+		else{
+			yourRankStatus.setText(messages.notmatched());
+		}
+		
+	}
+
+
+
+	@Override
+	public void setBotStatus(String s) {
+		BotStatus.setText(s);
+	}
+
+
+
+	public void addTimer(int i, final Runnable runnable) {
+		// TODO Auto-generated method stub
+		Timer timer = new Timer() {
+			@Override
+			public void run() {
+				runnable.run();
+			}
+		};
+		timer.scheduleRepeating(10000);
+	}
+
+
+
+	@Override
+	public void setStartDate(Date date) {
+		// TODO Auto-generated method stub
+		if(Presenter.startDate!=null){
+			StartDate.setText(messages.startdate(date));
+		}
+		else{
+			StartDate.setText(messages.notmatched());
+		}
+		
+	}
+	
+	public void setDragController(PickupDragController drag){
+		this.dragController = drag;
+	}
+
+
+
+
+	
+/*	  private void setSaveAndLoadButton() {
+			
+			  saveButton.addClickHandler(new ClickHandler(){
+
+					@Override
+					public void onClick(ClickEvent event) {
+					
+						if(storage!=null){
+							String name = textBox.getText();
+							String stage = serializer.stateToString(presenter.getState());
+							storage.setItem(name, stage);
+							listBox.addItem(name);
+						}
+					}
+			    	
+			    });
+				
+				loadButton.addClickHandler(new ClickHandler(){
+
+					@Override
+					public void onClick(ClickEvent event) {
+					
+						if(storage!=null){
+							String name = listBox.getItemText(listBox.getSelectedIndex());
+							String stage = storage.getItem(name);
+							State state = serializer.stringToState(stage);
+							setBoard();				
+						    presenter.setNewState(state);
+						    presenter.setState();
+						    History.newItem(serializer.stateToString(presenter.getState()));	
+							
+						}
+					}
+			    	
+			    });	
+				
+			    
+			    resetButton.addClickHandler(new ClickHandler(){
+
+					@Override
+					public void onClick(ClickEvent event) {
+						
+						setBoard();
+					    presenter.reset();
+						presenter.setState();
+						History.newItem(serializer.stateToString(presenter.getState()));	
+						//resetButton.setVisible(false);
+						//reDraw();
+					}
+			    	
+			    });    
+		}
+	  */
+
+
+	
+	
+}
+
+

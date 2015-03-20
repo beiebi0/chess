@@ -1,0 +1,46 @@
+package org.vorasahil.hw5;
+
+import com.google.gwt.dom.client.AudioElement;
+import com.google.gwt.dom.client.MediaElement;
+import com.google.gwt.media.client.Audio;
+
+/**
+ * 
+ * @author Sahil Vora Provides support for audio.
+ */
+public class AudioSupport {
+
+	static final String dir = "vorasahil_audio/";
+
+	/**
+	 * Returns an Audio instance with the appropriate source set.
+	 * @param file
+	 * @return
+	 */
+	public static Audio getAudio(String file) {
+		file = dir + file;
+		Audio audio;
+		{
+			audio = Audio.createIfSupported();
+
+			if (audio == null) {
+				return null;
+			}
+			if (MediaElement.CAN_PLAY_PROBABLY.equals(audio
+					.canPlayType(AudioElement.TYPE_OGG))) {
+				audio.setSrc(file + ".ogg");
+			} else if (MediaElement.CAN_PLAY_PROBABLY.equals(audio
+					.canPlayType(AudioElement.TYPE_MP3))) {
+				audio.setSrc(file + ".mp3");
+			} else if (MediaElement.CAN_PLAY_MAYBE.equals(audio
+					.canPlayType(AudioElement.TYPE_OGG))) {
+				audio.setSrc(file + ".mp3");
+			} else if (MediaElement.CAN_PLAY_MAYBE.equals(audio
+					.canPlayType(AudioElement.TYPE_MP3))) {
+				audio.setSrc("file.mp3");
+			}
+			audio.load();
+		}
+		return audio;
+	}
+}

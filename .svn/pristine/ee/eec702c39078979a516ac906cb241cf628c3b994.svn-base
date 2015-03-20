@@ -1,0 +1,36 @@
+package org.sanjana.hw6;
+
+import java.io.Serializable;
+import org.shared.chess.Color;
+
+@SuppressWarnings("serial")
+public class StateManager implements Serializable {
+
+	private int gameId;
+	private String state;
+	private Color turn;
+	
+	public int getGameId() {
+		return gameId;
+	}
+	
+	public void setGameId(int gameId) {
+		this.gameId = gameId;
+	}
+	
+	public Color getTurn(){
+		return turn;
+	}
+	
+	public void setTurn(Color turn){
+		this.turn=turn;
+	}
+	
+	public String getState(){
+		return state;
+	}
+	
+	public void setState(String state){
+		this.state=state;
+	}
+}

@@ -1,0 +1,46 @@
+package org.sanjana.hw7.server;
+
+import java.io.IOException;
+
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import org.sanjana.hw7.Player;
+
+import com.google.appengine.api.channel.ChannelPresence;
+import com.google.appengine.api.channel.ChannelService;
+import com.google.appengine.api.channel.ChannelServiceFactory;
+import com.googlecode.objectify.Key;
+
+import static com.googlecode.objectify.ObjectifyService.ofy;
+
+public class ConnectServlet extends HttpServlet  {
+
+	private static final long serialVersionUID = 1L;
+	ChannelService channelService = ChannelServiceFactory.getChannelService();
+
+	@Override
+	public void doPost(HttpServletRequest req, HttpServletResponse resp) 
+			throws IOException, ServletException{
+		ChannelPresence channelPresence;
+
+		channelPresence = channelService.parsePresence(req);
+		String channelToken = channelPresence.clientId();
+		String userID = channelToken;
+
+		String playerEmail = userID.substring(0, userID.indexOf("_"));
+		Key<Player> playerKey = Key.create(Player.class, playerEmail);
+		Player player = ofy().load().key(playerKey).get();
+
+		if (channelPresence.isConnected()) {
+			player.addConnection(channelToken);
+			ofy().save().entity(player).now();
+		}
+		else {
+			player.removeConnection(channelToken);
+			ofy().save().entity(player).now();
+		}
+	}
+}

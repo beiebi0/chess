@@ -1,0 +1,81 @@
+package org.ashishmanral.hw7;
+
+
+import java.util.Date;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+import com.googlecode.objectify.Key;
+import com.googlecode.objectify.annotation.Entity;
+import com.googlecode.objectify.annotation.Id;
+
+@Entity
+public class Match {
+  @Id
+  private Long matchId;
+  private Key<Player> whitePlayer;
+  private Key<Player> blackPlayer;
+  private String turnOfPlayer;
+  private String state = "BlankState";
+  private String winner = "No Winner";
+  private Date dateStarted;
+  
+  private static Logger logger = Logger.getLogger(Match.class.toString());
+  
+  public Match() {
+  }
+  
+  public Match(Key<Player> white, Key<Player> black, String turnOfPlayer, Date dateStarted) {
+    this.whitePlayer = white;
+    this.blackPlayer = black;
+    this.turnOfPlayer = turnOfPlayer;
+    this.dateStarted = dateStarted;
+  }
+  
+  public Long getMatchId() {
+    return matchId;
+  }
+  
+  public String getState() {
+    return state;
+  }
+
+  public String getTurnOfPlayer(){
+	return turnOfPlayer;
+  }
+  
+  public Key<Player> getOpponent(Key<Player> player) {
+	if (player.equals(whitePlayer)) return blackPlayer;
+    else if (player.equals(blackPlayer)) return whitePlayer;
+    return null;
+  }
+  
+  public String getWinner(){
+	  return winner;
+  }
+  
+  public Date getDateStarted(){
+	  return dateStarted;
+  }
+  
+  public void setState(String state) {
+    this.state = state;
+  }
+ 
+  public void setTurnOfPlayer(String email){
+	  turnOfPlayer = email;
+  }
+  
+  public void setDateStarted(Date dateStarted){
+	  this.dateStarted = dateStarted;
+  }
+  
+  public void deletePlayer(Key<Player> player) {
+    if (player.equals(whitePlayer)) whitePlayer = null;
+    else if (player.equals(blackPlayer)) blackPlayer = null;
+  }
+  
+  public void setWinner(String winner){
+	  this.winner = winner;
+  }
+}

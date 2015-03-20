@@ -1,0 +1,70 @@
+package org.kuangchelee.hw8;
+
+import com.google.gwt.i18n.client.Constants;
+
+public interface ChessConstants extends Constants{
+	@DefaultStringValue("Chess Game")
+	String chess();
+	@DefaultStringValue("You need to sign in to play")
+	String needSingIn();
+	@DefaultStringValue("Sign in")
+	String signIn();
+	@DefaultStringValue("Sign out")
+	String signOut();
+	@DefaultStringValue("Enter Player's ID, or leave it blank for auto-matching")
+	String enterID();
+	@DefaultStringValue("Play Match")
+	String playMatch();
+	@DefaultStringValue("Play against AI")
+	String playWithAI();
+	@DefaultStringValue("Match List (Match ID / Opponent):")
+	String matchList();
+	@DefaultStringValue("Delete")
+	String delete();
+	@DefaultStringValue("Disable Animation")
+	String disableAnimation();
+	@DefaultStringValue("Disable Sound")
+	String disableSound();
+	@DefaultStringValue("Black")
+	String black();
+	@DefaultStringValue("White")
+	String white();
+	@DefaultStringValue("(You)")
+	String you();
+	@DefaultStringValue("(Opponent)")
+	String opponent();
+	@DefaultStringValue("'s Turn")
+	String turn();
+	@DefaultStringValue("Choose one piecekind below for promotion.")
+	String choosePromotion();
+	@DefaultStringValue("Please Wait for Auto-matching.")
+	String pleaseWaitForAutoMatch();
+	@DefaultStringValue("Invalid User Name!")
+	String invalidUserName();
+	@DefaultStringValue("Successfully saved the state!")
+	String saveState();
+	@DefaultStringValue("Successfully deleted from the database")
+	String deleteState();
+	@DefaultStringValue("Pending from other opponent.")
+	String pendingDelete();
+	@DefaultStringValue("Fail to join the game.")
+	String failToJoin();
+	@DefaultStringValue("Fail to delete the game.")
+	String failToDelete();
+	@DefaultStringValue("Fail to Update Opponent List.")
+	String failToUpdate();
+	@DefaultStringValue("Fail to load the game.")
+	String failToLoad();
+	@DefaultStringValue("This game has been deleted by the opponent, you cannot make any move anymore!")
+	String hasBeenDeleted();
+	@DefaultStringValue("Draw")
+	String draw();
+	@DefaultStringValue("CHECKMATE")
+	String checkmate();
+	@DefaultStringValue("FIFTY_MOVE_RULE")
+	String fiftymoverule();
+	@DefaultStringValue("THREEFOLD_REPETITION_RULE")
+	String threefoldrepet();
+	@DefaultStringValue("STALEMATE")
+	String stalemate();
+}

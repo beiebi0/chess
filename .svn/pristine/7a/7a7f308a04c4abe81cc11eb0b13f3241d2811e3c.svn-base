@@ -1,0 +1,22 @@
+package org.shihweihuang.hw6.client;
+
+import java.util.List;
+import java.util.Set;
+
+import org.shihweihuang.hw7.Match;
+
+import com.google.gwt.user.client.rpc.RemoteService;
+import com.google.gwt.user.client.rpc.RemoteServiceRelativePath;
+
+@RemoteServiceRelativePath("ChessPlatform")
+public interface ChessPlatformService extends RemoteService {
+	
+	String getToken(LoginInfo loginInfo);
+	void matchPlayer(LoginInfo loginInfo, String matchPlayer);
+	void publishMove(String matchID, String moveString);
+	Match getMatch(String matchID);
+	Set<String> getMatchList(LoginInfo loginInfo);
+	void removeMatch(LoginInfo loginInfo, String matchID);
+	void removeFromWaitList(LoginInfo loginInfo);
+	double getPlayerRanking(LoginInfo loginInfo);
+}

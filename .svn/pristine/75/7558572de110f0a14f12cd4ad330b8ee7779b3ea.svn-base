@@ -1,0 +1,12 @@
+package org.bohouli.hw2_5;
+
+import org.shared.chess.AbstractStateExplorerAllTest;
+import org.shared.chess.StateExplorer;
+import org.bohouli.hw2_5.StateExplorerImpl;
+
+public class StateExplorerImplAllTest extends AbstractStateExplorerAllTest {
+	 @Override
+	  public StateExplorer getStateExplorer() {
+	    return new StateExplorerImpl();
+	  }
+}

@@ -1,0 +1,86 @@
+package org.jiangfengchen.hw2_5;
+
+import java.util.Set;
+
+import org.jiangfengchen.hw2.StateChangerImpl;
+import org.shared.chess.Color;
+import org.shared.chess.Move;
+import org.shared.chess.Piece;
+import org.shared.chess.PieceKind;
+import org.shared.chess.Position;
+import org.shared.chess.State;
+import org.shared.chess.StateExplorer;
+
+import com.google.common.collect.Sets;
+
+public class StateExplorerImpl implements StateExplorer {
+
+  @Override
+  public Set<Move> getPossibleMoves(State state) {
+	Set<Move> result = Sets.newHashSet();
+	Set<Position> starts = getPieces(state, state.getTurn());
+	for (Position start: starts){
+		result.addAll(getPossibleMovesFromPosition(state,start));
+	}
+	
+    return result;
+  }
+
+  @Override
+  public Set<Move> getPossibleMovesFromPosition(State state, Position start) {
+	  Set<Move> result = Sets.newHashSet();
+	  if (state.getGameResult()!=null) return result;
+	  if (start == null) return result;
+	  Piece piece = state.getPiece(start);
+	  if (piece==null) return result;
+	  Color color = piece.getColor();	 
+	  if (color!=state.getTurn()) return result;
+	  StateChangerImpl SCI = new StateChangerImpl(); 
+	  Set<Position> des = SCI.getLegalMoves(start, state);
+	  if(piece.getKind()!=PieceKind.PAWN){
+		  for (Position to : des){
+			  result.add(new Move(start,to,null));
+		  }
+	  }else{
+		  for (Position to : des){
+			  if (to.getRow()==7&&color==Color.WHITE) {
+				  result.add(new Move(start,to,PieceKind.BISHOP));
+				  result.add(new Move(start,to,PieceKind.KNIGHT));
+				  result.add(new Move(start,to,PieceKind.QUEEN));
+				  result.add(new Move(start,to,PieceKind.ROOK));
+			  }else if(to.getRow()==0&&color==Color.BLACK) {
+				  result.add(new Move(start,to,PieceKind.BISHOP));
+				  result.add(new Move(start,to,PieceKind.KNIGHT));
+				  result.add(new Move(start,to,PieceKind.QUEEN));
+				  result.add(new Move(start,to,PieceKind.ROOK));
+			  }else {
+				  result.add(new Move(start,to,null));
+			  }
+			  
+		  }
+	  }
+	  
+	  return result;
+	    
+  }
+
+  @Override
+  public Set<Position> getPossibleStartPositions(State state) {
+    Set<Position> result = Sets.newHashSet();
+    for (Move mv: getPossibleMoves(state)){
+    	result.add(mv.getFrom());
+    }
+  
+    return result;
+  }
+  public Set<Position> getPieces(State state,Color color){
+		 Set<Position> result =  Sets.newHashSet();
+		 for(int x=0; x <= 7; x++){
+			 for(int y=0; y <= 7; y++){
+				 Piece p =state.getPiece(x,y);
+				 if(p!=null && p.getColor()==color) result.add(new Position(x,y));
+			 }
+		 }		 		 		 
+		 return result;
+	 }
+}

@@ -1,0 +1,656 @@
+package org.alishah.hw2;
+
+
+import static org.shared.chess.Color.BLACK;
+import static org.shared.chess.Color.WHITE;
+import static org.shared.chess.GameResultReason.CHECKMATE;
+import static org.shared.chess.GameResultReason.STALEMATE;
+import static org.shared.chess.GameResultReason.FIFTY_MOVE_RULE;
+import static org.shared.chess.State.COLS;
+import static org.shared.chess.State.ROWS;
+import static org.shared.chess.PieceKind.BISHOP;
+import static org.shared.chess.PieceKind.KING;
+import static org.shared.chess.PieceKind.KNIGHT;
+import static org.shared.chess.PieceKind.PAWN;
+import static org.shared.chess.PieceKind.QUEEN;
+import static org.shared.chess.PieceKind.ROOK;
+
+
+import org.shared.chess.Color;
+import org.shared.chess.GameResult;
+import org.shared.chess.IllegalMove;
+import org.shared.chess.Move;
+import org.shared.chess.Piece;
+import org.shared.chess.PieceKind;
+import org.shared.chess.Position;
+import org.shared.chess.State;
+import org.shared.chess.StateChanger;
+
+public class StateChangerImpl implements StateChanger {
+		
+  public void makeMove(State state, Move move) throws IllegalMove {
+
+    checkMove(state, move);
+    // If no exception is thrown, the move is valid. 
+    state.setTurn(state.getTurn().getOpposite());
+    
+    if (state.getNumberOfMovesWithoutCaptureNorPawnMoved() >= 100) {
+    	state.setGameResult(new GameResult(null, FIFTY_MOVE_RULE));
+    	return;
+    }
+    
+    // Check if piece is in check and there are no moves. 
+    if (!doMovesExistOnBoard(state)) {
+    	Position kingPosition = findPiece(state, KING, state.getTurn());
+    	if (kingPosition == null) {
+    		throw new IllegalMove();
+    	}
+      if (isPieceBeingAttacked(state, kingPosition, state.getTurn())) {
+      	state.setGameResult(new GameResult(state.getTurn().getOpposite(), CHECKMATE));
+      } else {
+      	state.setGameResult(new GameResult(null, STALEMATE));
+      }
+    }
+  }
+  
+  private boolean isValidMove(State state, Move move) {
+    try {
+      checkMove(state.copy(), move);
+      return true;
+    }
+    catch (IllegalMove e) {
+      return false;
+    }
+  }
+ 
+  private boolean doMovesExistOnBoard(State state) {
+  	for (int i = 0; i < COLS; i++) {
+  		for (int j = 0; j < ROWS; j++) {
+  			Piece piece = state.getPiece(i, j);
+  			if (piece != null && piece.getColor() == state.getTurn()) {
+  				if (doMovesExistForPiece(state, new Position(i, j))) {
+  					return true;
+  				}
+  			}
+  		}
+  	}
+  	return false;
+  }
+  
+  public boolean doMovesExistForPiece(State state, Position position) {
+    for (int i = 0; i < ROWS; i++) {
+      for (int j = 0; j < COLS; j++) {
+        Move move = new Move(position, new Position(i,j), null);
+        if (isValidMove(state, move)) {
+        	return true;
+        }
+        move = new Move(position, new Position(i,j), QUEEN);
+        if (isValidMove(state, move)) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+  
+  private void checkMove(State state, Move move) throws IllegalMove {
+  	State beforeState = state.copy();
+    boolean isMoveCapture = false; 
+    
+  	if (state.getGameResult() != null) {
+      // Game already ended!
+      throw new IllegalMove();
+    }
+    Position from = move.getFrom();
+    if (!isPositionOnBoard(from)) {
+    	// Position not on board
+    	throw new IllegalMove();
+    }
+    Piece fromPiece = state.getPiece(from);
+    if (fromPiece == null) {
+      // Nothing to move!
+      throw new IllegalMove();
+    }
+    
+    Position to = move.getTo();
+    if (!isPositionOnBoard(to)) {
+    	// Position not on board
+    	throw new IllegalMove();
+    }
+    Piece toPiece = state.getPiece(to);
+    if (from.equals(to)) {
+    	// Not moving anywhere
+    	throw new IllegalMove();
+    }
+    Color color = fromPiece.getColor();
+    if (color != state.getTurn()) {
+      // Wrong player moves!
+      throw new IllegalMove();
+    }
+    if (move.getPromoteToPiece() != null) {
+    	PieceKind promotionPiece = move.getPromoteToPiece();
+    	if (fromPiece.getKind() != PAWN) {
+    		// Can't promote a piece that isn't a pawn.
+    		throw new IllegalMove();
+    	}
+    	if (to.getRow() != promotionRow(color)) {
+    		// Can't promote right now.
+    		throw new IllegalMove();
+    	}
+    	if (promotionPiece == KING || promotionPiece == PAWN) {
+    		throw new IllegalMove();
+    	}
+    } else if (fromPiece.getKind() == PAWN &&
+    					 to.getRow() == promotionRow(color)) {
+    	throw new IllegalMove();
+    }    
+    
+    if (toPiece != null && color == toPiece.getColor()) {
+    	throw new IllegalMove();
+    }
+    if (toPiece != null) {
+    	isMoveCapture = true;
+    }
+    
+    int rowsMoved = to.getRow() - from.getRow();
+    int colsMoved = to.getCol() - from.getCol();
+    
+    switch (fromPiece.getKind()) {
+    	case KING:
+    		if (Math.abs(rowsMoved) <= 1 && Math.abs(colsMoved) <= 1) {
+    			updateCastlingAllowed(state, KING, state.getTurn(), null);
+    			setPieceNewPosition(state, from, to, move, isMoveCapture);
+    		} else if (rowsMoved == 0 && Math.abs(colsMoved) == 2) {
+    			if (!isCastlingAllowed(state, from, to, state.getPiece(from).getColor())) {
+    				throw new IllegalMove();
+    			}
+    			int kingsRow = kingRow(color);
+    			if (to.getCol() == 6 && from.getCol() == 4) {
+    				state.setPiece(kingsRow, 7, null);
+    				state.setPiece(kingsRow, 5, new Piece(color, ROOK));
+    				updateCastlingAllowed(state, KING, state.getTurn(), null);
+    				setPieceNewPosition(state, from, to, move, isMoveCapture);
+    			} else if (to.getCol() == 2 && from.getCol() == 4) {
+    				state.setPiece(kingsRow, 0, null);
+    				state.setPiece(kingsRow, 3, new Piece(color, ROOK));
+    				updateCastlingAllowed(state, KING, state.getTurn(), null);
+    				setPieceNewPosition(state, from, to, move, isMoveCapture);
+    			} else {
+    				throw new IllegalMove();
+    			}
+    		} else {
+    			throw new IllegalMove();
+    		}
+    		break;
+    	case QUEEN:
+    		if (rowsMoved == 0 || colsMoved == 0) {
+    			if (isPathClearRowsColumns(state, from, to) == false) {
+    				throw new IllegalMove();
+    			}
+    			setPieceNewPosition(state, from, to, move, isMoveCapture);
+    		} else if (Math.abs(rowsMoved) == Math.abs(colsMoved)) {
+    			if (isPathClearDiagonally(state, from, to) == false) {
+    				throw new IllegalMove();
+    			}
+    			setPieceNewPosition(state, from, to, move, isMoveCapture);
+    		} else {
+    			throw new IllegalMove();
+    		}
+    		break;
+    	case ROOK:
+    		if (rowsMoved == 0 || colsMoved == 0) {
+    			if (isPathClearRowsColumns(state, from, to) == false) {
+    				throw new IllegalMove();
+    			}
+    			updateCastlingAllowed(state, ROOK, state.getTurn(), from);
+    			setPieceNewPosition(state, from, to, move, isMoveCapture);
+    		} else {
+    			throw new IllegalMove();
+    		}
+    		break;
+    	case KNIGHT:
+    		if ((Math.abs(colsMoved) == 1 && Math.abs(rowsMoved) == 2) ||
+    				(Math.abs(colsMoved) == 2 && Math.abs(rowsMoved) == 1)) {
+    			setPieceNewPosition(state, from, to, move, isMoveCapture);
+    		} else {
+    			throw new IllegalMove();
+    		}
+    		break;
+    	case BISHOP:
+    		if (Math.abs(rowsMoved) == Math.abs(colsMoved)) {
+    			if (isPathClearDiagonally(state, from, to) == false) {
+    				throw new IllegalMove();
+    			}
+    			setPieceNewPosition(state, from, to, move, isMoveCapture);
+    		} else {
+    			throw new IllegalMove();
+    		}
+    		break;
+    	case PAWN:
+    		boolean doubleSquareJumpAllowed;
+    		if (color == Color.WHITE) {
+    			if (from.getRow() == 1) {
+    				doubleSquareJumpAllowed = true;
+    			} else {
+    				doubleSquareJumpAllowed = false;
+    			}
+    			
+    		} else {
+    			rowsMoved *= -1;
+    			if (from.getRow() == 6) {
+    				doubleSquareJumpAllowed = true;
+    			} else {
+    				doubleSquareJumpAllowed = false;
+    			}
+    		}
+    		// Simple move forward one space.
+    		if (Math.abs(colsMoved) > 1 || rowsMoved > 2) {
+    			throw new IllegalMove();
+    		} else if (colsMoved == 0 && rowsMoved == 1) {
+    			if (state.getPiece(to) != null) {
+    				throw new IllegalMove();
+    			}
+    			setPawnNewPosition(state, from, to, move);
+    		} else if (colsMoved == 0 && rowsMoved == 2 && doubleSquareJumpAllowed) {
+    			if (isPathClearRowsColumns(state, from, to) == false) {
+    				throw new IllegalMove();
+    			}
+    			if (state.getPiece(to) != null) {
+    				throw new IllegalMove();
+    			}
+    			setPawnNewPosition(state, from, to, move);
+    			state.setEnpassantPosition(to);
+    		} else if (Math.abs(colsMoved) == 1 && rowsMoved == 1) {
+    			Piece capturePiece = state.getPiece(to);
+    			if (capturePiece == null) {
+    				boolean enpassantCapture = false;
+    				if ((from.getRow() == 4 && color == Color.WHITE) || 
+    						(from.getRow() == 3 && color == Color.BLACK)) {
+    					enpassantCapture = true;
+    				}
+    				if (enpassantCapture == false) {
+    					throw new IllegalMove();
+    				}
+    				if (state.getEnpassantPosition() == null) {
+    					throw new IllegalMove();
+    				}
+    				if (state.getEnpassantPosition().getCol() != to.getCol()) {
+    					throw new IllegalMove();
+    				}
+    				if (Math.abs(state.getEnpassantPosition().getCol() - from.getCol()) > 1) {
+    					throw new IllegalMove();
+    				}
+    				if (color == state.getPiece(state.getEnpassantPosition()).getColor()) {
+    					throw new IllegalMove();
+    				}
+    				state.setPiece(state.getEnpassantPosition(), null);
+    				setPawnNewPosition(state, from, to, move);
+    			} else {
+    				if (color == capturePiece.getColor()) {
+    					throw new IllegalMove();
+    				}
+    				setPawnNewPosition(state, from, to, move);
+    				if (capturePiece.getKind() == ROOK) {
+    					updateCastlingAllowed(state, ROOK, capturePiece.getColor(), to);
+    				}
+    			}
+    		} else {
+    			throw new IllegalMove();
+    		}
+    		break;
+    }
+    
+    Position kingPosition = findPiece(state, KING, color);
+    if (kingPosition == null) {
+    	throw new IllegalMove();
+    }
+
+    if (isPieceBeingAttacked(state, kingPosition, color)) {
+    	state = beforeState;
+    	throw new IllegalMove();
+    }
+  }
+  
+	private boolean isPositionOnBoard(Position position) {
+		return position.getCol() >= 0 &&
+					 position.getCol() < COLS &&
+					 position.getRow() >= 0 &&
+					 position.getRow() < ROWS;
+	}
+	
+	private int promotionRow(Color color) {
+    if (color == WHITE) {
+    	return 7;
+    } else {
+    	return 0;
+    }
+	}
+	
+	private int kingRow(Color color) {
+    if (color == BLACK) {
+    	return 7;
+    } else {
+    	return 0;
+    }
+	}
+	
+  private boolean isPathClearDiagonally(State state, Position from, Position to) {
+  	int rowsMoved = to.getRow() - from.getRow();
+  	int colsMoved = to.getCol() - from.getCol();
+  	
+  	int rowDirection = (rowsMoved > 0) ? 1 : -1;
+  	int colDirection = (colsMoved > 0) ? 1 : -1;
+  	
+  	int rowStart = from.getRow() + rowDirection;
+  	int colStart = from.getCol() + colDirection;
+  	
+  	for (int i = rowStart; i != to.getRow(); i += rowDirection) {
+  		if (state.getPiece(rowStart, colStart) != null) {
+  			return false;
+  		}
+  		rowStart += rowDirection;
+  		colStart += colDirection;
+  	}
+  	return true;
+  }
+  
+  private boolean isPathClearRowsColumns(State state, Position from, Position to) {
+  	int rowsMoved = to.getRow() - from.getRow();
+  	int colsMoved = to.getCol() - from.getCol();
+  	
+  	int rowDirection = (rowsMoved > 0) ? 1 : -1;
+  	int colDirection = (colsMoved > 0) ? 1 : -1;
+  	
+  	int rowStart = from.getRow() + rowDirection;
+  	int colStart = from.getCol() + colDirection;
+  	
+  	if (rowsMoved == 0) {
+  		while (colStart >= 0 && colStart < 8 && colStart != to.getCol() ) {
+  			if (state.getPiece(from.getRow(), colStart) != null) {
+  				return false;
+  			}
+  			colStart += colDirection;
+  		}
+  		return true;
+  	} else if (colsMoved == 0) {
+  		while (rowStart >= 0 && rowStart < 8 && rowStart != to.getRow()) {
+  			if (state.getPiece(rowStart, from.getCol()) != null) {
+  				return false;
+  			}
+  			rowStart += rowDirection;
+  		}
+  		return true;
+  	}
+  	return false;
+  }
+  
+  public boolean isCastlingAllowed(State state, Position from, Position to, Color color) {
+  	int bottomRow = kingRow(color);
+  	if (to.equals(new Position(bottomRow, 6))) {
+  		if (state.isCanCastleKingSide(color) &&
+  			  isPathClearRowsColumns(state, from, new Position(bottomRow, 7))) {
+  			for (int i = from.getCol(); i <= 6; i++) {
+  				if (isPieceBeingAttacked(state, new Position(bottomRow, i), color)) {
+  					return false;
+  				}
+  			}
+  			return true;
+  		}
+  	} else if (to.equals(new Position(bottomRow, 2))) {
+  		if (state.isCanCastleQueenSide(color) && 
+  				isPathClearRowsColumns(state, from, new Position(bottomRow, 0))) {
+  			for (int i = from.getCol(); i >= 2; i--) {
+  				if (isPieceBeingAttacked(state, new Position(bottomRow, i), color)) {
+  					return false;
+  				}
+  			}
+  			return true;
+  		}
+  	}
+  	return false;
+  }
+  
+  public boolean isPieceBeingAttacked(State state, Position position, Color color) {
+  	boolean hor, vert, diag, knight;
+  	hor = isHorizontalPathAttack(state, position, color);
+  	vert = isVerticalPathAttack(state, position, color);
+  	diag = isDiagonalPathAttack(state, position, color);
+  	knight = isKnightAttack(state, position, color);
+  	
+  	return hor || vert || diag || knight;
+  }
+  
+  public boolean isHorizontalPathAttack(State state, Position pos, Color color) {
+  	int row = pos.getRow();
+  	int col = pos.getCol();
+  	int direction = 1; 
+  	col += direction;
+  	while (col < 8) {
+  		if (state.getPiece(row, col) != null) {
+  			Piece piece = state.getPiece(row, col);
+  			if (piece.getColor() == color) {
+  				break;
+  			} else if (piece.getKind() == KING) {
+  				if (Math.abs(col - pos.getCol()) == 1) {
+  					return true;
+  				} else {
+  					break;
+  				}
+  			} else if (piece.getKind() == QUEEN || piece.getKind() == ROOK) {
+  				return true;
+  			}
+  			break;
+  		}
+  		col += direction;
+  	}
+  	col = pos.getCol();
+  	direction = -1;
+  	col += direction;
+  	while (col >= 0) {
+  		if (state.getPiece(row, col) != null) {
+  			Piece piece = state.getPiece(row, col);
+  			if (piece.getColor() == color) {
+  				break;
+  			} else if (piece.getKind() == KING) {
+  				if (Math.abs(col - pos.getCol()) == 1) {
+  					return true;
+  				} else {
+  					break;
+  				}
+  			} else if (piece.getKind() == QUEEN || piece.getKind() == ROOK) {
+  				return true;
+  			}
+  			break;
+  		}
+  		col += direction;
+  	}
+  	return false;
+  }
+ 
+  public boolean isVerticalPathAttack(State state, Position pos, Color color) {
+  	int row = pos.getRow();
+  	int col = pos.getCol();
+  	int direction = 1; 
+  	row += direction;
+  	while (row < 8) {
+  		if (state.getPiece(row, col) != null) {
+  			Piece piece = state.getPiece(row, col);
+  			if (piece.getColor() == color) {
+  				break;
+  			} else if (piece.getKind() == KING) {
+  				if (Math.abs(row - pos.getRow()) == 1) {
+  					return true;
+  				} else {
+  					break;
+  				}
+  			} else if (piece.getKind() == QUEEN || piece.getKind() == ROOK) {
+  				return true;
+  			}
+  			break;
+  		}
+  		row += direction;
+  	}
+  	row = pos.getRow();
+  	direction = -1;
+  	row += direction;
+  	while (row >= 0) {
+  		if (state.getPiece(row, col) != null) {
+  			Piece piece = state.getPiece(row, col);
+  			if (piece.getColor() == color) {
+  				break;
+  			} else if (piece.getKind() == QUEEN || piece.getKind() == ROOK) {
+  				return true;
+  			} else if (piece.getKind() == KING) {
+  				if (Math.abs(row - pos.getRow()) == 1) {
+  					return true;
+  				} else {
+  					break;
+  				}
+  			}
+  			break;
+  		}
+  		row += direction;
+  	}
+  	return false;
+  }
+  
+  public boolean isDiagonalPathAttack(State state, Position pos, Color color) {
+  	int row = pos.getRow();
+  	int col = pos.getCol();
+  	int rowDirection = 1;
+  	int colDirection = 1;
+  	
+  	for (int i = 0; i <= 3; i++) {
+  		row += rowDirection;
+  		col += colDirection;
+  		while (row >= 0 && row < 8 && col >= 0 && col < 8) {
+  			if (state.getPiece(row, col) != null) {
+  				Piece piece = state.getPiece(row, col);
+  				if (piece.getColor() == color) {
+  					break;
+  				} else if (piece.getKind() == QUEEN || piece.getKind() == BISHOP) {
+  					return true;
+  				} else if (piece.getKind() == KING) {
+    				if (Math.abs(col - pos.getCol()) == 1 &&
+    						Math.abs(row - pos.getRow()) == 1) {
+    					return true;
+    				} else {
+    					break;
+    				}
+  				} else if (piece.getKind() == PAWN) {
+  					if (pos.getRow() - row == 1 && 
+  							Math.abs(pos.getCol() - col) == 1 &&
+  							piece.getColor() == WHITE) {
+  						return true;
+  					} else if (pos.getRow() - row == -1 &&
+  										 Math.abs(pos.getCol() - col) == 1 &&
+  										 piece.getColor() == BLACK) {
+  						return true;
+  					} else {
+  						break;
+  					}
+  				}
+  			}
+  			row += rowDirection;
+  			col += colDirection;
+  		}
+  		row = pos.getRow();
+  		col = pos.getCol();
+  		if (i % 2 != 0) {
+  			rowDirection = -1;
+  		}
+  		if (colDirection == 1) {
+  			colDirection = -1;
+  		} else if (colDirection == -1) {
+  			colDirection = 1;
+  		}
+  	}
+  	return false;
+  }
+  
+  public boolean isKnightAttack(State state, Position pos, Color color) {
+  	int row = pos.getRow();
+  	int col = pos.getCol();
+  	
+  	int [] rows = {2, 1, -2, -1};
+  	int [] cols = rows;
+  	
+  	for (int i = 0; i < rows.length; i++) {
+  		for (int j = 0; j < cols.length; j++) {
+  			if (Math.abs(rows[i]) != Math.abs(cols[j])) {
+  				Position checkIfKnight = new Position(row + rows[i], col + cols[j]);
+  				if (isPositionOnBoard(checkIfKnight)) {
+  					Piece piece = state.getPiece(checkIfKnight);
+  					if (piece != null &&
+  							piece.getColor() != color &&
+  							piece.getKind() == KNIGHT) {
+  						return true;
+  					}
+  				}
+  			}
+  		}
+  	}
+  	return false;
+  }
+  
+  private void setPawnNewPosition(State state, Position from, Position to, Move move) {
+  	Piece piece = state.getPiece(from);
+    state.setPiece(from, null);
+    state.setPiece(to, piece);
+    state.setEnpassantPosition(null);
+    if (move != null && move.getPromoteToPiece() != null) {
+      state.setPiece(to, new Piece(piece.getColor(), move.getPromoteToPiece()));
+    }
+    state.setNumberOfMovesWithoutCaptureNorPawnMoved(0);
+  }
+  
+  private void setPieceNewPosition(State state, Position from, Position to,
+  																 Move move, boolean isCapture) {
+  	if (isCapture) {
+  		state.setNumberOfMovesWithoutCaptureNorPawnMoved(0);
+  		if (state.getPiece(to).getKind() == ROOK) {
+  			updateCastlingAllowed(state, ROOK, state.getPiece(to).getColor(), to);
+  		}
+  	} else {
+  		state.setNumberOfMovesWithoutCaptureNorPawnMoved(
+  				state.getNumberOfMovesWithoutCaptureNorPawnMoved() + 1);
+  	}
+  	Piece movedPiece = state.getPiece(from);
+  	state.setPiece(from, null);
+  	state.setPiece(to, movedPiece);
+  	state.setEnpassantPosition(null);
+  }
+  
+  private void updateCastlingAllowed(State state, PieceKind kindOfPiece, Color color, Position position) {
+  	if (kindOfPiece == KING) {
+  		state.setCanCastleKingSide(color, false);
+  		state.setCanCastleQueenSide(color, false);
+  	} else if (kindOfPiece == ROOK) {
+  		if (color == WHITE) {
+  			if (position.equals(new Position(0, 0))) {
+  				state.setCanCastleQueenSide(color, false);
+  			} else if (position.equals(new Position(0, 7))) {
+  				state.setCanCastleKingSide(color, false);
+  			}
+  		} else if (color == BLACK) {
+  			if (position.equals(new Position(7, 0))) {
+  				state.setCanCastleQueenSide(color, false);
+  			} else if (position.equals(new Position(7, 7))) {
+  				state.setCanCastleKingSide(color, false);
+  			}
+  		}
+  	}
+  }
+ 
+  private Position findPiece(State state, PieceKind kind, Color color) {
+  	for (int i = 0; i < COLS; i++) {
+  		for (int j = 0; j < ROWS; j++) {
+  			Piece piece = state.getPiece(j, i);
+  			if (piece != null && piece.getKind() == kind && piece.getColor() == color) {
+  				return new Position(j, i);
+  			}
+  		}
+  	}
+  	return null;
+  }
+}

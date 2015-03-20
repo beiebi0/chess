@@ -1,0 +1,54 @@
+<!DOCTYPE ui:UiBinder SYSTEM "http://dl.google.com/gwt/DTD/xhtml.ent">
+<ui:UiBinder xmlns:ui="urn:ui:com.google.gwt.uibinder"
+	xmlns:g="urn:import:com.google.gwt.user.client.ui" xmlns:mgwt="urn:import:com.googlecode.mgwt.ui.client.widget"
+	xmlns:b="urn:import:com.googlecode.mgwt.ui.client.widget.buttonbar">
+	<ui:style field="css" type="org.alexanderoskotsky.hw3.GameCss">
+		.highlighted {
+			background-color: yellow !important;
+		}
+		
+		td img {
+			display: block
+		}
+	</ui:style>
+
+	<mgwt:LayoutPanel>
+		<g:HTMLPanel>
+			<g:HTMLPanel ui:field="matchingPanel">
+				<g:Button ui:field="cancelAutoMatch">Cancel</g:Button>
+				<g:Label>Finding Player</g:Label>
+				<g:Image ui:field="spinner"></g:Image>
+			</g:HTMLPanel>
+		</g:HTMLPanel>
+
+		<g:HTMLPanel ui:field="gamePanel">
+			<g:HTMLPanel>
+				<g:Button ui:field="autoMatch">AutoMatch</g:Button>
+				<g:Button ui:field="playWithAI">Play With AI</g:Button>
+			</g:HTMLPanel>
+			<g:HTMLPanel>
+				<g:SuggestBox ui:field="matchBox" />
+				<g:Button ui:field="matchButton">Match</g:Button>
+			</g:HTMLPanel>
+
+			<g:ListBox ui:field="matchList">
+				<g:item value=''>
+					[Select a Match]
+				</g:item>
+			</g:ListBox>
+
+			<g:HTMLPanel>
+				<g:Label ui:field="nameLabel" text="" />
+				<g:Label ui:field="gameStatus" text="Status" />
+				<g:Grid ui:field="gameGrid" />
+				<g:Grid ui:field="whitePromotion" />
+				<g:Grid ui:field="blackPromotion" />
+				<g:HTMLPanel>
+					<g:Button ui:field="newGameButton">New Game</g:Button>
+					<g:Button ui:field="deleteGameButton">Delete Game</g:Button>
+				</g:HTMLPanel>
+			</g:HTMLPanel>
+		</g:HTMLPanel>
+
+	</mgwt:LayoutPanel>
+</ui:UiBinder>

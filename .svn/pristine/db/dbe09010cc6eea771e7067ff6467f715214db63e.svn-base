@@ -1,0 +1,34 @@
+package org.harshmehta.hw6.server;
+
+public class Game {
+  private int gameId;
+  private String player1ClientId;
+  private String player2ClientId;
+  private int turn;
+  
+  public int getGameId() {
+    return gameId;
+  }
+  public void setGameId(int gameId) {
+    this.gameId = gameId;
+  }
+  public String getPlayer1ClientId() {
+    return player1ClientId;
+  }
+  public void setPlayer1ClientId(String player1ClientId) {
+    this.player1ClientId = player1ClientId;
+  }
+  public String getPlayer2ClientId() {
+    return player2ClientId;
+  }
+  public void setPlayer2ClientId(String player2ClientId) {
+    this.player2ClientId = player2ClientId;
+  }
+  public int getTurn() {
+    return turn;
+  }
+  public void setTurn(int turn) {
+    this.turn = turn;
+  }
+  
+}

@@ -1,0 +1,57 @@
+package org.jiangfengchen.hw8;
+
+import java.text.DateFormat;
+import java.util.Date;
+import java.util.LinkedList;
+
+import org.jiangfengchen.hw7.Player;
+
+public class RatingHelper {
+	final static double c=18.131937;
+	final static double q=0.00575646273;
+	
+	public static double interRD(double RD,int t){
+		return Math.min(Math.sqrt(RD*RD+c*c*t), 350.0);
+	}
+	
+	public static double g(double RD){
+		return 1/Math.sqrt(1+3*q*q*RD*RD/9.87);
+	}
+	
+	public static double E(double RDi,double r,double ri){
+		double tmp = Math.pow(10, (g(RDi)*(r-ri)/(-400.0)));
+		return 1/(1+tmp);
+	}
+	
+	public static double d2(double r,Player op){
+		double grd = g(op.getRD());
+		double sqr=grd*grd;
+		double e = E(op.getRD(),r,op.getRating());
+		double sigma=(sqr*e*(1-e));
+	
+		return 1/(sigma*q*q);
+		
+	}
+	
+	public static double finalRD(double rating,double RD,Player op,int t){
+		double d2=d2(rating,op);
+		double interRD2=Math.pow(interRD(RD,t),2);
+		double tmp = 1/(1/interRD2+1/d2);
+		return Math.sqrt(tmp);
+	}
+	
+	public static double newRating(Player pl,Player op,double s,int t){
+		double r0=pl.getRating();
+		double e = E(op.getRD(),r0,op.getRating());
+		double sigma=g(op.getRD())*(s-e);
+		double RD2= Math.pow(finalRD(pl.getRating(),pl.getRD(),op,t), 2.0)*q;
+		double remainder=sigma*RD2;
+		return r0+remainder;
+	}
+	
+	public static int DayDiff(Date d1,Date d2){
+		int t = (int)( (d1.getTime() - d2.getTime()) / (1000 * 60 * 60 * 24) );
+		return t;
+
+	}
+}

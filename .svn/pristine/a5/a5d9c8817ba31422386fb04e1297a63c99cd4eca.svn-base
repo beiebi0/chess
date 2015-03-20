@@ -1,0 +1,48 @@
+package org.kanwang.hw10;
+
+import org.kanwang.hw3.Presenter;
+
+import com.allen_sauer.gwt.dnd.client.DragContext;
+import com.allen_sauer.gwt.dnd.client.VetoDragException;
+import com.allen_sauer.gwt.dnd.client.drop.SimpleDropController;
+import com.google.gwt.user.client.ui.Image;
+import com.google.gwt.user.client.ui.Widget;
+
+public class MyDropController extends SimpleDropController{
+	private Presenter presenter;
+	int row, col;
+	Image piece[][];
+
+	public MyDropController(Widget dropTarget) {
+		super(dropTarget);
+	}
+	
+	public void setPresenter(Presenter p){
+		this.presenter = p;
+	}
+	
+	public void setPosition(int r, int c){
+		this.row = r;
+		this.col = c;
+	}
+	
+	public void setImage(Image pieceBoard[][]){
+		piece = pieceBoard;
+	}
+
+	@Override
+	public void onPreviewDrop(DragContext context) throws VetoDragException{
+		int i = 0, j = 0;
+		for(i = 0 ; i < 8 ; i++){
+			for(j = 0 ; j < 8 ; j++){
+				if(piece[i][j] == context.draggable)
+					break;
+			}
+			if(j < 8)
+				break;
+		}
+//		presenter.selectPiece(i, j);
+		if(!presenter.selectPiece(row, col))
+			throw new VetoDragException();
+	}
+}

@@ -1,0 +1,122 @@
+package org.shihweihuang.hw3;
+
+import com.google.gwt.resources.client.ClientBundle;
+import com.google.gwt.resources.client.ImageResource;
+
+public interface GameImages extends ClientBundle {
+  @Source("black_tile.png")
+  ImageResource blackTile();
+  
+  @Source("white_tile.png")
+  ImageResource whiteTile();
+  
+  @Source("wKing_wTile.png")
+  ImageResource wKing_wTile();
+  
+  @Source("wQueen_wTile.png")
+  ImageResource wQueen_wTile();
+  
+  @Source("wRook_wTile.png")
+  ImageResource wRook_wTile();
+  
+  @Source("wBishop_wTile.png")
+  ImageResource wBishop_wTile();
+  
+  @Source("wKnight_wTile.png")
+  ImageResource wKnight_wTile();
+  
+  @Source("wPawn_wTile.png")
+  ImageResource wPawn_wTile();
+  
+  @Source("bKing_wTile.png")
+  ImageResource bKing_wTile();
+  
+  @Source("bQueen_wTile.png")
+  ImageResource bQueen_wTile();
+  
+  @Source("bRook_wTile.png")
+  ImageResource bRook_wTile();
+  
+  @Source("bBishop_wTile.png")
+  ImageResource bBishop_wTile();
+  
+  @Source("bKnight_wTile.png")
+  ImageResource bKnight_wTile();
+  
+  @Source("bPawn_wTile.png")
+  ImageResource bPawn_wTile();
+  
+  @Source("wKing_bTile.png")
+  ImageResource wKing_bTile();
+  
+  @Source("wQueen_bTile.png")
+  ImageResource wQueen_bTile();
+  
+  @Source("wRook_bTile.png")
+  ImageResource wRook_bTile();
+  
+  @Source("wBishop_bTile.png")
+  ImageResource wBishop_bTile();
+  
+  @Source("wKnight_bTile.png")
+  ImageResource wKnight_bTile();
+  
+  @Source("wPawn_bTile.png")
+  ImageResource wPawn_bTile();
+  
+  @Source("bKing_bTile.png")
+  ImageResource bKing_bTile();
+  
+  @Source("bQueen_bTile.png")
+  ImageResource bQueen_bTile();
+  
+  @Source("bRook_bTile.png")
+  ImageResource bRook_bTile();
+  
+  @Source("bBishop_bTile.png")
+  ImageResource bBishop_bTile();
+  
+  @Source("bKnight_bTile.png")
+  ImageResource bKnight_bTile();
+ 
+  @Source("bPawn_bTile.png")
+  ImageResource bPawn_bTile();
+  //
+  
+  @Source("wKing.png")
+  ImageResource wKing();
+  
+  @Source("wQueen.png")
+  ImageResource wQueen();
+  
+  @Source("wRook.png")
+  ImageResource wRook();
+  
+  @Source("wBishop.png")
+  ImageResource wBishop();
+  
+  @Source("wKnight.png")
+  ImageResource wKnight();
+  
+  @Source("wPawn.png")
+  ImageResource wPawn();
+  
+  @Source("bKing.png")
+  ImageResource bKing();
+  
+  @Source("bQueen.png")
+  ImageResource bQueen();
+  
+  @Source("bRook.png")
+  ImageResource bRook();
+  
+  @Source("bBishop.png")
+  ImageResource bBishop();
+  
+  @Source("bKnight.png")
+  ImageResource bKnight();
+  
+  @Source("bPawn.png")
+  ImageResource bPawn();
+}
+

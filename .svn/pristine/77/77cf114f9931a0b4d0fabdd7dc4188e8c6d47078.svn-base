@@ -1,0 +1,50 @@
+package org.alishah.hw3;
+
+import com.google.gwt.resources.client.ClientBundle;
+import com.google.gwt.resources.client.ImageResource;
+
+public interface GameImages extends ClientBundle {
+
+  @Source("BLACK_BISHOP.png")
+  ImageResource blackBishop();
+  
+  @Source("BLACK_KING.png")
+  ImageResource blackKing();
+  
+  @Source("BLACK_KNIGHT.png")
+  ImageResource blackKnight();
+  
+  @Source("BLACK_PAWN.png")
+  ImageResource blackPawn();
+  
+  @Source("BLACK_QUEEN.png")
+  ImageResource blackQueen();
+  
+  @Source("BLACK_ROOK.png")
+  ImageResource blackRook();
+  
+  @Source("WHITE_BISHOP.png")
+  ImageResource whiteBishop();
+  
+  @Source("WHITE_KING.png")
+  ImageResource whiteKing();
+  
+  @Source("WHITE_KNIGHT.png")
+  ImageResource whiteKnight();
+  
+  @Source("WHITE_PAWN.png")
+  ImageResource whitePawn();
+  
+  @Source("WHITE_QUEEN.png")
+  ImageResource whiteQueen();
+  
+  @Source("WHITE_ROOK.png")
+  ImageResource whiteRook();
+  
+  @Source("blank_square.png")
+  ImageResource blankSquare();
+  
+  @Source("background.png")
+  ImageResource background();
+  
+}

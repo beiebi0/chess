@@ -1,0 +1,421 @@
+package org.bohuang.hw3;
+
+import java.util.Date;
+import java.util.HashSet;
+import java.util.Set;
+
+import org.bohuang.hw2.StateChangerImpl;
+import org.bohuang.hw2_5.StateExplorerImpl;
+import org.bohuang.hw6.client.ChessService;
+import org.bohuang.hw6.client.ChessServiceAsync;
+import org.bohuang.hw6.client.LoginInfo;
+import org.bohuang.hw7.Match;
+import org.bohuang.hw9.AlphaBetaPruning;
+import org.bohuang.hw9.Heuristic;
+import org.bohuang.hw9.Timer;
+import org.shared.chess.Color;
+import org.shared.chess.GameResult;
+import org.shared.chess.Move;
+import org.shared.chess.Piece;
+import org.shared.chess.PieceKind;
+import org.shared.chess.Position;
+import org.shared.chess.State;
+
+import com.google.gwt.core.client.GWT;
+import com.google.gwt.storage.client.Storage;
+import com.google.gwt.user.client.Window;
+import com.google.gwt.user.client.rpc.AsyncCallback;
+
+public class Presenter {	
+	
+  public interface View {
+    /**
+     * Renders the piece at this position.
+     * If piece is null then the position is empty.
+     */
+    void setPiece(int row, int col, Piece piece);
+    /**
+     * Turns the highlighting on or off at this cell.
+     * Cells that can be clicked should be highlighted.
+     */
+    void setHighlighted(int row, int col, boolean highlighted);
+    /**
+     * Indicate whose turn it is.
+     */
+    void setWhoseTurn(Color color);
+    /**
+     * Indicate whether the game is in progress or over.
+     */
+    void setGameResult(GameResult gameResult);	
+	void reDraw();	
+	void setStatus(String s);
+	void setBotVisible();
+	void setTopVisible();
+	void setBoard();
+	void setSelected(int row, int col, boolean b);
+	void setOpponentStatus();
+	void setGameIdStatus();
+	void setYourColorStatus();
+	void setYourRank();
+	void setBotStatus(String s);
+	void setStartDate(Date date);
+	/*String getHistoryToken();
+	void addHistoryToken(String token);
+	*/
+	void setChessWidget();
+	void addTimer(int i, Runnable runnable);
+	
+	
+		
+  }
+  
+  ChessServiceAsync ChessService = GWT.create(ChessService.class);
+  StateExplorerImpl Explorer = new StateExplorerImpl();
+  StateChangerImpl Changer = new StateChangerImpl();
+  StateSerializer serializer = new StateSerializer();
+  Position promPosition ;
+  String userId = "";
+  LoginInfo userInfo;
+  static Long gameId ;
+  static Color playerColor ;
+  static String opponentId;
+  static Double playerRank;
+  static boolean againstBot = false;
+  static Date startDate ;
+  
+  private Storage stockstore = Storage.getLocalStorageIfSupported();
+  
+  public static Double getPlayerRank() {
+	return playerRank;
+}
+
+public static void setPlayerRank(Double playerRank) {
+	Presenter.playerRank = playerRank;
+}
+
+public Long getGameId() {
+	return gameId;
+}
+
+public void setGameId(Long Id) {
+	gameId = Id;
+}
+
+  
+ 
+  public static String getOpponentId() {
+	return opponentId;
+}
+
+public void setOpponentId(String opponentId) {
+	Presenter.opponentId = opponentId;
+}
+
+
+
+public View view;
+  public static State state = new State() ;
+  public Position last ;
+  
+  
+  
+ 
+  
+  public Color getPlayerColor() {
+	return playerColor;
+}
+
+public void setPlayerColor(Color Color) {
+	playerColor = Color;
+}
+
+public void setView(View view) {
+    this.view = view;
+    view.addTimer(10000, new Runnable() {
+		@Override
+		public void run() {
+			if(stockstore!=null){
+				if(stockstore.getLength()>0){
+					String[] storedMove = stockstore.getItem("Stock."+(stockstore.getLength()-1)).split(",");
+					String storedState =storedMove[0];
+					Long storedId = Long.parseLong(storedMove[1]);
+					ChessService.MakeMove(storedState, userId, storedId, new AsyncCallback<Match>(){
+
+						@Override
+						public void onFailure(Throwable caught) {
+							// TODO Auto-generated method stub
+							
+						}
+
+						@Override
+						public void onSuccess(Match result) {
+							// TODO Auto-generated method stub
+							stockstore.removeItem("Stock."+(stockstore.getLength()-1));
+						}
+						
+					});
+				}
+			}
+		}
+	});
+
+  }
+  
+  public void setState() {
+    view.setWhoseTurn(state.getTurn());
+    view.setGameResult(state.getGameResult());
+    view.setOpponentStatus();
+    view.setYourColorStatus();
+    view.setGameIdStatus();
+    view.setYourRank();
+    view.setStartDate(startDate);
+    for (int r = 0; r < 8; r++) {
+      for (int c = 0; c < 8; c++) {
+    	  view.setHighlighted(7, c, false);
+    	  if(state.getPiece(7-r, c)!=null){
+    		  view.setPiece(r, c, state.getPiece(7-r, c));       		  
+    	  }
+      }
+    }
+    //view.clearHighlighted();
+  }
+
+  public void selectGrid(int row, int col) {
+	// TODO Auto-generated method stub	  
+	
+	Set<Move> posMove =  new HashSet<Move>() ;
+	if(state.getTurn().equals(state.getPiece(7-row, col).getColor())){
+		clearHighlighted();
+		clearSelected();
+		last = new Position(7-row,col);
+		view.setSelected(row, col, true);
+		posMove.addAll(Explorer.getPossibleMovesFromPosition(state,new Position(7-row,col)));
+		for(Move move: posMove){
+			view.setHighlighted(7-move.getTo().getRow(), move.getTo().getCol(), true);
+		}
+	}	
+  }
+  
+  public void makeMove(Integer row , Integer col ,Integer k){
+	  
+	  Position thisp = new Position(7-row,col);
+	  if(state.getPiece(last)!=null&&
+			  state.getPiece(last).getKind().equals(PieceKind.PAWN)&&
+			  row == 7){
+		  promPosition = new Position(7-row,col);
+		  view.setTopVisible();		  
+	  }
+	  else if(state.getPiece(last)!=null&&
+			  state.getPiece(last).getKind().equals(PieceKind.PAWN)&&
+			  row == 0){
+		  promPosition = new Position(7-row,col);
+		  view.setBotVisible();		  
+	  }
+	  else if(state.getPiece(last)!=null){ 
+		  Move move = new Move(last,thisp,null);
+		  Changer.makeMove(state, move);
+		  last = null;
+		  if(againstBot){
+			  Heuristic heuristic = new Heuristic();
+				AlphaBetaPruning pruning = new AlphaBetaPruning(heuristic);
+				Timer timer = new Timer(2000);
+				view.setBotStatus("Calculating...");
+				int moves = Explorer.getPossibleMoves(state).size();
+				int depth = 0;
+				if(moves >= 20){
+					depth = 2;
+				}else if(moves >= 8){
+					depth = 3;
+				}else if(moves >= 5){
+					depth = 4;
+				}else if(moves >= 3){
+					depth = 5;
+				}else{
+					depth = 6;
+				}
+				 if(state.getGameResult()==null){
+					 Move moveBot = pruning.findBestMove(state, depth, timer);
+						Changer.makeMove(state, moveBot);
+						view.setBotStatus("Done!It's Your Turn");
+				 }
+				 
+		  }else{
+			  ChessService.MakeMove(serializer.stateToString(state), userId, this.gameId, new AsyncCallback<Match>(){
+
+					@Override
+					public void onFailure(Throwable caught) {
+						// TODO Auto-generated method stub
+						String storeItem = serializer.stateToString(state) + ","  + gameId;
+						if (stockstore != null) {
+							  int numStocks = stockstore.getLength();
+							  stockstore.setItem("Stock."+numStocks, storeItem);
+							}
+						Window.alert("Move Failed");
+					}
+
+					@Override
+					public void onSuccess(Match result) {
+						// TODO Auto-generated method stub
+						if(result==null) return;
+						State input = serializer.stringToState(result.getState());
+						setNewState(input);
+						view.reDraw();
+						setState();
+					}
+					  
+				  });
+		  }
+		  
+		  view.reDraw();
+		  this.setState();	
+	  
+    } 	  
+	  
+  }
+  
+  private void clearHighlighted() {
+	// TODO Auto-generated method stub
+	for (int row = 0; row < 8; row++) {
+	      for (int col = 0; col < 8; col++) {
+	    	  view.setHighlighted(row,col, false);
+	      }
+	}
+  }
+  
+  private void clearSelected() {
+		// TODO Auto-generated method stub
+		for (int row = 0; row < 8; row++) {
+		      for (int col = 0; col < 8; col++) {
+		    	  view.setSelected(row,col, false);
+		      }
+		}
+	  }
+
+public void promoteTo(int j) {
+	// TODO Auto-generated method stub
+	switch(j){
+	case 0:{
+		Move move = new Move(last,promPosition,PieceKind.ROOK);
+	    Changer.makeMove(state, move);
+	    break;
+	}
+	case 1:{
+		Move move = new Move(last,promPosition,PieceKind.KNIGHT);
+	    Changer.makeMove(state, move);
+	    break;
+	}
+	case 2:{
+		Move move = new Move(last,promPosition,PieceKind.BISHOP);
+	    Changer.makeMove(state, move);
+	    break;
+	}
+	case 3:{
+		Move move = new Move(last,promPosition,PieceKind.QUEEN);
+	    Changer.makeMove(state, move);
+	    break;
+	}
+	}
+	
+	
+	promPosition = null;
+	last = null;
+	if(againstBot){
+		Heuristic heuristic = new Heuristic();
+		AlphaBetaPruning pruning = new AlphaBetaPruning(heuristic);
+		Timer timer = new Timer(2000);
+		view.setBotStatus("Calculating...");
+		
+		 if(state.getGameResult()==null){
+			 Move moveBot = pruning.findBestMove(state, 1, timer);
+				Changer.makeMove(state, moveBot);
+				view.setBotStatus("Done!It's Your Turn");
+		 }
+		
+	}
+	else{
+		ChessService.MakeMove(serializer.stateToString(state), userId, this.gameId, new AsyncCallback<Match>(){
+
+			@Override
+			public void onFailure(Throwable caught) {
+				// TODO Auto-generated method stub
+				String storeItem = serializer.stateToString(state) + "," + gameId;
+				if (stockstore != null) {
+					  int numStocks = stockstore.getLength();
+					  stockstore.setItem("Stock."+numStocks, storeItem);
+					}
+				
+				Window.alert("Move Failed");
+			}
+
+			@Override
+			public void onSuccess(Match result) {
+				// TODO Auto-generated method stub
+				if(result==null) return;
+				State input = serializer.stringToState(result.getState());
+				setNewState(input);
+				view.reDraw();
+				setState();
+			}
+			  
+		  });
+	}
+	
+	view.reDraw();
+	this.setState();	
+}
+
+public Object getState() {
+	// TODO Auto-generated method stub
+	return this.state;
+}
+
+public void setNewState(State state) {
+	// TODO Auto-generated method stub
+	this.state = state;
+}
+
+public void setHistory() {
+	// TODO Auto-generated method stub
+	view.setBoard();
+	this.setState();
+}
+
+public void reset() {
+	// TODO Auto-generated method stub
+	this.state = new State();
+}
+  
+public void setId(String id){
+	  this.userId=id;
+}
+
+public void BotMove() {
+	Heuristic heuristic = new Heuristic();
+	AlphaBetaPruning pruning = new AlphaBetaPruning(heuristic);
+	Timer timer = new Timer(2000);
+	view.setBotStatus("Calculating...");
+	int moves = Explorer.getPossibleMoves(state).size();
+	int depth = 0;
+	if(moves >= 20){
+		depth = 2;
+	}else if(moves >= 8){
+		depth = 3;
+	}else if(moves >= 5){
+		depth = 4;
+	}else if(moves >= 3){
+		depth = 5;
+	}else{
+		depth = 6;
+	}
+	 if(state.getGameResult()==null){
+		 Move moveBot = pruning.findBestMove(state, depth, timer);
+			Changer.makeMove(state, moveBot);
+			view.setBotStatus("Done!It's Your Turn");
+	 }
+	 view.reDraw();
+		this.setState();	
+}
+
+
+
+}

@@ -1,0 +1,38 @@
+package org.karthikmahadevan.hw6.client;
+
+import java.util.List;
+
+import org.karthikmahadevan.hw7.MatchInfo;
+
+import com.google.gwt.user.client.rpc.AsyncCallback;
+
+public interface GameServiceAsync {
+
+	void getToken(String clientID, AsyncCallback<String> callback);
+
+	void updateState(String clientID, String state, AsyncCallback<Void> callback);
+
+	void testCommunication(AsyncCallback<Void> callback);
+
+	void getOpponentThroughAutoMatch(AsyncCallback<Void> callback);
+
+	void addNewConnection(AsyncCallback<String> callback);
+
+	void updateMove(Long MatchID, String state, AsyncCallback<Void> callback);
+
+	void getMatches(AsyncCallback<List<Long>> callback);
+
+	void getMatchInfo(Long matchID, AsyncCallback<String> callback);
+
+	void deleteMatch(Long matchID, AsyncCallback<Void> callback);
+
+	void playWith(String opponent, AsyncCallback<String> callback);
+
+	void updateRating(String white, String black, String winner,
+			AsyncCallback<Void> callback);
+
+	void getCurrentUserEmailAndRating(AsyncCallback<String> callback);
+
+	void newMatchWithAI(AsyncCallback<Void> callback);
+
+}

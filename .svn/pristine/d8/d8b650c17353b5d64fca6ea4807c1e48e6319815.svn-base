@@ -1,0 +1,232 @@
+package org.yuehlinchung.hw6.server;
+
+import java.util.Date;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Queue;
+import java.util.logging.Logger;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import com.google.appengine.api.channel.ChannelMessage;
+import com.google.appengine.api.channel.ChannelPresence;
+import com.google.appengine.api.channel.ChannelService;
+import com.google.appengine.api.channel.ChannelServiceFactory;
+import com.google.appengine.api.users.User;
+import com.google.appengine.api.users.UserService;
+import com.google.appengine.api.users.UserServiceFactory;
+
+import org.yuehlinchung.hw6.client.GameService;
+import org.yuehlinchung.hw6.shared.Mail;
+import org.yuehlinchung.hw6.shared.LoginInfo;
+import org.yuehlinchung.hw6.shared.Match;
+
+import com.google.gwt.user.server.rpc.RemoteServiceServlet;
+import com.googlecode.objectify.Objectify;
+
+public class GameServiceImpl extends RemoteServiceServlet implements 
+	GameService {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+	private static final Logger logger = Logger.getLogger(GameServiceImpl.class.getName());
+	private static Queue<String> waitList = new LinkedList<String>();
+	UserService userService = UserServiceFactory.getUserService();
+	ChannelService channelService = ChannelServiceFactory.getChannelService();
+	ChannelPresence presence;
+	static Objectify objectify = OfyService.ofy();
+	
+	public LoginInfo login(String requestUri) {
+	    User user = userService.getCurrentUser();
+	    LoginInfo loginInfo = new LoginInfo();
+	    if (user != null) {
+	    	LoginInfo player = objectify.load().type(LoginInfo.class).id(user.getEmail()).get();
+		    logger.info("Loggin Player: " + user.getEmail() + ", DB: "+ player);
+			if (!(player == null)) {
+				loginInfo.copyMatch(player.getMatch());
+				loginInfo.setRank(player.getRank());
+			}
+			loginInfo.setLoggedIn(true);
+			loginInfo.setEmailAddress(user.getEmail());
+			loginInfo.setNickname(user.getNickname());
+			loginInfo.setLogoutUrl(userService.createLogoutURL(requestUri));
+			String channelId = createChannel(user.getEmail());
+		    loginInfo.setChannelId(channelId);
+		    objectify.save().entity(loginInfo).now();
+	    } else {
+		    loginInfo.setLoggedIn(false);
+		    loginInfo.setLoginUrl(userService.createLoginURL(requestUri));
+	    }
+	    return loginInfo;
+	}
+
+	public void findGame(LoginInfo loginInfo, String newState) {
+		logger.info("Finding Game for player " + loginInfo.getEmailAddress());
+		if (waitList.contains(loginInfo.getEmailAddress())) {
+			waitList.remove(loginInfo.getEmailAddress());
+		}
+		if (!waitList.isEmpty()) {	
+			LoginInfo player1 = objectify.load().type(LoginInfo.class).id(loginInfo.getEmailAddress()).get();
+			LoginInfo player2 = objectify.load().type(LoginInfo.class).id(waitList.poll()).get();
+			Match game = new Match(player1.getEmailAddress(), player2.getEmailAddress(), newState, player1.getEmailAddress(), false, "0", getDate());
+			objectify.save().entity(game).now();
+			logger.info("Auto Match Game Id: " + game.getId());
+			player1.addMatch(game.getId());
+			objectify.save().entity(player1).now();
+			player2.addMatch(game.getId());
+			objectify.save().entity(player2).now();
+			//if (player1.isOnline()) 
+				channelService.sendMessage(new ChannelMessage(player1.getEmailAddress(), "Auto:" + game.getId() + "," + player2.getEmailAddress()));
+			//if (player2.isOnline())
+				channelService.sendMessage(new ChannelMessage(player2.getEmailAddress(), "Auto:" + game.getId() + "," + player1.getEmailAddress()));
+		} else {
+	    	waitList.add(loginInfo.getEmailAddress());
+	    }
+	}
+	
+	public void cancelFindGame(LoginInfo loginInfo) {
+		waitList.remove(loginInfo.getEmailAddress());
+	}
+	
+	public String createChannel (String uniqueId) {
+		String channelId = channelService.createChannel(uniqueId);
+		logger.info("Returning new channel " + channelId + " for player " + uniqueId);
+		return channelId;
+	}
+	
+	public Long saveState(Long id, String self, String opponent, String state, String turn, boolean over, String result) {
+		Long tmp;
+		LoginInfo player1 = objectify.load().type(LoginInfo.class).id(self).get();
+		LoginInfo player2 = objectify.load().type(LoginInfo.class).id(opponent).get();
+		if (id == null) {
+			Match game = new Match(self, opponent, state, turn, over, result, getDate());
+			objectify.save().entity(game).now();
+			assert game.getId() != null;
+			tmp = game.getId();
+			// Handle Player
+			player1.addMatch(game.getId());
+			objectify.save().entity(player1).now();
+			if (player2 == null) {
+				LoginInfo tmpInfo = new LoginInfo();
+				tmpInfo.setEmailAddress(opponent);
+				objectify.save().entity(tmpInfo).now();
+				player2 = objectify.load().type(LoginInfo.class).id(opponent).get();
+			}
+			player2.addMatch(game.getId());
+			objectify.save().entity(player2).now();
+			//if (player2.isOnline()) 
+				channelService.sendMessage(new ChannelMessage(opponent, "Update:" + game.getId() + "," + self));
+		} else {
+			Match game = objectify.load().type(Match.class).id(id).get();
+			game.state = state;
+			game.turn = turn;
+			game.over = over;
+			game.setResult(result);
+			tmp = id;
+			objectify.save().entity(game).now();
+			
+			if (game.over == true) {
+				// Calculate the Elo
+				double Qa, Qb;
+				Qa = Math.pow(10, player1.getRank()/400);
+				Qb = Math.pow(10, player2.getRank()/400);
+				if (game.getResult().equals("0")) {
+					if (game.turn.equals(player1.getEmailAddress())) {
+						player1.updateRank(Qa, Qb, 1);
+						player2.updateRank(Qb, Qa, 0);
+					} else if (game.turn.equals(player2.getEmailAddress())) {
+						player1.updateRank(Qa, Qb, 0);
+						player2.updateRank(Qb, Qa, 1);
+					}
+				} else {
+					player1.updateRank(Qa, Qb, 0.5);
+					player2.updateRank(Qb, Qa, 0.5);
+				}
+			}
+			
+			//if (player2.isOnline()) 
+				channelService.sendMessage(new ChannelMessage(opponent, "Update:" + id + "," + self));
+		}
+		//if (player1.isOnline()) 
+			//channelService.sendMessage(new ChannelMessage(self, "Refresh:"));
+			channelService.sendMessage(new ChannelMessage(self, "Update:" + id + "," + opponent));
+		return tmp;
+	}
+	
+	public void deleteState(Long id, String self) {
+		// Delete Player Match List
+		LoginInfo player = objectify.load().type(LoginInfo.class).id(self).get();
+		player.removeMatch(id);
+		objectify.save().entity(player).now();
+		Match game = objectify.load().type(Match.class).id(id).get();
+		game.delete();
+		if (game.getDelete() == 2) {
+			objectify.delete().entity(game).now();
+		} else {
+			objectify.save().entity(game).now();
+		}
+	}
+	
+	public Match getGame(Long id) {
+		Match game = objectify.load().type(Match.class).id(id).get();
+		return game;
+	}
+	
+	public LoginInfo updateInfo(String self) {
+		LoginInfo player = objectify.load().type(LoginInfo.class).id(self).get();
+		return player;
+	}
+	
+	public void setContact(List<String> emails) {
+		Mail info = new Mail(emails);
+		objectify.save().entity(info).now();
+	}
+	
+	public Mail getContact() {
+		Mail info = objectify.load().type(Mail.class).id("contact").get();
+		return info;
+	}
+	
+	public static void setOnline(String id) {
+		LoginInfo player = objectify.load().type(LoginInfo.class).id(id).get();
+		player.setOnline(true);
+		objectify.save().entity(player).now();
+		logger.info(id + " is online");
+	}
+	
+	public static void setOffline(String id) {
+		LoginInfo player = objectify.load().type(LoginInfo.class).id(id).get();
+		player.setOnline(false);
+		player.setChannelId(null);
+		objectify.save().entity(player).now();
+		if (waitList.contains(id)) {
+			waitList.remove(id);
+		}
+		logger.info(id + " is offline");
+	}
+	
+	private Date getDate() {
+		Date today = new Date();
+		return today;
+	}
+
+		  public static void addHeadersForCORS(HttpServletRequest req, HttpServletResponse resp) {
+		    resp.setHeader("Access-Control-Allow-Methods", "POST"); // "GET, HEAD, POST, PUT, DELETE, TRACE, OPTIONS");
+		    resp.setHeader("Access-Control-Allow-Origin", "*");
+		    resp.setHeader("Access-Control-Allow-Headers", "X-GWT-Module-Base, X-GWT-Permutation, Content-Type"); 
+		  }
+
+		  @Override
+		  protected void doOptions(HttpServletRequest req, HttpServletResponse resp) {
+		    addHeadersForCORS(req, resp);
+		  }
+
+		  @Override
+		  protected void onAfterResponseSerialized(String serializedResponse) {
+		    super.onAfterResponseSerialized(serializedResponse);
+		    addHeadersForCORS(getThreadLocalRequest(), getThreadLocalResponse());
+		  }
+}
+

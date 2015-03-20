@@ -1,0 +1,566 @@
+package org.sanjana.hw5;
+
+import static org.shared.chess.Color.WHITE;
+import static org.shared.chess.PieceKind.BISHOP;
+import static org.shared.chess.PieceKind.KNIGHT;
+import static org.shared.chess.PieceKind.PAWN;
+import static org.shared.chess.PieceKind.QUEEN;
+import static org.shared.chess.PieceKind.ROOK;
+
+import java.util.HashMap;
+import java.util.Set;
+
+import org.sanjana.hw2.StateChangerImpl;
+import org.sanjana.hw2_5.StateExplorerImpl;
+import org.sanjana.hw7.MultiplayerChessService;
+import org.sanjana.hw7.MultiplayerChessServiceAsync;
+import org.sanjana.hw9.AlphaBetaPruning;
+import org.sanjana.hw9.DateTimer;
+import org.sanjana.hw9.Heuristic;
+import org.shared.chess.Color;
+import org.shared.chess.GameResult;
+import org.shared.chess.Move;
+import org.shared.chess.Piece;
+import org.shared.chess.PieceKind;
+import org.shared.chess.Position;
+import org.shared.chess.State;
+
+import com.google.gwt.animation.client.Animation;
+import com.google.gwt.core.shared.GWT;
+import com.google.gwt.dom.client.AudioElement;
+import com.google.gwt.dom.client.Element;
+import com.google.gwt.dom.client.MediaElement;
+import com.google.gwt.dom.client.Style;
+import com.google.gwt.event.dom.client.HasClickHandlers;
+import com.google.gwt.media.client.Audio;
+import com.google.gwt.user.client.History;
+import com.google.gwt.user.client.Window;
+
+public class Presenter{
+	public interface View {
+		/**
+		 * Renders the piece at this position. If piece is null then the
+		 * position is empty.
+		 */
+		void setPiece(int row, int col, Piece piece);
+		/**
+		 * Turns the highlighting on or off at this cell. Cells that can be
+		 * clicked should be highlighted.
+		 */
+		void setHighlighted(int row, int col, boolean highlighted);
+		/**
+		 * Indicate whose turn it is.
+		 */
+		void setWhoseTurn(Color color);
+		/**
+		 * Indicate whether the game is in progress or over.
+		 */
+		void setGameResult(GameResult gameResult);
+
+		HasClickHandlers getImage(int row, int col);
+		Element getElement(int x, int y);
+
+		/**
+		 * gets the piece to be promoted to
+		 */
+		HasClickHandlers getPromotionImage(Color c,int i);
+		/**
+		 * Responsible for visibility of promotion grid
+		 */
+		void setPromotionGridVisible(Color c,boolean vis);
+		/**
+		 * sets the promotion grids for black and white
+		 */
+		public void setwhitePromotionGrid();
+		public void setblackPromotionGrid();
+		void setDisableStorageButtons();	
+
+		/**
+		 * Handlers
+		 */
+		void initBoardHandlers();
+		void initPromotionHandlers();
+		void initStorageHandlers();
+		void initAnimationHandler();
+		void initControlHandler();
+
+		/**
+		 * Sets player and Opponent's colors.
+		 */
+		void setPlayerTurn(Color color);
+		void setOpponentTurn(Color color);
+		void setTurn(Color turn);
+		void updateMove(Long matchID,State state);
+		void setOpponentInfo(String opponent);
+		void setPlayerInfo(String player);
+		void updateAIMove(Long matchID,State string);
+		void updateMatchList();
+		void nextAIMove(String send);
+	}
+
+	private View view;
+	private State state;
+	StateChangerImpl statechanger;
+	StateExplorerImpl stateexplorer;
+	PieceKind promotionTo;
+	Position selected;
+	Position promotionPos;
+	private Set<Position> moveStartPositions;
+	private Set<Move> possibleMoves;
+
+	//History
+	public int HistoryCount=0;
+	private HashMap<String,State> stateRecord = new HashMap<String,State>();
+
+	//Animation
+	private boolean soundCheck = false;
+	private boolean animationCheck = false;
+	public chessSound Sounds = new chessSound();
+
+	//Multiplayer
+	private Long matchID;
+	//	private static MultiplayerChessServiceAsync  chessService = GWT.create(MultiplayerChessService.class);
+	private boolean canPlay=true;
+
+	public Presenter() 
+	{
+		this.statechanger = new StateChangerImpl();
+		this.stateexplorer = new StateExplorerImpl();
+		this.state = new State();
+		this.promotionTo=null;
+		this.selected = null;
+		this.promotionPos = null;
+		this.HistoryCount=0;
+		this.stateRecord.clear();
+	}
+
+	public void setView(View view) 
+	{
+		if(!soundCheck)
+			Sounds.playgameStart();
+		this.view = view;
+		setState(state);
+	}
+
+	public void setState(State state)
+	{
+		this.state=state;
+		view.setWhoseTurn(state.getTurn());
+		view.setGameResult(state.getGameResult());
+
+		if (state.getGameResult() != null) {
+			view.setGameResult(state.getGameResult());
+			if(!soundCheck)
+				Sounds.playgameOver();
+		}
+
+		for (int row = 0; row < 8; row++) 
+			for (int col = 0; col < 8; col++) 
+				view.setPiece(7-row, col, state.getPiece(row, col));
+
+		//		showStartingPositions(state);
+	}
+
+	/**
+	 * Performing promotion
+	 */
+	public void setPromotion(int index) 
+	{
+		switch (index) 
+		{
+		case 0:
+			promotionTo = KNIGHT;
+			break;
+		case 1:
+			promotionTo = BISHOP;
+			break;
+		case 2:
+			promotionTo = ROOK;
+			break;
+		case 3:
+			promotionTo = QUEEN;
+			break;
+		default:
+			break;
+		}
+
+		Move move = new Move(selected, promotionPos, promotionTo);
+		view.setPromotionGridVisible(state.getTurn(),false);
+		if(!soundCheck)
+			Sounds.playPromotion();
+		statechanger.makeMove(state, move);
+		server();
+		setState(state);
+		promotionPos=null;
+		clearHighlights();
+		addHistory();
+		view.setHighlighted(selected.getRow(),selected.getCol(), false);
+		view.initBoardHandlers();
+	}
+
+	/**
+	 * What to do when cell is clicked
+	 * @param matchId2 
+	 */
+	public void onClicked(int row, int col, Long matchId2) 
+	{
+		if(canPlay)
+		{
+			this.matchID = matchId2;
+			Position pos = new Position(row, col);
+			Piece piece = state.getPiece(pos);
+
+			if(selected == null) 
+			{
+				if(piece == null || piece.getColor() != state.getTurn())
+					return;
+				highlightMoves(pos);
+			} 
+
+			else
+			{
+				if (piece != null && piece.getColor() == state.getTurn()) 
+				{
+					highlightMoves(pos);
+					clearHighlights();
+				}
+
+				else 
+				{
+					PieceKind kind = state.getPiece(selected).getKind();
+					possibleMoves = stateexplorer.getPossibleMovesFromPosition(state, selected);
+					int r = state.getTurn().equals(WHITE) ? 7 : 0;
+
+					if(kind==PAWN && row==r)
+					{
+						Move move = new Move(selected, pos, PieceKind.QUEEN);
+						if (possibleMoves.contains(move))
+						{
+							view.setPromotionGridVisible(state.getTurn(),true);
+							promotionPos = pos;
+						}
+					}
+
+					else 
+					{
+						Move move = new Move(selected, pos, null);
+						if (possibleMoves.contains(move)) 
+						{
+							if(!soundCheck)
+								Sounds.playMove();
+
+							if(!animationCheck)
+								animation(7-selected.getRow(),selected.getCol(),7-pos.getRow(),pos.getCol(), move);	
+							else
+								statechanger.makeMove(state, move);
+
+							setState(this.state);
+							clearHighlights();
+							addHistory();
+							view.setTurn(state.getTurn());
+							//							server();
+						}
+					}
+				}
+			}
+		}
+	}
+
+	public void movePiece(Move move)
+	{
+		view.setTurn(state.getTurn());
+		setState(this.state);
+		clearHighlights();
+		addHistory();
+		server();
+	}
+
+	/**
+	 * shows the starting positions of board
+	 */
+	public void showStartingPositions(State state)
+	{
+		moveStartPositions=stateexplorer.getPossibleStartPositions(state);
+		for(Position pos: moveStartPositions)
+			view.setHighlighted(7-pos.getRow(), pos.getCol(), true);
+	}
+
+	public void showOppositeStartingPositions(State state)
+	{
+		State copy=state.copy();
+		copy.setTurn(state.getTurn().getOpposite());
+		Set<Position> moveOppositeStartPositions=stateexplorer.getPossibleStartPositions(copy);
+		for(Position pos: moveOppositeStartPositions)
+			view.setHighlighted(7-pos.getRow(), pos.getCol(), true);
+	}
+
+	/**
+	 * Highlighting the moves from a position
+	 */
+	private void highlightMoves(Position pos)
+	{
+		if (state.getGameResult() != null) 
+		{
+			view.setGameResult(state.getGameResult());
+			if(!soundCheck)
+				Sounds.playgameOver();
+		}
+
+		selected = pos;
+		possibleMoves = stateexplorer.getPossibleMovesFromPosition(state, selected);
+		for(Move move : possibleMoves)
+			view.setHighlighted(7 - move.getTo().getRow(), move.getTo().getCol(), true);
+	}
+
+	/**
+	 *Clearing the highlights on the board
+	 */
+	void clearHighlights() 
+	{
+		selected = null;
+		for (int row = 0; row < 8; row++) 
+			for(int col = 0; col < 8; col++) 
+				view.setHighlighted(row, col, false);
+	}
+
+	/**
+	 * Restart
+	 */
+	public void restartClicked()
+	{
+		if(!soundCheck)
+			Sounds.playgameStart();
+		stateRecord.clear();
+		this.HistoryCount=0;
+		setState(new State());
+	}
+
+	//To load Storage
+	public void loadStorage(String key)
+	{
+		State state=StateSerializer.deserialize(key);
+		clearHighlights();
+		this.state=state;
+		setState(state);	
+	}
+
+	public String addStorage(String key){
+		return StateSerializer.serialize(state);
+	}
+
+	//To Set History
+	public void setHistory(String token){
+		State state=stateRecord.get(token);
+		clearHighlights();
+		this.state=state;
+		setState(state);
+		view.initBoardHandlers();
+	}
+
+	//To add History
+	public void addHistory()
+	{
+		clearHighlights();
+		HistoryCount++;
+		History.newItem("state" + HistoryCount,false);
+		stateRecord.put(("state" + HistoryCount), state.copy());
+		showOppositeStartingPositions(state);
+	}	
+
+	//Classes to set Animation and Sound
+	public void animationDisable(boolean checked){
+		animationCheck = (checked == true) ? true : false;
+	}
+
+	public void soundDisable(boolean checked){
+		soundCheck = (checked == true) ? true : false;
+	}
+
+	public boolean getsoundCheck(){
+		return this.soundCheck;
+	}
+
+	public boolean getanimationCheck(){
+		return this.animationCheck;
+	}
+
+	public void animation(int x,int y,int xx,int yy,Move move)
+	{
+		Element from=view.getElement(x, y);
+		ChessAnimation ca= new ChessAnimation(from,move);
+		Element to=view.getElement(xx, yy);
+		ca.move(to.getAbsoluteLeft(),to.getAbsoluteTop());
+	}
+
+	//Chess Class
+	public class chessSound
+	{		
+		static final String dir = "http://multiplayergameofchess.appspot.com/sanjana_audio/";
+
+		//Sound
+		private Audio gameStartAudio;
+		private Audio gameOverAudio;
+		private	Audio movePieceAudio;
+		private Audio promotionAudio;
+		private Audio clickAudio;
+
+		public chessSound()
+		{
+			gameStartAudio=makeAudio("gameStart");
+			gameOverAudio=makeAudio("gameOver");
+			movePieceAudio=makeAudio("movePiece");
+			promotionAudio=makeAudio("promotion");
+			clickAudio=makeAudio("clickOption");
+		}
+
+		public Audio makeAudio(String music) 
+		{
+			String file=dir+music;
+
+			Audio audio=Audio.createIfSupported();
+			if(audio==null)
+				return null;
+			if (MediaElement.CAN_PLAY_PROBABLY.equals(audio.canPlayType(AudioElement.TYPE_WAV))){
+				audio.setSrc(file+".wav");
+			} 
+			else if (MediaElement.CAN_PLAY_PROBABLY.equals(audio.canPlayType(AudioElement.TYPE_MP3))){
+				audio.setSrc(file+".mp3");
+			} 
+			else if (MediaElement.CAN_PLAY_MAYBE.equals(audio.canPlayType(AudioElement.TYPE_WAV))){
+				audio.setSrc(file+".wav");
+			} 
+			else if (MediaElement.CAN_PLAY_MAYBE.equals(audio.canPlayType(AudioElement.TYPE_MP3))){
+				audio.setSrc(file+".mp3");
+			}
+			audio.load();
+			return audio;
+		}
+
+		public void playgameStart()
+		{			
+			gameStartAudio.play();
+		}
+
+		public void playgameOver()
+		{		
+			gameOverAudio.play();
+		}
+
+		public void playMove()
+		{	
+			movePieceAudio.play();
+		}
+
+		public void playPromotion()
+		{		
+			promotionAudio.play();
+		}
+
+		public void playClick()
+		{		
+			clickAudio.play();
+		}
+	}
+
+	//Animation Class
+	public class ChessAnimation extends Animation  {
+
+		private int x;
+		private int y;
+		private int xx;
+		private int yy;
+		private final Element element;
+		private Move m;
+
+		public ChessAnimation(Element element,Move m)
+		{
+			this.element=element;
+			this.m=m;
+		}
+
+		public void move(int xx, int yy) {		
+			this.x=element.getAbsoluteLeft();
+			this.y=element.getAbsoluteTop();
+			this.xx=xx;
+			this.yy=yy;
+			run(800);
+		}
+
+		@Override
+		protected void onUpdate(double progress) {
+			double p= x+ (progress*(xx-x));
+			double q= y+ (progress*(yy-y));
+			this.element.getStyle().setPosition(Style.Position.ABSOLUTE);
+			this.element.getStyle().setLeft(p, Style.Unit.PX);
+			this.element.getStyle().setTop(q, Style.Unit.PX);
+		}
+
+		@Override
+		protected void onComplete(){
+			super.onComplete();
+			element.getStyle().setPosition(Style.Position.STATIC);
+			element.getParentElement().getStyle().setPosition(Style.Position.STATIC);
+			statechanger.makeMove(state,this.m);
+			movePiece(this.m);
+		}
+	}
+
+	//Multiplayer Functions
+	public void enableBoard() {
+		canPlay = true;
+	}
+
+	public void disableBoard() {
+		canPlay = false;
+	}
+
+	public void server(){
+//		Window.alert("calling send move");
+		view.updateMove(this.matchID,this.state);
+		disableBoard();
+	}
+
+	//AI
+	public void AIMove() {
+//		Window.alert("getting move");
+		if (state.getGameResult() != null) {
+			return;
+		}
+		Move move = null;
+		AlphaBetaPruning ai=new AlphaBetaPruning(new Heuristic());
+		try{
+			try{
+				move = ai.findBestMove(state, 5, new DateTimer(5500));
+			}catch(Exception e){
+//				Window.alert(e.getMessage());
+				//				move=ai.findBestMove(state, 3, new DateTimer(2000));
+				Set<Move> moves=(new StateExplorerImpl().getPossibleMoves(state));
+
+				move=moves.iterator().next();
+				trymove(move);
+			}
+
+			statechanger.makeMove(state, move);
+			animation(7-move.getFrom().getRow(), move.getFrom().getCol(),7-move.getTo().getRow(), move.getTo().getCol(), move);
+			view.setTurn(state.getTurn());
+			clearHighlights();
+			addHistory();	
+			setState(state);
+			enableBoard();
+			view.updateAIMove(this.matchID,state);	
+		}catch(Exception e){
+			return;
+		}
+	}
+
+	public void trymove(Move move) {
+		statechanger.makeMove(state, move);
+		animation(7-move.getFrom().getRow(), move.getFrom().getCol(),7-move.getTo().getRow(), move.getTo().getCol(), move);
+		view.setTurn(state.getTurn());
+		clearHighlights();
+		addHistory();	
+		setState(state);
+		enableBoard();
+		view.updateAIMove(this.matchID,state);	
+	}
+}

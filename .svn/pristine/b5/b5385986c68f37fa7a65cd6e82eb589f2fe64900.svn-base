@@ -1,0 +1,327 @@
+package org.ashishmanral.hw3;
+
+import java.util.HashSet;
+import java.util.Set;
+
+import org.ashishmanral.hw2.StateChangerImpl;
+import org.ashishmanral.hw2_5.StateExplorerImpl;
+import org.shared.chess.Color;
+import org.shared.chess.GameResult;
+import org.shared.chess.GameResultReason;
+import org.shared.chess.Move;
+import org.shared.chess.Piece;
+import org.shared.chess.PieceKind;
+import org.shared.chess.Position;
+import org.shared.chess.State;
+
+import com.google.gwt.user.client.History;
+
+/**
+ * Presenter Class
+ * @author Ashish Manral
+ *
+ */
+public class Presenter{
+  
+  /**
+   * Constructor that takes view and state as argument and sets them.
+   * @param view Object of Graphics
+   */
+  public Presenter(View view){
+    this.state=new State();
+	sei=new StateExplorerImpl();
+    sci=new StateChangerImpl();
+    setView(view);
+    setState();
+    Set<Position> startPositions=sei.getPossibleStartPositions(this.state);
+    highlightStartPosition(startPositions);
+    turn=this.state.getTurn();
+  }
+  
+  /**
+   * Interface View
+   * @author Ashish
+   *
+   */
+  public interface View {
+    /**
+     * Renders the piece at this position.
+     * If piece is null then the position is empty.
+     */
+    void setPiece(int row, int col, Piece piece);
+    /**
+     * Turns the highlighting on or off at this cell.
+     * Cells that can be clicked should be highlighted.
+     */
+    void setHighlighted(int row, int col, boolean highlighted);
+    /**
+     * Indicate whose turn it is.
+     */
+    void setWhoseTurn(Color color);
+    /**
+     * Indicate whether the game is in progress or over.
+     */
+    void setGameResult(GameResult gameResult);
+    /**
+     * Testing purposes.
+     */
+    void print(String str);
+    /**
+     * Sets the promotion grid visibility.
+     */
+    void setPromoteDisplay(Color color,boolean value);
+    /**
+     * Highlights a selected piece. 
+     */
+    void highlightSelectedPiece(int row,int col,boolean highlighted);
+  }
+
+  private View view;
+  public State state;
+  private Color turn=Color.WHITE;
+  public Set<Position> possibleEndHighlightedPositions=new HashSet<Position>();
+  public Set<Position> possibleStartHighlightedPositions=new HashSet<Position>();
+  public Position selectedPos;
+  public Position promotionPos;
+  private StateExplorerImpl sei;
+  private StateChangerImpl sci;
+  public boolean toPromoteFlag=false;
+  private String historyState="";
+  
+  /**
+   * Setter method for View.
+   * @param view Graphics object
+   */
+  public void setView(View view) {
+    this.view = view;
+  }
+  
+  /**
+   * Sets the history token for the current state. Takes argument current state.
+   * @param state The State that needs to be set.
+   */
+  public void setHistory(State state) {
+	for (int r = 0; r < 8; r++) {
+      for (int c = 0; c < 8; c++) {
+        setHistory(state.getPiece(r, c));
+      }
+    }
+    historyState+=(turn==Color.WHITE)?"B$":"W$";
+    if(state.isCanCastleKingSide(Color.WHITE)) historyState+="T$";
+    else historyState+="F$";
+    if(state.isCanCastleKingSide(Color.BLACK)) historyState+="T$";
+    else historyState+="F$";
+    if(state.isCanCastleQueenSide(Color.WHITE)) historyState+="T$";
+    else historyState+="F$";
+    if(state.isCanCastleQueenSide(Color.BLACK)) historyState+="T$";
+    else historyState+="F$";
+    historyState+=Integer.toString(state.getNumberOfMovesWithoutCaptureNorPawnMoved());
+    if(state.getEnpassantPosition()!=null) historyState+="$" + state.getEnpassantPosition().getRow() + state.getEnpassantPosition().getCol();
+    else                                   historyState+="$88";
+    if(state.getGameResult()!=null){
+      if(state.getGameResult().getWinner()==null && state.getGameResult().getGameResultReason()==GameResultReason.FIFTY_MOVE_RULE) historyState+="$D1";
+      else if(state.getGameResult().getWinner()==null && state.getGameResult().getGameResultReason()==GameResultReason.STALEMATE) historyState+="$D2";
+      else if(state.getGameResult().getWinner()==null && state.getGameResult().getGameResultReason()==GameResultReason.THREEFOLD_REPETITION_RULE) historyState+="$D3";
+      else historyState+=state.getGameResult().getWinner()==Color.WHITE?"$W":"$B";
+    }
+    else{
+      historyState+="$N";
+    }
+    History.newItem(historyState);
+    historyState="";
+    
+  }
+  
+  /**
+   * Overloaded method. Helps to set the history of current state. Takes Piece as an argument.
+   * @param currentPiece Current piece being set in the history.
+   */
+  public void setHistory(Piece currentPiece){
+  if(currentPiece==null){
+	  historyState+="N$";
+	  return;
+	}
+	Color currentColor=currentPiece.getColor();
+	String color=(currentColor==Color.WHITE)?"W":"B";
+	switch(currentPiece.getKind()){
+	case PAWN:historyState+=color+"P$";
+	break;
+	case ROOK:historyState+=color+"R$";
+	break;
+	case KNIGHT:historyState+=color+"G$";
+	break;
+	case BISHOP:historyState+=color+"B$";
+	break;
+	case QUEEN:historyState+=color+"Q$";
+	break;
+	case KING:historyState+=color+"K$";
+	break;
+	}
+  }
+  
+  /**
+   * Used to set the state and display it in the grid.
+   */
+  public void setState(){
+    view.setWhoseTurn(state.getTurn());
+    view.setGameResult(state.getGameResult());
+    for (int r = 0; r < 8; r++) {
+      for (int c = 0; c < 8; c++) {
+        view.setPiece(7-r, c, state.getPiece(r, c));
+      }
+    }
+  }
+  
+  /**
+   * Handles whenever user clicks on a cell/block. It decides whether the click is to move a piece or just a selection.
+   * @param row Row clicked
+   * @param col Col cliked
+   * @param promoteToPieceKind Piece to be promoted to.
+   */
+  public void clickedOn(int row,int col,PieceKind promoteToPieceKind){
+	int rowForModel=7-row;
+	//Checks if a promotion is required but the user has not selected a piece from promotion grid.
+	if(toPromoteFlag==true && promoteToPieceKind==null){
+      return;
+	}
+	//Checks if the cell is clicked after selecting a piece.
+	if(possibleEndHighlightedPositions.contains(new Position(row,col))){
+	  //A white promotion move.
+	  if(promoteToPieceKind==null && turn==Color.WHITE && state.getPiece(selectedPos).getKind()==PieceKind.PAWN && row==0 ){
+		toPromoteFlag=true;
+		promotionPos=new Position(row,col);
+		view.setPromoteDisplay(turn,true);
+		return;
+	  }
+	  //A black promotion move.
+	  else if(promoteToPieceKind==null && turn==Color.BLACK && state.getPiece(selectedPos).getKind()==PieceKind.PAWN && row==7){
+		toPromoteFlag=true;
+		promotionPos=new Position(row,col);
+		view.setPromoteDisplay(turn,true);
+		return;
+	  }
+	  //A proper promotion move after promotion piece is selected.
+	  else if(promoteToPieceKind!=null){
+		toPromoteFlag=false;
+		view.setPromoteDisplay(turn,false);
+	  }
+	  sci.makeMove(state,new Move(selectedPos,new Position(rowForModel,col),promoteToPieceKind));
+	  setHistory(state);
+	}
+	//Checks if a piece is selected.
+	else if(possibleStartHighlightedPositions.contains(new Position(row,col))){
+	  clearHighlight(possibleStartHighlightedPositions);
+	  possibleStartHighlightedPositions=new HashSet<Position>();
+	  Set<Move> possibleMovesFromPos=sei.getPossibleMovesFromPosition(state, new Position(rowForModel,col));
+	  highlightPossibleMovePositions(possibleMovesFromPos);
+	  selectedPos=new Position(rowForModel,col);
+	  view.highlightSelectedPiece(row,col,true);
+	}
+	else{
+	  return;
+	}
+  }
+  
+  /**
+   * It highlights all the moves that are possible from a position.
+   */
+  public void highlightPossibleMovePositions(Set<Move> possibleMovesFromPos){
+	for(Move move:possibleMovesFromPos){
+      view.setHighlighted(7-move.getTo().getRow(),move.getTo().getCol(),true);
+      possibleEndHighlightedPositions.add(new Position(7-move.getTo().getRow(),move.getTo().getCol()));
+    }
+  }
+  
+  /**
+   * It highlights all the positions that can be moved.
+   */
+  public void highlightStartPosition(Set<Position> startPositions){
+    for(Position p:startPositions){
+      view.setHighlighted(7-p.getRow(), p.getCol(), true);
+      possibleStartHighlightedPositions.add(new Position(7-p.getRow(),p.getCol()));
+    }
+  }
+  
+  /**
+   * It clears all the highlighted cells/blocks.
+   */
+  public void clearHighlight(Set<Position> highlightedPositions){
+    for(Position p:highlightedPositions){
+      view.setHighlighted(p.getRow(),p.getCol(),false); 	
+    }
+  }
+  
+  /**
+   * Restore the state using string. Used to provide History support.
+   * @param historyToken The token returned from History which contains the state to be restored.
+   */
+  public void restoreState(String historyToken){
+    String[] stateSplit=historyToken.split("\\$");
+    int counter=0;
+    for(int i=0;i<8;i++){
+      for(int j=0;j<8;j++){
+        Color currentColor=(stateSplit[counter].charAt(0)=='W')?Color.WHITE:(stateSplit[counter].charAt(0)=='B')?Color.BLACK:null;
+        PieceKind currentPieceKind=null;
+        if(currentColor!=null){
+        switch(stateSplit[counter].charAt(1)){
+          case 'P':currentPieceKind=PieceKind.PAWN;
+                   break;
+          case 'R':currentPieceKind=PieceKind.ROOK;
+          		   break;
+          case 'G':currentPieceKind=PieceKind.KNIGHT;
+          		   break;
+          case 'B':currentPieceKind=PieceKind.BISHOP;
+          		   break;
+          case 'Q':currentPieceKind=PieceKind.QUEEN;
+         		   break;
+          case 'K':currentPieceKind=PieceKind.KING;
+         		   break;
+        }
+        state.setPiece(i,j,new Piece(currentColor,currentPieceKind));}
+        else{
+          state.setPiece(i,j,null);
+        }
+        ++counter;
+      }
+    }
+    state.setTurn(stateSplit[counter++].charAt(0)=='W'?Color.WHITE:Color.BLACK);
+    state.setCanCastleKingSide(Color.WHITE, stateSplit[counter++].charAt(0)=='T'?true:false);
+    state.setCanCastleKingSide(Color.BLACK, stateSplit[counter++].charAt(0)=='T'?true:false);
+    state.setCanCastleQueenSide(Color.WHITE, stateSplit[counter++].charAt(0)=='T'?true:false);
+    state.setCanCastleQueenSide(Color.BLACK, stateSplit[counter++].charAt(0)=='T'?true:false);
+    state.setNumberOfMovesWithoutCaptureNorPawnMoved(Integer.parseInt(stateSplit[counter++]));
+    if(Integer.parseInt(stateSplit[counter])!=88){
+      int enpassantPos=Integer.parseInt(stateSplit[counter]);
+      state.setEnpassantPosition(new Position(enpassantPos/10,enpassantPos%10));
+    }
+    if(stateSplit[++counter].charAt(0)!='N'){
+      if(stateSplit[counter].charAt(0)=='D'){
+        switch(stateSplit[counter].charAt(1)){
+          case '1':state.setGameResult(new GameResult(null, GameResultReason.FIFTY_MOVE_RULE));
+            	   break;
+          case '2':state.setGameResult(new GameResult(null, GameResultReason.STALEMATE));
+           		   break;
+          case '3':state.setGameResult(new GameResult(null, GameResultReason.THREEFOLD_REPETITION_RULE));
+         		   break;
+        }
+      }
+      else{
+        state.setGameResult(new GameResult(stateSplit[counter].charAt(0)=='W'?Color.WHITE: Color.BLACK,GameResultReason.CHECKMATE));
+      }
+    }
+    else{
+      state.setGameResult(null);
+    }
+    turn=state.getTurn();
+	if (selectedPos!=null) view.highlightSelectedPiece(7-selectedPos.getRow(),selectedPos.getCol(),false);
+    setState();
+    clearHighlight(possibleStartHighlightedPositions);
+    clearHighlight(possibleEndHighlightedPositions);
+	possibleEndHighlightedPositions=new HashSet<Position>();
+	selectedPos=null;
+	Set<Position> startPositions=sei.getPossibleStartPositions(state);
+	highlightStartPosition(startPositions);
+  }
+}
+
+	

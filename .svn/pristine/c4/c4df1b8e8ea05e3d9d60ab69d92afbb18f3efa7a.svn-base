@@ -1,0 +1,81 @@
+package org.shihweihuang.hw7;
+
+import java.io.Serializable;
+import java.util.Date;
+
+import com.googlecode.objectify.annotation.Entity;
+import com.googlecode.objectify.annotation.Id;
+import com.googlecode.objectify.annotation.Serialize;
+
+@Entity
+public class Match implements Serializable {
+
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+	
+	@Id String matchID;
+	String state;
+	String wPlayer;
+	String bPlayer;
+	@Serialize Date startDate;
+	
+	public Date getStartDate() {
+		return startDate;
+	}
+
+	public void setStartDate(Date startDate) {
+		this.startDate = startDate;
+	}
+
+	public Match(){
+		matchID = "";
+		state = "";
+		wPlayer = "";
+		bPlayer = "";
+		startDate = new Date();
+	}
+	
+	public String getwPlayer() {
+		return wPlayer;
+	}
+
+	public void setwPlayer(String wPlayer) {
+		this.wPlayer = wPlayer;
+	}
+
+	public String getbPlayer() {
+		return bPlayer;
+	}
+
+	public void setbPlayer(String bPlayer) {
+		this.bPlayer = bPlayer;
+	}
+
+	
+	
+//	public Match(String matchID, State state, String[] player, String turn){
+//		this.matchID = matchID;
+//		this.state = state;
+//		this.player = player;
+//		this.turn = turn;
+//	}
+
+	public String getMatchID() {
+		return matchID;
+	}
+
+	public void setMatchID(String matchID) {
+		this.matchID = matchID;
+	}
+
+	public String getState() {
+		return state;
+	}
+
+	public void setState(String state) {
+		this.state = state;
+	}
+
+}

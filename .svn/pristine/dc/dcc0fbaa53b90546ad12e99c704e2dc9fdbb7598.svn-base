@@ -1,0 +1,13 @@
+package org.harshmehta.hw2;
+
+import org.harshmehta.hw1.AbstractStateChangerCastlingForBlackTest;
+import org.shared.chess.StateChanger;
+
+public class StateChangerImplCastlingForBlackTest extends AbstractStateChangerCastlingForBlackTest {
+
+  @Override
+  public StateChanger getStateChanger() {
+    return new StateChangerImpl();
+  }
+
+}

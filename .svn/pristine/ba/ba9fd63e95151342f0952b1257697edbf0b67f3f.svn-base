@@ -1,0 +1,177 @@
+package org.alexanderoskotsky.hw3;
+
+import org.shared.chess.Color;
+import org.shared.chess.GameResult;
+import org.shared.chess.GameResultReason;
+import org.shared.chess.Piece;
+import org.shared.chess.PieceKind;
+import org.shared.chess.Position;
+import org.shared.chess.State;
+
+public class StateSerializer {
+
+	public static State deserialize(String str) {
+		Piece[][] board = null;
+		boolean whiteKingSide = false;
+		boolean whiteQueenSide = false;
+		boolean blackKingSide = false;
+		boolean blackQueenSide = false;
+		Position enpassant = null;
+		Color color = Color.WHITE;
+		int numberOfMovesWithoutCaptureNorPawnMoved = 0;
+		Color winner = null;
+		GameResultReason reason = null;
+		GameResult result = null;
+
+		for (String keyValue : str.split("&")) {
+			String[] keyValueArr = keyValue.split("=");
+			String key = keyValueArr[0];
+			String value = keyValueArr[1];
+
+			if (key.equals("board")) {
+				board = deserializeBoard(value);
+			} else if (key.equals("castling")) {
+				whiteKingSide = value.charAt(0) == 'Y';
+				whiteQueenSide = value.charAt(1) == 'Y';
+				blackKingSide = value.charAt(2) == 'Y';
+				blackQueenSide = value.charAt(3) == 'Y';
+			} else if (key.equals("enpassant")) {
+				int row = Integer.parseInt(String.valueOf(value.charAt(0)));
+				int col = Integer.parseInt(String.valueOf(value.charAt(1)));
+
+				enpassant = new Position(row, col);
+			} else if (key.equals("turn")) {
+				color = value.equals("W") ? Color.WHITE : Color.BLACK;
+			} else if (key.equals("numberOfMovesWithoutCaptureNorPawnMoved")) {
+				numberOfMovesWithoutCaptureNorPawnMoved = Integer.parseInt(value);
+			} else if (key.equals("winner")) {
+				winner = value.equals("W") ? Color.WHITE : Color.BLACK;
+			} else if (key.equals("reason")) {
+				if (value.equals("CHECKMATE")) {
+					reason = GameResultReason.CHECKMATE;
+				} else if (value.equals("FIFTY_MOVE_RULE")) {
+					reason = GameResultReason.FIFTY_MOVE_RULE;
+				} else if (value.equals("THREEFOLD_REPETITION_RULE")) {
+					reason = GameResultReason.THREEFOLD_REPETITION_RULE;
+				} else if (value.equals("STALEMATE")) {
+					reason = GameResultReason.STALEMATE;
+				}
+			}
+		}
+		
+		if(reason != null) {
+			result = new GameResult(winner, reason);
+		}
+
+		return new State(color, board, new boolean[] { whiteKingSide, blackKingSide },
+				new boolean[] { whiteQueenSide, blackQueenSide }, enpassant,
+				numberOfMovesWithoutCaptureNorPawnMoved, result);
+	}
+
+	private static Piece[][] deserializeBoard(String value) {
+		Piece[][] board = new Piece[8][8];
+
+		for (String piece : value.split(",")) {
+			String[] data = piece.split(":");
+
+			String posString = data[0];
+			String colorKind = data[1];
+
+			int row = Integer.parseInt(String.valueOf(posString.charAt(0)));
+			int col = Integer.parseInt(String.valueOf(posString.charAt(1)));
+
+			Color color = colorKind.charAt(0) == 'W' ? Color.WHITE : Color.BLACK;
+
+			char kindChar = colorKind.charAt(1);
+
+			PieceKind kind = getKindForChar(kindChar);
+
+			board[row][col] = new Piece(color, kind);
+		}
+
+		return board;
+	}
+
+	public static PieceKind getKindForChar(char kindChar) {
+		PieceKind kind = null;
+		if (kindChar == 'K') {
+			kind = PieceKind.KING;
+		} else if (kindChar == 'N') {
+			kind = PieceKind.KNIGHT;
+		} else if (kindChar == 'B') {
+			kind = PieceKind.BISHOP;
+		} else if (kindChar == 'R') {
+			kind = PieceKind.ROOK;
+		} else if (kindChar == 'Q') {
+			kind = PieceKind.QUEEN;
+		} else {
+			kind = PieceKind.PAWN;
+		}
+		return kind;
+	}
+
+	public static String serialize(State state) {
+		String str = "";
+
+		String castleState = "";
+
+		castleState += state.isCanCastleKingSide(Color.WHITE) ? "Y" : "N";
+		castleState += state.isCanCastleQueenSide(Color.WHITE) ? "Y" : "N";
+		castleState += state.isCanCastleKingSide(Color.BLACK) ? "Y" : "N";
+		castleState += state.isCanCastleQueenSide(Color.BLACK) ? "Y" : "N";
+
+		str += "castling=" + castleState;
+
+		if (state.getEnpassantPosition() != null) {
+			str += "&enpassant=" + state.getEnpassantPosition().getRow()
+					+ state.getEnpassantPosition().getCol();
+		}
+		str += "&turn=" + state.getTurn();
+
+		if (state.getGameResult() != null) {
+			str += "&winner=" + state.getGameResult().getWinner();
+			str += "&reason=" + state.getGameResult().getGameResultReason();
+		}
+
+		str += "&numberOfMovesWithoutCaptureNorPawnMoved="
+				+ state.getNumberOfMovesWithoutCaptureNorPawnMoved();
+
+		String boardState = "";
+		for (int i = 0; i < 8; i++) {
+			for (int j = 0; j < 8; j++) {
+				Piece piece = state.getPiece(i, j);
+
+				if (piece != null) {
+					boardState += i + "" + j + ":" + piece.getColor()
+							+ getCharForKind(piece.getKind()) + ",";
+				}
+			}
+		}
+
+		boardState = boardState.substring(0, boardState.length() - 1);
+
+		str += "&board=" + boardState;
+
+		return str;
+
+	}
+
+	private static String getCharForKind(PieceKind kind) {
+		switch (kind) {
+		case BISHOP:
+			return "B";
+		case KING:
+			return "K";
+		case KNIGHT:
+			return "N";
+		case PAWN:
+			return "P";
+		case QUEEN:
+			return "Q";
+		case ROOK:
+			return "R";
+		}
+
+		return "";
+	}
+}

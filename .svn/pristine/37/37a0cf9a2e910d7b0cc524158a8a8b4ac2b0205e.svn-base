@@ -1,0 +1,206 @@
+package org.longjuntan.hw3;
+
+import static org.junit.Assert.assertEquals;
+
+import org.junit.Before;
+import org.junit.Test;
+import org.longjuntan.hw2.StateChangerImpl;
+import org.mockito.Mockito;
+import org.shared.chess.Color;
+import org.shared.chess.GameResult;
+import org.shared.chess.GameResultReason;
+import org.shared.chess.Move;
+import org.shared.chess.Piece;
+import org.shared.chess.PieceKind;
+import org.shared.chess.Position;
+import org.shared.chess.State;
+
+/**
+ * Tests for the Presenter class.
+ */
+public class PresenterTest {
+	Presenter presenter;
+	Presenter.View view;
+
+	@Before
+	public void setup() {
+		presenter = new Presenter();
+		view = Mockito.mock(Presenter.View.class);
+		presenter.setView(view);
+	}
+
+	@Test
+	public void testSetState() {
+		State state = new State();
+		presenter.setState(state);
+//		Mockito.verify(view).setWhoseTurn(Color.WHITE);
+		Mockito.verify(view).setGameResult(null);
+		Mockito.verify(view).setPiece(0, 0,
+				new Piece(Color.WHITE, PieceKind.ROOK));
+		Mockito.verify(view).setPiece(4, 4, null);
+	}
+
+	private void init1forTLJ(State state) {
+		for (int i = 0; i < State.ROWS; i++) {
+			for (int j = 0; j < State.COLS; j++) {
+				state.setPiece(new Position(i, j), null);
+			}
+		}
+		state.setCanCastleKingSide(Color.WHITE, false);
+		state.setCanCastleKingSide(Color.BLACK, false);
+		state.setCanCastleQueenSide(Color.WHITE, false);
+		state.setCanCastleQueenSide(Color.BLACK, false);
+
+		state.setTurn(Color.BLACK);
+		state.setPiece(new Position(3, 0), new Piece(Color.WHITE,
+				PieceKind.PAWN));
+		state.setPiece(new Position(4, 0), new Piece(Color.BLACK,
+				PieceKind.PAWN));
+		state.setPiece(new Position(5, 2), new Piece(Color.BLACK,
+				PieceKind.KING));
+		state.setPiece(new Position(5, 3), new Piece(Color.BLACK,
+				PieceKind.QUEEN));
+		state.setPiece(new Position(7, 0), new Piece(Color.WHITE,
+				PieceKind.KING));
+	}
+
+	private void init2forTLJ(State state) {
+		state.setPiece(new Position(1, 2), null);
+		state.setPiece(new Position(6, 5), null);
+		state.setPiece(new Position(6, 1), new Piece(Color.WHITE,
+				PieceKind.PAWN));
+		state.setPiece(new Position(1, 6), new Piece(Color.BLACK,
+				PieceKind.PAWN));
+
+		presenter.setState(state);
+	}
+
+	private void init3forTLJ(State state) {
+		for (int i = 0; i < State.ROWS; i++) {
+			for (int j = 0; j < State.COLS; j++) {
+				state.setPiece(new Position(i, j), null);
+			}
+		}
+		state.setCanCastleKingSide(Color.WHITE, false);
+		state.setCanCastleKingSide(Color.BLACK, false);
+		state.setCanCastleQueenSide(Color.WHITE, false);
+		state.setCanCastleQueenSide(Color.BLACK, false);
+
+		state.setTurn(Color.BLACK);
+		state.setPiece(new Position(0, 2), new Piece(Color.WHITE,
+				PieceKind.KING));
+		state.setPiece(new Position(7, 3), new Piece(Color.BLACK,
+				PieceKind.KING));
+		state.setPiece(new Position(7, 5), new Piece(Color.BLACK,
+				PieceKind.ROOK));
+		state.setPiece(new Position(2, 2), new Piece(Color.BLACK,
+				PieceKind.BISHOP));
+		state.setPiece(new Position(2, 4), new Piece(Color.BLACK,
+				PieceKind.KNIGHT));
+	}
+
+	@Test
+	public void testInitl() {
+		presenter.init();
+
+//		Mockito.verify(view).setWhoseTurn(Color.WHITE);
+		Mockito.verify(view).setGameResult(null);
+		State other = new State();
+		for (int r = 0; r < 8; r++) {
+			for (int c = 0; c < 8; c++) {
+				Mockito.verify(view).setPiece(r, c, other.getPiece(r, c));
+			}
+		}
+	}
+
+	@Test
+	public void testSetGameStatus() {
+		presenter.init();
+		presenter.selectCell(1, 0);
+		
+//		Mockito.verify(view).setWhoseTurn(Color.WHITE);	
+	}
+
+	@Test
+	public void testSetGameResult_Stalemate() {
+		State state = new State();
+		init1forTLJ(state);
+		StateChangerImpl sc = new StateChangerImpl();
+		sc.makeMove(state, new Move(new Position(5, 2), new Position(5, 1),
+				null));
+
+		presenter.setState(state);
+		Mockito.verify(view).setGameResult(
+				new GameResult(null, GameResultReason.STALEMATE));
+	}
+
+	@Test
+	public void testSetGameResult_Checkmate() {
+		State state = new State();
+		init3forTLJ(state);
+		StateChangerImpl sc = new StateChangerImpl();
+		sc.makeMove(state, new Move(new Position(7, 5), new Position(0, 5),
+				null));
+
+		presenter.setState(state);
+		Mockito.verify(view).setGameResult(
+				new GameResult(Color.BLACK, GameResultReason.CHECKMATE));
+	}
+
+	@Test
+	public void testSetGameResult_FiftyMoveRule() {
+		State state = new State();
+		init1forTLJ(state);
+		state.setNumberOfMovesWithoutCaptureNorPawnMoved(99);
+		StateChangerImpl sc = new StateChangerImpl();
+		sc.makeMove(state, new Move(new Position(5, 2), new Position(6, 3),
+				null));
+
+		presenter.setState(state);
+		Mockito.verify(view).setGameResult(
+				new GameResult(null, GameResultReason.FIFTY_MOVE_RULE));
+	}
+
+	@Test
+	public void testSelectPiece() {
+		presenter.init();
+		presenter.selectCell(1, 0);
+
+		Mockito.verify(view).setHighlighted(1, 0, true);
+		Mockito.verify(view).setPossibleMoves(new Position(2, 0), true);
+	}
+
+	@Test
+	public void testRefresh() {
+		presenter.init();
+		presenter.selectCell(1, 0);
+		presenter.selectCell(1, 1);
+
+		Mockito.verify(view).setHighlighted(1, 0, false);
+		Mockito.verify(view).setPossibleMoves(new Position(2, 0), false);
+	}
+
+	@Test
+	public void testSetPromotionKind() {
+		State state = new State();
+		init2forTLJ(state);
+
+		presenter.selectCell(6, 1);
+		presenter.selectCell(7, 0);
+
+		Mockito.verify(view).setPromotion(Color.WHITE);
+	}
+	
+	@Test 
+	public void testGetHistory(){
+		State state = new State();
+		init2forTLJ(state);
+		
+		String history = presenter.getHistory();
+		State other = Utils.setStateByHistory(history);
+		
+		assertEquals(state,other);	
+		assertEquals(Utils.getHistory(state),Utils.getHistory(other));
+	}
+		
+}

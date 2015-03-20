@@ -1,0 +1,298 @@
+package org.sanjana.hw3;
+
+import java.util.HashMap;
+import java.util.Set;
+
+import org.sanjana.hw2.StateChangerImpl;
+import org.sanjana.hw2_5.StateExplorerImpl;
+
+import org.shared.chess.Color;
+import org.shared.chess.GameResult;
+import org.shared.chess.Move;
+import org.shared.chess.Piece;
+import org.shared.chess.PieceKind;
+import org.shared.chess.Position;
+import org.shared.chess.State;
+
+import static org.shared.chess.PieceKind.BISHOP;
+import static org.shared.chess.PieceKind.KNIGHT;
+import static org.shared.chess.PieceKind.QUEEN;
+import static org.shared.chess.PieceKind.PAWN;
+import static org.shared.chess.PieceKind.ROOK;
+import static org.shared.chess.Color.WHITE;
+import com.google.gwt.event.dom.client.HasAllDragAndDropHandlers;
+import com.google.gwt.event.dom.client.HasClickHandlers;
+import com.google.gwt.storage.client.Storage;
+import com.google.gwt.user.client.History;
+import com.google.gwt.user.client.ui.Grid;
+
+public class Presenter{
+	public interface View {
+		/**
+		 * Renders the piece at this position. If piece is null then the
+		 * position is empty.
+		 */
+		void setPiece(int row, int col, Piece piece);
+		/**
+		 * Turns the highlighting on or off at this cell. Cells that can be
+		 * clicked should be highlighted.
+		 */
+		void setHighlighted(int row, int col, boolean highlighted);
+		/**
+		 * Indicate whose turn it is.
+		 */
+		void setWhoseTurn(Color color);
+		/**
+		 * Indicate whether the game is in progress or over.
+		 */
+		void setGameResult(GameResult gameResult);
+
+		HasClickHandlers getImage(int row, int col);
+		HasAllDragAndDropHandlers getImageDrag(int row, int col);
+		/**
+		 * gets the piece to be promoted to
+		 */
+		HasClickHandlers getPromotionImage(Color c,int i);
+		/**
+		 * Responsible for visibility of promotion grid
+		 */
+		void setPromotionGridVisible(Color c,boolean vis);
+		/**
+		 * sets the promotion grids for black and white
+		 */
+		public void setwhitePromotionGrid();
+		public void setblackPromotionGrid();
+		Grid getGrid();
+		void setDisableStorageButtons();
+		void initBoardHandlers();
+		void initPromotionHandlers();
+		void initStorageHandlers();
+		void initAnimationHandler();
+		void initControlHandler();
+	}
+
+	private View view;
+	private State state;
+	StateChangerImpl statechanger;
+	StateExplorerImpl stateexplorer;
+	PieceKind promotionTo;
+	Position selected;
+	Position promotionPos;
+	private Set<Position> moveStartPositions;
+	private Set<Move> possibleMoves;
+
+	private Storage stockStore = null;
+	//History
+	private int HistoryCount=0;
+	private HashMap<String,State> stateRecord = new HashMap<String,State>();
+
+	public Presenter() 
+	{
+		this.statechanger = new StateChangerImpl();
+		this.stateexplorer = new StateExplorerImpl();
+		this.state = new State();
+		this.promotionTo=null;
+		this.selected = null;
+		this.promotionPos = null;
+	}
+
+	public void setView(View view) 
+	{
+		this.view = view;
+		setState(state);
+	}
+
+	//	public void init()
+	//	{
+	//		stateRecord.clear();
+	//		this.HistoryCount=0;
+	//		History.newItem("state0");
+	//		setState(state);
+	//	}
+
+	public void setState(State state)
+	{
+		this.state=state;
+		view.setWhoseTurn(state.getTurn());
+		view.setGameResult(state.getGameResult());
+
+		for (int row = 0; row < 8; row++) {
+			for (int col = 0; col < 8; col++) {
+				view.setPiece(7-row, col, state.getPiece(row, col));
+			}
+		}		
+		showStartingPositions(state);
+	}
+
+	/**
+	 * Performing promotion
+	 */
+	public void setPromotion(int index) 
+	{
+		switch (index) 
+		{
+		case 0:
+			promotionTo = KNIGHT;
+			break;
+		case 1:
+			promotionTo = BISHOP;
+			break;
+		case 2:
+			promotionTo = ROOK;
+			break;
+		case 3:
+			promotionTo = QUEEN;
+			break;
+		default:
+			break;
+		}
+
+		Move move = new Move(selected, promotionPos, promotionTo);
+		view.setPromotionGridVisible(state.getTurn(),false);
+		statechanger.makeMove(state, move);
+		setState(state);
+		promotionPos=null;
+		clearHighlights();
+		addHistory();
+		view.setHighlighted(selected.getRow(),selected.getCol(), false);
+		view.initBoardHandlers();
+	}
+
+	/**
+	 * What to do when cell is clicked
+	 */
+	public void onClicked(int row, int col) 
+	{
+		Position pos = new Position(row, col);
+		Piece piece = state.getPiece(pos);
+		if(selected == null) 
+		{
+			if(piece == null || piece.getColor() != state.getTurn())
+				return;
+			highlightMoves(pos);
+		} 
+
+		else
+		{
+			if (piece != null && piece.getColor() == state.getTurn()) 
+			{
+				highlightMoves(pos);
+				clearHighlights();
+			}
+
+			else 
+			{
+				PieceKind kind = state.getPiece(selected).getKind();
+				possibleMoves = stateexplorer.getPossibleMovesFromPosition(state, selected);
+				int r = state.getTurn().equals(WHITE) ? 7 : 0;
+
+				if(kind==PAWN && row==r)
+				{
+					Move move = new Move(selected, pos, PieceKind.QUEEN);
+					if (possibleMoves.contains(move))
+					{
+						view.setPromotionGridVisible(state.getTurn(),true);
+						promotionPos = pos;
+					}
+				}
+
+				else 
+				{
+					Move move = new Move(selected, pos, null);
+					if (possibleMoves.contains(move)) 
+					{
+						statechanger.makeMove(state, move);
+						setState(state);
+						clearHighlights();
+						addHistory();
+					}
+					clearHighlights();
+				}
+			}
+		}
+	}
+
+	/**
+	 * shows the starting positions of board
+	 */
+	private void showStartingPositions(State state)
+	{
+		moveStartPositions=stateexplorer.getPossibleStartPositions(state);
+		for(Position pos: moveStartPositions)
+			view.setHighlighted(7-pos.getRow(), pos.getCol(), true);
+	}
+
+	/**
+	 * Highlighting the moves from a position
+	 */
+	private void highlightMoves(Position pos)
+	{
+		if (state.getGameResult() != null) {
+			view.setGameResult(state.getGameResult());
+		}
+
+		selected = pos;
+		possibleMoves = stateexplorer.getPossibleMovesFromPosition(state, selected);
+		for(Move move : possibleMoves)
+			view.setHighlighted(7 - move.getTo().getRow(), move.getTo().getCol(), true);
+	}
+
+	/**
+	 *Clearing the highlights on the board
+	 */
+	public void clearHighlights() 
+	{
+		selected = null;
+		for (int row = 0; row < 8; row++) 
+			for(int col = 0; col < 8; col++) 
+				view.setHighlighted(row, col, false);
+	}
+
+	/**
+	 * Restart
+	 */
+	public void restartClicked()
+	{
+		stateRecord.clear();
+		this.HistoryCount=0;
+		setState(new State());
+	}
+
+	public void setHistory(String token) 
+	{
+		state = stateRecord.get(token);
+		clearHighlights();
+		setState(state);	
+	}
+
+	public void setState(String historyToken) 
+	{	
+		State s= new State();
+		s=stateRecord.get(historyToken);
+		clearHighlights();
+		setState(s);
+	}
+
+	public void addHistory()
+	{
+		HistoryCount++;
+		History.newItem("state" + HistoryCount, false);
+		stateRecord.put(("state" + HistoryCount), state.copy());
+	}	
+
+	public void addStorage(String key)
+	{
+		stockStore=Storage.getLocalStorageIfSupported();
+		if(stockStore!=null)
+			stockStore.setItem(key,("state" + HistoryCount));
+	}
+
+	public void loadStorage(String key)
+	{
+		String s=stockStore.getItem(key);
+		State state=stateRecord.get(s);
+		clearHighlights();
+		setState(state);	
+		History.newItem("state" + HistoryCount, false);
+	}
+}

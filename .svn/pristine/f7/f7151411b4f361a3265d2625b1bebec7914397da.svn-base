@@ -1,0 +1,14 @@
+package org.vorasahil.hw2;
+
+import org.shared.chess.*;
+import org.vorasahil.hw2.StateChangerImpl;
+
+public class StateChangerImplAllTest extends AbstractStateChangerAllTest {
+
+
+	@Override
+	public StateChanger getStateChanger() {
+		  return new StateChangerImpl();
+	}
+
+}

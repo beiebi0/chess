@@ -1,0 +1,287 @@
+package org.vorasahil.hw1;
+
+import static org.junit.Assert.assertFalse;
+import static org.shared.chess.Color.BLACK;
+import static org.shared.chess.Color.WHITE;
+import static org.junit.Assert.assertTrue;
+import org.junit.Test;
+
+import org.shared.chess.*;
+public abstract class AbstractStateChnagerCastlingWhiteTest extends	AbstractStateChangerTest {
+
+	
+	/**
+	 * Testing if initially boolean variables are set true.
+	 */
+	@Test
+	public void testKingSideCastlingEnabledAtStart() {
+		assertTrue(start.isCanCastleKingSide(WHITE));
+	}
+	
+	@Test
+	public void testQueenSideCastlingEnabledAtStart() {
+		assertTrue(start.isCanCastleQueenSide(WHITE));
+	}
+	
+	@Test
+	public void testKingSideCastlingEnabledAfterKRookMoved() {
+		State expected=start.copy();
+		expected.setPiece(new Position(1,7), null);
+		Move move = new Move(new Position(0,7),new Position(1,7),null);
+		stateChanger.makeMove(expected, move);
+		assertFalse(expected.isCanCastleKingSide(WHITE));
+	}
+	
+	@Test
+	public void testQueenSideCastlingEnabledAfterKRookMoved() {
+		State expected=start.copy();
+		expected.setPiece(new Position(1,7), null);
+		Move move = new Move(new Position(0,7),new Position(1,7),null);
+		stateChanger.makeMove(expected, move);
+		assertTrue(expected.isCanCastleQueenSide(WHITE));
+	}
+	
+	@Test
+	public void testKingSideCastlingEnabledAfterQRookMoved() {
+		State expected=start.copy();
+		expected.setPiece(new Position(1,0), null);
+		Move move = new Move(new Position(0,0),new Position(1,0),null);
+		stateChanger.makeMove(expected, move);
+		assertTrue(expected.isCanCastleKingSide(WHITE));
+	}
+	
+	@Test
+	public void testQueenSideCastlingEnabledAfterQRookMoved() {
+		State expected=start.copy();
+		expected.setPiece(new Position(1,0), null);
+		Move move = new Move(new Position(0,0),new Position(1,0),null);
+		stateChanger.makeMove(expected, move);
+		assertFalse(expected.isCanCastleQueenSide(WHITE));
+	}
+	
+	@Test
+	public void testKingSideCastlingEnabledAfterKingMoved() {
+		State expected=start.copy();
+		expected.setPiece(new Position(1,4), null);
+		Move move = new Move(new Position(0,4),new Position(1,4),null);
+		stateChanger.makeMove(expected, move);
+		assertFalse(expected.isCanCastleKingSide(WHITE));
+	}
+	
+	@Test
+	public void testQueenSideCastlingEnabledAfterKingMoved() {
+		State expected=start.copy();
+		expected.setPiece(new Position(1,4), null);
+		Move move = new Move(new Position(0,4),new Position(1,4),null);
+		stateChanger.makeMove(expected, move);
+		assertFalse(expected.isCanCastleQueenSide(WHITE));
+	}
+	
+	@Test(expected=IllegalMove.class)
+	public void testKingSideCastlingWithBlockingBishop(){
+		State expected=start.copy();
+		expected.setPiece(new Position(0,6), null);
+		Move move = new Move(new Position(0,4),new Position(0,6),null);
+		stateChanger.makeMove(expected, move);
+	}
+	
+	@Test(expected=IllegalMove.class)
+	public void testQueenSideCastlingWithBlockingBishop(){
+		State expected=start.copy();
+		expected.setPiece(new Position(0,1), null);
+		expected.setPiece(new Position(0,3), null);
+		Move move = new Move(new Position(0,4),new Position(0,2),null);
+		stateChanger.makeMove(expected, move);
+		assertTrue(expected.isCanCastleQueenSide(WHITE));
+	}
+	
+	@Test(expected=IllegalMove.class)
+	public void testCastlingKingSideWithBlockingKnight(){
+		State expected=start.copy();
+		expected.setPiece(new Position(0,5), null);
+		Move move = new Move(new Position(0,4),new Position(0,6),null);
+		stateChanger.makeMove(expected, move);
+	}
+	
+	@Test(expected=IllegalMove.class)
+	public void testCastlingQueenSideWithBlockingKnight(){
+		State expected=start.copy();
+		expected.setPiece(new Position(0,2), null);
+		expected.setPiece(new Position(0,3), null);
+		Move move = new Move(new Position(0,4),new Position(0,2),null);
+		stateChanger.makeMove(expected, move);
+	}
+	
+	@Test(expected=IllegalMove.class)
+	public void testCastlingQueenSideWithBlockingQueen(){
+		State expected=start.copy();
+		expected.setPiece(new Position(0,2), null);
+		expected.setPiece(new Position(0,1), null);
+		Move move = new Move(new Position(0,4),new Position(0,2),null);
+		stateChanger.makeMove(expected, move);
+	}
+	
+	@Test(expected = IllegalMove.class)
+	public void testIllegalKingSideCastling() {
+	    Move move = new Move(new Position(0, 4), new Position(0, 6), null);
+	    stateChanger.makeMove(start, move);
+	}
+
+
+	@Test(expected = IllegalMove.class)
+	public void testIllegalQueenSideCastling() {
+	    Move move = new Move(new Position(0, 4), new Position(0, 2), null);
+	    stateChanger.makeMove(start, move);
+	}
+	
+	/**
+	 * Helper method that sets all the other pieces on the rank to be null.
+	 * @param expected
+	 */
+	private void clearOtherPieces(State expected){
+		expected.setPiece(new Position(0,5), null);
+		expected.setPiece(new Position(0,6), null);
+		expected.setPiece(new Position(0,1), null);
+		expected.setPiece(new Position(0,2), null);
+		expected.setPiece(new Position(0,3), null);
+	}
+	
+	@Test(expected = IllegalMove.class)
+	public void testKCastlingWithCanCastleKingSideSetToFalse() {
+		State expected=start.copy();
+		clearOtherPieces(expected);
+		expected.setCanCastleKingSide(WHITE, false);
+	    Move move = new Move(new Position(0, 4), new Position(0, 6), null);
+	    stateChanger.makeMove(expected, move);
+	}
+
+
+	@Test
+	public void testQCastlingWithCanCastleKingSideSetToFalse() {
+		State expected=start.copy();
+		clearOtherPieces(expected);
+		expected.setCanCastleKingSide(WHITE, false);
+	    Move move = new Move(new Position(0, 4), new Position(0, 2), null);
+	    stateChanger.makeMove(expected, move);
+	}
+		
+	@Test
+	public void testKCastlingWithCanCastleQueenSideSetToFalse() {
+		State expected=start.copy();
+		clearOtherPieces(expected);
+		expected.setCanCastleQueenSide(WHITE, false);
+	    Move move = new Move(new Position(0, 4), new Position(0, 6), null);
+	    stateChanger.makeMove(expected, move);
+	}
+
+
+	@Test(expected = IllegalMove.class)
+	public void testQCastlingWithCanCastleQueenSideSetToFalse() {
+		State expected=start.copy();
+		clearOtherPieces(expected);
+		expected.setCanCastleQueenSide(WHITE, false);
+	    Move move = new Move(new Position(0, 4), new Position(0, 2), null);
+	    stateChanger.makeMove(expected, move);
+	}
+	
+	
+	@Test
+	public void testCastleKingSide(){
+		State expected=start.copy();
+		expected.setPiece(new Position(0,5), null);
+		expected.setPiece(new Position(0,6), null);
+		Move move = new Move(new Position(0,4),new Position(0,6),null);
+		stateChanger.makeMove(expected, move);
+	}
+	
+	@Test
+	public void testCastleQueenSide(){
+		State expected=start.copy();
+		expected.setPiece(new Position(0,1), null);
+		expected.setPiece(new Position(0,2), null);
+		expected.setPiece(new Position(0,3), null);
+		Move move = new Move(new Position(0,4),new Position(0,2),null);
+		stateChanger.makeMove(expected, move);
+	}
+
+	
+	@Test(expected=IllegalMove.class)
+	public void testCanCastleKingSideWhenInCheck(){
+		State expected=start.copy();
+		expected.setPiece(new Position(0,5), null);
+		expected.setPiece(new Position(0,6), null);
+		expected.setPiece(new Position(1,4), null);
+		expected.setPiece(new Position(5,4), new Piece(BLACK,PieceKind.QUEEN));
+		Move move = new Move(new Position(0,4),new Position(0,6),null);
+		stateChanger.makeMove(expected, move);
+	}
+	
+	@Test(expected=IllegalMove.class)
+	public void testCanCastleQueenSideWhenInCheck(){
+		State expected=start.copy();
+		expected.setPiece(new Position(0,1), null);
+		expected.setPiece(new Position(0,2), null);
+		expected.setPiece(new Position(0,3), null);
+		expected.setPiece(new Position(1,4), null);
+		expected.setPiece(new Position(5,4), new Piece(BLACK,PieceKind.QUEEN));
+		Move move = new Move(new Position(0,4),new Position(0,2),null);
+		stateChanger.makeMove(expected, move);
+	}
+	
+	@Test(expected = IllegalMove.class)
+	public void testCanCastleKingSideWhenThroughCheck(){
+		State expected=start.copy();
+		expected.setPiece(new Position(0,5), null);
+		expected.setPiece(new Position(0,6), null);
+		expected.setPiece(new Position(1,5), null);
+		expected.setPiece(new Position(5,5), new Piece(BLACK,PieceKind.QUEEN));
+		Move move = new Move(new Position(0,4),new Position(0,6),null);
+		stateChanger.makeMove(expected, move);
+	}
+	
+	@Test(expected=IllegalMove.class)
+	public void testCanCastleQueenSideWhenThroughCheck(){
+		State expected=start.copy();
+		expected.setPiece(new Position(0,1), null);
+		expected.setPiece(new Position(0,2), null);
+		expected.setPiece(new Position(0,3), null);
+		expected.setPiece(new Position(1,3), null);
+		expected.setPiece(new Position(5,3), new Piece(BLACK,PieceKind.QUEEN));
+		Move move = new Move(new Position(0,4),new Position(0,2),null);
+		stateChanger.makeMove(expected, move);
+	}
+	
+	@Test(expected=IllegalMove.class)
+	public void testCanCastleKingSideWhenToCheck(){
+		State expected=start.copy();
+		expected.setPiece(new Position(0,5), null);
+		expected.setPiece(new Position(0,6), null);
+		expected.setPiece(new Position(1,6), null);
+		expected.setPiece(new Position(5,6), new Piece(BLACK,PieceKind.QUEEN));
+		Move move = new Move(new Position(0,4),new Position(0,6),null);
+		stateChanger.makeMove(expected, move);
+	}
+	
+	@Test (expected=IllegalMove.class)
+	public void testCanCastleQueenSideWhenToCheck(){
+		State expected=start.copy();
+		expected.setPiece(new Position(0,1), null);
+		expected.setPiece(new Position(0,2), null);
+		expected.setPiece(new Position(0,3), null);
+		expected.setPiece(new Position(1,2), null);
+		expected.setPiece(new Position(5,2), new Piece(BLACK,PieceKind.QUEEN));
+		Move move = new Move(new Position(0,4),new Position(0,2),null);
+		stateChanger.makeMove(expected, move);
+	}
+	
+	@Test
+	public void testCanCastleKingSideAfterCheckBlocked(){
+		
+	}
+
+	@Test
+	public void testCanCastleQueenSideAfterCheckBlocked(){
+		
+	}
+
+}

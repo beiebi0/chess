@@ -1,0 +1,142 @@
+package org.yuanjia.hw3;
+
+import org.junit.Before;
+import org.junit.Test;
+import org.mockito.Mockito;
+import org.shared.chess.Color;
+import org.shared.chess.Move;
+import org.shared.chess.Piece;
+import org.shared.chess.PieceKind;
+import org.shared.chess.Position;
+import org.shared.chess.State;
+import org.yuanjia.hw2.StateChangerImpl;
+
+/**
+ * Tests for the Presenter class.
+ */
+public class PresenterTest {
+  Presenter presenter;
+  Presenter.View view;
+  StateChangerImpl statechanger = new StateChangerImpl();
+  
+  @Before
+  public void setup() {
+    presenter = new Presenter();
+    view = Mockito.mock(Presenter.View.class); 
+    presenter.setView(view);
+  }
+  
+  @Test
+  public void testSetState() {
+    State state = new State();
+    presenter.setState(state);
+    Mockito.verify(view).setWhoseTurn(Color.WHITE);
+    Mockito.verify(view).setGameResult(null);
+    Mockito.verify(view).setPiece(0, 0, 
+        new Piece(Color.WHITE, PieceKind.ROOK));
+    Mockito.verify(view).setPiece(4, 4, null);
+  }
+  
+  @Test
+  public void testSetState1() {
+    State state = new State();
+    state.setPiece(1, 1, null);
+    state.setPiece(2, 1, new Piece(Color.WHITE,PieceKind.PAWN));
+    presenter.setState(state);
+    Mockito.verify(view).setWhoseTurn(Color.WHITE);
+    Mockito.verify(view).setGameResult(null);
+    Mockito.verify(view).setPiece(1,1, null);
+    Mockito.verify(view).setPiece(2, 1, new Piece(Color.WHITE,PieceKind.PAWN));
+  }
+  
+  @Test
+  public void testSetState2() {
+    State state = new State();
+    state.setPiece(1, 1, null);
+    state.setPiece(3, 1, new Piece(Color.WHITE,PieceKind.PAWN));
+    state.setEnpassantPosition(new Position(3,1));
+    presenter.setState(state);
+    Mockito.verify(view).setWhoseTurn(Color.WHITE);
+    Mockito.verify(view).setGameResult(null);
+    Mockito.verify(view).setPiece(3, 1, 
+        new Piece(Color.WHITE, PieceKind.PAWN));
+    Mockito.verify(view).setPiece(1, 1, null);
+  }
+  
+  @Test
+  public void testSetState3() {
+    State state = new State();
+    presenter.setState(state);
+    Mockito.verify(view).setWhoseTurn(Color.WHITE);
+    Mockito.verify(view).setGameResult(null);
+    Mockito.verify(view).setPiece(0, 3, 
+        new Piece(Color.WHITE, PieceKind.QUEEN));
+    Mockito.verify(view).setPiece(5, 5, null);
+  }
+  
+  @Test
+  public void testSetState4() {
+    State state = new State();
+    state.setTurn(Color.BLACK);
+    presenter.setState(state);
+     
+    Mockito.verify(view).setWhoseTurn(Color.BLACK);
+    Mockito.verify(view).setGameResult(null);
+    Mockito.verify(view).setPiece(0, 1, 
+        new Piece(Color.WHITE, PieceKind.KNIGHT));
+    Mockito.verify(view).setPiece(4, 4, null);
+  }
+  
+  @Test
+  public void testSetState5() {
+    State state = new State();
+    state.setPiece(0, 1, null);
+    state.setPiece(2, 0, new Piece(Color.WHITE, PieceKind.KNIGHT));
+    presenter.setState(state);
+    Mockito.verify(view).setWhoseTurn(Color.WHITE);
+    Mockito.verify(view).setGameResult(null);
+    Mockito.verify(view).setPiece(2, 0, 
+        new Piece(Color.WHITE, PieceKind.KNIGHT));
+    Mockito.verify(view).setPiece(0, 1, null);
+  }
+  
+  @Test
+  public void testSelectCell(){
+	  State state = new State();
+	  presenter.setState(state);
+	  presenter.selectCell(1, 2, "Click");
+	  Mockito.verify(view).setDotHighlighted(2, 2, true);
+	  Mockito.verify(view).setDotHighlighted(3, 2, true);
+  }
+  
+  @Test
+  public void testSelectCell2(){
+	  State state = new State();
+	  presenter.setState(state);
+	  presenter.selectCell(1, 2, "DnD");
+	  Mockito.verify(view).setDotHighlighted(2, 2, true);
+	  Mockito.verify(view).setDotHighlighted(3, 2, true);
+  }
+  
+  @Test
+  public void testSelectCell3(){
+	  State state = new State();
+	  presenter.setState(state);
+	  presenter.selectCell(1, 2, "Click");
+	  presenter.selectCell(2, 2, "Click");
+	 
+	  Mockito.verify(view).setGameResult(null);
+	  Mockito.verify(view).setWhoseTurn(Color.WHITE);
+  }
+  
+  @Test
+  public void testSelectCell4(){
+	  State state = new State();
+	  presenter.setState(state);
+	  presenter.selectCell(1, 2, "DnD");
+	  presenter.selectCell(3, 2, "DnD");
+	  Mockito.verify(view).setWhoseTurn(Color.WHITE);
+	  Mockito.verify(view).setGameResult(null);
+  }
+  
+}

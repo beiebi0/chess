@@ -1,0 +1,11 @@
+package org.mengyanhuang.hw6.client;
+
+import com.google.gwt.user.client.rpc.RemoteService;
+import com.google.gwt.user.client.rpc.RemoteServiceRelativePath;
+
+
+@RemoteServiceRelativePath("ChessMoveService")
+public interface ChessMoveService extends RemoteService{
+	
+	public String getCurrentState(String state, String Uid);
+}

@@ -1,0 +1,137 @@
+package org.shitianren.hw6.server;
+
+import java.util.HashMap;
+
+import org.shitianren.hw6.client.ChessGameService;
+
+import com.google.appengine.api.channel.ChannelMessage;
+import com.google.appengine.api.channel.ChannelService;
+import com.google.appengine.api.channel.ChannelServiceFactory;
+import com.google.appengine.api.users.User;
+import com.google.appengine.api.users.UserService;
+import com.google.appengine.api.users.UserServiceFactory;
+import com.google.gwt.user.server.rpc.RemoteServiceServlet;
+
+public class ChessGameServiceImpl extends RemoteServiceServlet implements
+		ChessGameService {
+
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+	ChannelService channelService = ChannelServiceFactory.getChannelService();
+	private User user1 = null;
+	private User user2 = null;
+	HashMap<String, String> playerMatchList = new HashMap<String, String>();
+
+	// LoginInfo user1 = new LoginInfo();
+	// LoginInfo user2 = new LoginInfo();
+	@Override
+	public String createChannel() {
+		UserService userService = UserServiceFactory.getUserService();
+		User user = userService.getCurrentUser();
+		if (user != null) {
+			ChannelService channelService = ChannelServiceFactory
+					.getChannelService();
+
+			String token = channelService.createChannel(user.getUserId());
+			System.out.println("server side token" + token);
+			/*
+			 * set user1, if user1 exists, set user2 and put this pair into
+			 * gameMatch map
+			 */
+			if (user1 == null) {
+				user1 = user;
+				return token + "&W";
+			} else {
+
+				user2 = user;
+				playerMatchList.put(user1.getUserId(), user2.getUserId());
+				playerMatchList.put(user2.getUserId(), user1.getUserId());
+				
+				user1 = null;
+				user2 = null;
+				
+				return token + "&B";
+			}
+		} else
+			return null;
+	}
+
+	@Override
+	public String sendState(String state) {
+		UserService userService = UserServiceFactory.getUserService();
+		User user = userService.getCurrentUser();
+		System.out.println("on server sendState ");
+
+		/*
+		 * send state back to current user and opponent user
+		 */
+		String opuser = playerMatchList.get(user.getUserId());
+		if (opuser == null) {
+			return null;
+		}
+		/*
+		System.out.println("send state to user:" + user1.getNickname());
+
+		channelService.sendMessage(new ChannelMessage(user1.getUserId(),state));
+		
+		System.out.println("send state to opuser:" + user2.getNickname());
+
+		channelService.sendMessage(new ChannelMessage(user2.getUserId(),state));
+		return state;
+		*/
+		System.out.println("send state to user:" + user.getNickname());
+
+		channelService.sendMessage(new ChannelMessage(user.getUserId(),state));
+		
+		System.out.println("send state to opuser:" + opuser);
+
+		channelService.sendMessage(new ChannelMessage(opuser,state));
+		return state;
+	}
+
+	public String getReady() {
+		UserService userService = UserServiceFactory.getUserService();
+		User user = userService.getCurrentUser();
+		/*
+		 * if the gameMatch contains the current user, it means it contains both
+		 * user1 and user2, then the game is ready and send this ready statement
+		 * back
+		 */
+		
+		
+		if (playerMatchList.containsKey(user)) {
+			String opuser = playerMatchList.get(user.getUserId());
+			System.out.println("send ready to user:" + user.getNickname());
+			channelService.sendMessage(new ChannelMessage(user.getUserId(),
+					"gameReady"));
+			System.out.println("send ready to opuser:" + opuser);
+			channelService.sendMessage(new ChannelMessage(opuser,
+					"gameReady"));
+
+			return "gameReady";
+		} else
+			return "";
+
+		/*
+		if(user2!=null){
+			System.out.println("send ready to user:" + user1.getNickname());
+			channelService.sendMessage(new ChannelMessage(user1.getUserId(),
+					"gameReady"));
+			System.out.println("send ready to opuser:" + user2.getNickname());
+			channelService.sendMessage(new ChannelMessage(user2.getUserId(),
+					"gameReady"));
+
+			return "gameReady";
+		}
+		else
+			return null;
+		*/
+	}
+	/*
+	public void disconnect(){
+		
+	}
+	*/
+}

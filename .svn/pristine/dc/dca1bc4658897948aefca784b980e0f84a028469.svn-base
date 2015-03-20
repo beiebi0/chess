@@ -1,0 +1,41 @@
+package org.kanwang.hw10;
+
+import org.kanwang.hw3.Presenter;
+
+import com.allen_sauer.gwt.dnd.client.PickupDragController;
+import com.google.gwt.user.client.ui.AbsolutePanel;
+import com.google.gwt.user.client.ui.Image;
+import com.google.gwt.user.client.ui.Widget;
+
+public class MyDragController extends PickupDragController {
+
+	Image piece[][];
+	Presenter presenter;
+	public MyDragController(AbsolutePanel boundaryPanel,
+			boolean allowDroppingOnBoundaryPanel) {
+		super(boundaryPanel, allowDroppingOnBoundaryPanel);
+	}
+
+	public void setImage(Image pieceBoard[][]){
+		piece = pieceBoard;
+	}
+	
+	public void setPresenter(Presenter p){
+		this.presenter = p;
+	}
+	
+	@Override
+	public void dragStart() {
+		super.dragStart();
+		int col = 0, row = 0;
+		for(col = 0 ; col < 8 ; col++){
+			for(row = 0 ; row < 8 ; row++){
+				if(context.draggable == piece[row][col])
+					break;
+			}
+			if(row < 8) break;
+		}
+		presenter.selectPiece(row, col);
+	}
+
+}

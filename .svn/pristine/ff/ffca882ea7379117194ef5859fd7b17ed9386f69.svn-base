@@ -1,0 +1,284 @@
+package org.peigenyou.server;
+
+
+
+
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.Date;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import org.peigenyou.hw3.GreetingService;
+import org.peigenyou.hw3.Match;
+import org.peigenyou.hw3.Player;
+
+import org.shared.chess.*;
+
+
+import com.google.appengine.api.channel.ChannelMessage;
+import com.google.appengine.api.channel.ChannelService;
+import com.google.appengine.api.channel.ChannelServiceFactory;
+
+import com.google.appengine.api.users.UserService;
+import com.google.appengine.api.users.UserServiceFactory;
+
+import com.google.gwt.user.client.Window;
+import com.google.gwt.user.server.rpc.RemoteServiceServlet;
+import com.googlecode.objectify.Objectify;
+import com.googlecode.objectify.ObjectifyService;
+import com.googlecode.objectify.annotation.Id;
+public class GreetingServiceImpl extends RemoteServiceServlet implements GreetingService{
+	
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = Long.MAX_VALUE-1;
+	private ArrayList<String> waitingplayers=new ArrayList<String>();
+	private ChannelService channelService = ChannelServiceFactory.getChannelService();
+	private Objectify ofy = ObjectifyService.ofy();
+
+	{
+	ObjectifyService.register(Player.class);
+  ObjectifyService.register(Match.class);
+	}
+	public static void addHeadersForCORS(HttpServletRequest req, HttpServletResponse resp) {
+    resp.setHeader("Access-Control-Allow-Methods", "POST"); // "GET, HEAD, POST, PUT, DELETE, TRACE, OPTIONS");
+    resp.setHeader("Access-Control-Allow-Origin", "*");
+    resp.setHeader("Access-Control-Allow-Headers", "X-GWT-Module-Base, X-GWT-Permutation, Content-Type"); 
+  }
+
+  @Override
+  protected void doOptions(HttpServletRequest req, HttpServletResponse resp) {
+    addHeadersForCORS(req, resp);
+  }
+
+  @Override
+  protected void onAfterResponseSerialized(String serializedResponse) {
+    super.onAfterResponseSerialized(serializedResponse);
+    addHeadersForCORS(getThreadLocalRequest(), getThreadLocalResponse());
+  }
+	
+	
+  @Override
+	public String greetServer(String email) {
+		//UserService userService = UserServiceFactory.getUserService();
+		
+		//String email=userService.getCurrentUser().getEmail();
+		Player p1=ofy.load().type(Player.class).id(email).get();
+		if(p1==null) {
+			Player player=new Player();
+			player.Email=email;
+			//player.Name=userService.getCurrentUser().getNickname();
+			player.Name=email;
+			player.Tokens=channelService.createChannel(email,10);
+			ofy.save().entity(player).now();
+			return stringPlayer(player);
+		}
+		
+		//p1.Name=userService.getCurrentUser().getNickname();
+		p1.Name=email;
+		p1.Tokens=channelService.createChannel(email,10);
+		return stringPlayer(p1);
+	}
+
+	@Override
+	public String autoMatch(String player,String newstate) {
+		
+		if(!waitingplayers.isEmpty()){
+			if(!waitingplayers.contains(player))	{
+				waitingplayers.add(player);
+			}
+			outer:
+			for(int i=0;i<waitingplayers.size();++i){
+				if(waitingplayers.get(i).equals(player)) continue outer;
+				else {
+					String oppoent = waitingplayers.get(i);
+					Match match=new Match();
+					match.blackID=player;
+					match.whiteID=oppoent;
+					match.startDate=new Date();
+					match.MatchID=match.startDate.toGMTString();
+					match.state=newstate;
+					Player blackPlayer=ofy.load().type(Player.class).id(player).get();
+					Player whitePlayer=ofy.load().type(Player.class).id(oppoent).get();
+					if(blackPlayer==null|| whitePlayer==null) return "error";
+					blackPlayer.Matches.add(match.MatchID);
+					whitePlayer.Matches.add(match.MatchID);
+					ofy.save().entity(blackPlayer).now();
+					ofy.save().entity(whitePlayer).now();
+					ofy.save().entity(match).now();	
+					
+					if(waitingplayers.contains(player))waitingplayers.remove(player);
+					if(waitingplayers.contains(oppoent))waitingplayers.remove(oppoent);
+					channelService.sendMessage(new ChannelMessage(player,match.state));
+					channelService.sendMessage(new ChannelMessage(oppoent,match.state));
+					return oppoent;
+				}
+			} 
+			
+		}
+		else
+		{
+			if(!waitingplayers.contains(player))	waitingplayers.add(player);
+		}
+		return null;
+	}
+	
+	@Override
+	public void submitMove(String email,String matchID,String state) {
+		//UserService userService = UserServiceFactory.getUserService();
+		//String userID=userService.getCurrentUser().getEmail();
+		String userID=email;
+		Match match=ofy.load().type(Match.class).id(matchID).get();
+		match.state=state;
+		ofy.save().entity(match).now();
+		String a=userID.equals(match.blackID)?match.whiteID:match.blackID;
+		channelService.sendMessage(new ChannelMessage(a,state));
+		
+	}
+
+	@Override
+	public String loadMatch(String ID) {
+		Match match=ofy.load().type(Match.class).id(ID).get();
+		return stringMatch(match);
+	}
+
+	@Override
+	public void creatMatch(String blackID,String whiteID,String state) {
+		Match match=new Match();
+		
+		match.blackID=blackID;
+		match.whiteID=whiteID;
+		match.startDate=new Date();
+		match.MatchID=match.startDate.toGMTString();
+		match.state=state;
+		ofy.save().entity(match).now();
+		Player blackPlayer=ofy.load().type(Player.class).id(match.blackID).get();
+		Player whitePlayer=ofy.load().type(Player.class).id(match.whiteID).get();
+		if(blackPlayer==null){
+			blackPlayer=new Player();
+			blackPlayer.Email=match.blackID;
+		}
+		if(whitePlayer==null){
+			whitePlayer=new Player();
+			whitePlayer.Email=match.whiteID;
+		}
+		blackPlayer.Matches.add(match.MatchID);
+		whitePlayer.Matches.add(match.MatchID);
+		ofy.save().entity(blackPlayer).now();
+		ofy.save().entity(whitePlayer).now();
+	}
+
+	@Override
+	public void delMatch(String ID) {
+		Match newMatch=ofy.load().type(Match.class).id(ID).get();
+		Player blackPlayer=ofy.load().type(Player.class).id(newMatch.blackID).get();
+		Player whitePlayer=ofy.load().type(Player.class).id(newMatch.whiteID).get();
+		blackPlayer.Matches.remove(newMatch.MatchID);
+		whitePlayer.Matches.remove(newMatch.MatchID);
+		ofy.save().entity(blackPlayer).now();
+		ofy.save().entity(whitePlayer).now();
+		ofy.delete().type(Match.class).id(ID);
+		channelService.sendMessage(new ChannelMessage(newMatch.blackID,newMatch.state));
+		channelService.sendMessage(new ChannelMessage(newMatch.whiteID,newMatch.state));
+		
+	}
+
+	@Override
+	public String updatePlayer(String email) {
+		//UserService userService = UserServiceFactory.getUserService();
+		//userID=userService.getCurrentUser().getEmail();
+		Player player=ofy.load().type(Player.class).id(email).get();
+		return stringPlayer(player);
+	}
+
+	@Override
+	public void sendResult(String match1, String result) {
+		Match match=parseMatch(match1);
+		Player blackPlayer=ofy.load().type(Player.class).id(match.blackID).get();
+		Player whitePlayer=ofy.load().type(Player.class).id(match.whiteID).get();
+		double expB,expW,actB,actW,rB,rW;
+		rB=blackPlayer.rank;
+		rW=whitePlayer.rank;
+		if(result.equals("Draw")){
+			actB=0.5;
+			actW=0.5;
+		}else{
+			if(result.equals("Black")){
+				actB=1;
+				actW=0;
+			}
+			else{
+				actB=0;
+				actW=1;
+			}
+		}
+		expB=1/(1+(double)Math.pow(10, ((double)(rW-rB))/400.00));
+		expW=1/(1+(double)Math.pow(10, ((double)(rB-rW))/400.00));
+		blackPlayer.rank=(int) (rB+(double)15*((double)actB-(double)expB));
+		whitePlayer.rank=(int) (rW+(double)15*((double)actW-(double)expW));
+		match.isOver=true;
+		ofy.save().entities(match).now();
+		ofy.save().entities(blackPlayer).now();
+		ofy.save().entities(whitePlayer).now();
+	}
+	
+	private String stringPlayer(Player player){
+		StringBuffer a=new StringBuffer();
+		a.append(player.Email);
+		a.append('=');
+		a.append(player.Name);
+		a.append('=');
+		a.append(player.Tokens);
+		a.append('=');
+		a.append(player.rank);
+		for(String b:player.Matches){
+			a.append('=');
+			a.append(b);	
+		}
+		return a.toString();
+	}
+	
+	private String stringMatch(Match match){
+		StringBuffer a=new StringBuffer();
+		a.append(match.MatchID);
+		a.append('=');
+		a.append(match.blackID);
+		a.append('=');
+		a.append(match.whiteID);
+		a.append('=');
+		a.append(match.state);
+		a.append('=');
+		a.append(match.turn);
+		a.append('=');
+		a.append(match.startDate.toString());
+		return a.toString();
+	}
+	private Player parsePlayer(String player){
+		String[] cache=player.split("=");
+		Player p=new Player();
+		p.Email=cache[0];
+		p.Name=cache[1];
+		p.Tokens=cache[2];
+		p.rank=Integer.valueOf(cache[3]);
+		p.Matches=new ArrayList<String>();
+		for(int i=4;i<cache.length;++i){
+			p.Matches.add(cache[i]);
+		}
+		
+			return p;
+			
+	}
+	private Match parseMatch(String match){
+		String[] cache=match.split("=");
+		Match ne=new Match(cache[1],cache[2]);
+		ne.MatchID=cache[0];
+		ne.state=cache[3];
+		ne.turn=Integer.valueOf(cache[4]);
+		ne.startDate=new Date();
+		return ne;
+	}
+	
+}

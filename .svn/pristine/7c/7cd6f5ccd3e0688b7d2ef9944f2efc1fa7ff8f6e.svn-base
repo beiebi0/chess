@@ -1,0 +1,121 @@
+<!DOCTYPE ui:UiBinder SYSTEM "http://dl.google.com/gwt/DTD/xhtml.ent">
+<ui:UiBinder xmlns:ui="urn:ui:com.google.gwt.uibinder"
+  xmlns:g="urn:import:com.google.gwt.user.client.ui"
+  xmlns:mgwt="urn:import:com.googlecode.mgwt.ui.client.widget">
+  <ui:image field="background" src="Board black.jpg"/>
+  <ui:style field="css" type="org.mengyanhuang.hw3.GameCss">
+    .status{
+	    font-family: "Georgia";
+		font-size:17px;
+	}
+    .highlighted {
+	        outline: 3px Solid LightCoral; 
+    }
+    @sprite .board {
+            gwt-image: "background";
+          }
+    .grid {
+            margin-top: 20px;
+            margin-left: 20px;
+            border-spacing: 0px;
+            border-collapse: collapse;
+    } 
+    .center {
+			margin-left: auto;
+			margin-right: auto;
+		}
+	.bottom{
+			margin-left: auto;
+			margin-top: 470px;
+	}
+    td img {
+      display: block
+    }
+    /******************************************************
+	*                        SuggestBox
+	******************************************************/
+	.gwt-SuggestBox
+	{
+    	padding: 5px 4px;
+	  	border: 1px solid #ccc;
+  		border-top: 1px solid #999;
+ 		font-size: 100%;
+ 		font-family: Arial Unicode MS, Arial, sans-serif;
+	}
+	.gwt-SuggestBoxPopup
+	{
+  	  cursor                       :    pointer;
+  	  cursor                       :    hand;
+  	  border                       :    1px solid #666;
+  	  border-top                   :    0;
+  	  background-color             :    #fff;
+	}
+	.gwt-SuggestBoxPopup .item
+	{
+	    border                       :    1px dotted #aaa;
+	    
+	}
+	.gwt-SuggestBoxPopup .item-selected
+	{
+	    background-color             :    #ffc;
+	}
+  </ui:style>
+  <mgwt:LayoutPanel>
+ 	 <g:HTMLPanel>
+  		  <Table align="center">
+			<tr>
+				<td>
+                    <g:Label ui:field="gameStatus" text="Status" styleName="{css.status}"/>
+                    <g:Label ui:field="gameRank" styleName="{css.status}"/>
+                    <g:Label ui:field="gameDate" styleName="{css.status}"/>
+                </td>
+            </tr>
+            <tr>
+            	<td>
+   					 <div class="{css.board}">
+           				 <g:Grid ui:field="gameGrid" styleName="{css.grid}"/>
+   					 </div>
+   				</td>		    
+   			</tr>
+   			<tr align = "bottom" >
+   				<td>
+   					<g:FlowPanel ui:field="LocalStorageButton">
+   					  
+   					 </g:FlowPanel>
+   				</td>
+   			</tr>
+   			<tr align = "bottom">
+   			 	<td>
+   					 <g:FlowPanel ui:field="Buttons">
+   					     <g:Button ui:field="QueenButton" text = "Queen" styleName="{css.status}" />
+						 <g:Button ui:field="RookButton" text = "Rook" styleName="{css.status}" />
+						 <g:Button ui:field="BishopButton" text = "Bishop" styleName="{css.status}" />
+					 	 <g:Button ui:field="KnightButton" text = "Knight" styleName="{css.status}" />
+   					 </g:FlowPanel>
+   			    </td>
+   			</tr>
+  	 	</Table>
+  	 	<Table align="center"  style="border-spacing: 50px;">
+   			<tr>
+   				<td>
+   			 	    <g:VerticalPanel ui:field = "VerticalPanel1">
+   			            <g:Label ui:field="ChooseGameBelow"  styleName="{css.status}" />
+   			         	<g:ListBox ui:field="ListBox" />
+   			         	<g:Button ui:field="LoadButton"  styleName="{css.status}"/>
+   			       		<g:Button ui:field="DeleteButton"  styleName="{css.status}"/>
+   		   		  	 </g:VerticalPanel>
+   				 </td>
+   				 <td>
+   				     <g:VerticalPanel ui:field = "VerticalPanel2">
+   			           	 <g:Button ui:field="AutoMatchButton"  styleName="{css.status}"/>
+   			           	 <g:Button ui:field="AgainstComputerButton" styleName="{css.status}"/>
+   			           	 <g:Label ui:field="EnterOpponentEmail" styleName="{css.status}"/>
+   			           	 <g:FlowPanel ui:field="SuggestBoxPanel" styleName="{css.gwt-SuggestBox}"/>
+   			           	 <g:Button  ui:field="MatchButton" styleName="{css.status}"/>
+   				     </g:VerticalPanel>
+   				 </td>
+   			</tr>
+   		</Table>
+  	</g:HTMLPanel>
+  </mgwt:LayoutPanel>
+</ui:UiBinder> 

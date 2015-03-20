@@ -1,0 +1,313 @@
+package org.bohuang.hw3;
+
+import org.shared.chess.Color;
+import org.shared.chess.GameResult;
+import org.shared.chess.GameResultReason;
+import org.shared.chess.Piece;
+import org.shared.chess.PieceKind;
+import org.shared.chess.Position;
+import org.shared.chess.State;
+
+public class StateSerializer {
+	
+	public String stateToString(Object object) {
+		// TODO Auto-generated method stub
+		StringBuffer s = new StringBuffer();
+		State stateS = (State) object;	
+		
+		for(int i = 0 ; i < 8 ; i++){
+			for(int j = 0 ; j < 8 ; j++){
+				if(stateS.getPiece(i, j)==null){
+					s.append("_");
+				}
+				else{
+					if(stateS.getPiece(i, j).getColor().isBlack()){
+						switch(stateS.getPiece(i, j).getKind()){
+						case PAWN:{
+							s.append("p");
+							break;
+						}
+						case ROOK:{
+							s.append("r");
+							break;
+						}
+						case KNIGHT:{
+							s.append("k");
+							break;
+						}
+						case BISHOP:{
+							s.append("b");
+							break;
+						}
+						case QUEEN:{
+							s.append("q");
+							break;
+						}
+						case KING:{
+							s.append("w");
+							break;
+						}
+						}
+					}
+					else{
+						switch(stateS.getPiece(i, j).getKind()){
+						case PAWN:{
+							s.append("P");
+							break;
+						}
+						case ROOK:{
+							s.append("R");
+							break;
+						}
+						case KNIGHT:{
+							s.append("K");
+							break;
+						}
+						case BISHOP:{
+							s.append("B");
+							break;
+						}
+						case QUEEN:{
+							s.append("Q");
+							break;
+						}
+						case KING:{
+							s.append("W");
+							break;
+						}
+						}
+					}
+				}
+			}
+		}
+		
+		if(stateS.getTurn().isBlack()){
+			s.append("b");
+		}else{
+			s.append("w");
+		}
+		
+		if(stateS.isCanCastleKingSide(Color.BLACK)){
+			s.append("t");
+		}
+		else{
+			s.append("f");
+		}
+		
+		if(stateS.isCanCastleKingSide(Color.WHITE)){
+			s.append("t");
+		}
+		else{
+			s.append("f");
+		}
+		
+		if(stateS.isCanCastleQueenSide(Color.BLACK)){
+			s.append("t");
+		}
+		else{
+			s.append("f");
+		}
+		
+		if(stateS.isCanCastleQueenSide(Color.WHITE)){
+			s.append("t");
+		}
+		else{
+			s.append("f");
+		}
+		
+		if(stateS.getEnpassantPosition()!=null){
+			s.append(stateS.getEnpassantPosition().getRow());
+			s.append(stateS.getEnpassantPosition().getCol());
+		}
+		else{
+			s.append("_");
+			s.append("_");
+		}
+		
+		if(stateS.getGameResult()!=null){
+			s.append("e");
+			if(stateS.getGameResult().getWinner().isBlack()){
+				s.append("b");
+			}else if(stateS.getGameResult().getWinner().isWhite()){
+				s.append("w");
+			}else{
+				s.append("d");
+			}
+			
+			if(stateS.getGameResult().getGameResultReason().equals(GameResultReason.CHECKMATE)){
+				s.append("c");
+			}else if(stateS.getGameResult().getGameResultReason().equals(GameResultReason.FIFTY_MOVE_RULE)){
+				s.append("f");
+			}else if(stateS.getGameResult().getGameResultReason().equals(GameResultReason.STALEMATE)){
+				s.append("s");
+			}
+		}else{
+			s.append("_");
+			s.append("_");
+			s.append("_");
+		}
+		
+		if(stateS.getNumberOfMovesWithoutCaptureNorPawnMoved()<10){
+			s.append(0);
+			s.append(stateS.getNumberOfMovesWithoutCaptureNorPawnMoved());
+		}else{
+			s.append(stateS.getNumberOfMovesWithoutCaptureNorPawnMoved());
+		}
+		
+		
+		s.append("_");
+		return s.toString();
+	}
+	
+
+
+public State stringToState(String str) {
+	// TODO Auto-generated method stub
+	State stateO = new State();
+	int count = 0 ;
+	
+	for(int i = 0 ; i < 8 ; i++){
+		for(int j = 0 ; j < 8 ; j++){
+			switch(str.charAt(count)){
+			case 'p':{
+				stateO.setPiece(i, j, new Piece(Color.BLACK, PieceKind.PAWN));
+				break;
+			}
+			case 'P':{
+				stateO.setPiece(i, j, new Piece(Color.WHITE, PieceKind.PAWN));
+				break;
+			}
+			case 'r':{
+				stateO.setPiece(i, j, new Piece(Color.BLACK, PieceKind.ROOK));
+				break;
+			}
+			case 'R':{
+				stateO.setPiece(i, j, new Piece(Color.WHITE, PieceKind.ROOK));
+				break;
+			}
+			case 'k':{
+				stateO.setPiece(i, j, new Piece(Color.BLACK, PieceKind.KNIGHT));
+				break;
+			}
+			case 'K':{
+				stateO.setPiece(i, j, new Piece(Color.WHITE, PieceKind.KNIGHT));
+				break;
+			}
+			case 'b':{
+				stateO.setPiece(i, j, new Piece(Color.BLACK, PieceKind.BISHOP));
+				break;
+			}
+			case 'B':{
+				stateO.setPiece(i, j, new Piece(Color.WHITE, PieceKind.BISHOP));
+				break;
+			}
+			case 'q':{
+				stateO.setPiece(i, j, new Piece(Color.BLACK, PieceKind.QUEEN));
+				break;
+			}
+			case 'Q':{
+				stateO.setPiece(i, j, new Piece(Color.WHITE, PieceKind.QUEEN));
+				break;
+			}
+			case 'w':{
+				stateO.setPiece(i, j, new Piece(Color.BLACK, PieceKind.KING));
+				break;
+			}
+			case 'W':{
+				stateO.setPiece(i, j, new Piece(Color.WHITE, PieceKind.KING));
+				break;
+			}
+			default:{
+				stateO.setPiece(i, j, null);
+				break;
+			}
+			}
+			count++;
+		}
+	}
+	if(str.charAt(64)=='w'){
+		stateO.setTurn(Color.WHITE);
+	}else{
+		stateO.setTurn(Color.BLACK);
+	}
+	
+	if(str.charAt(65)=='t'){
+		stateO.setCanCastleKingSide(Color.BLACK, true);
+	}
+	else{
+		stateO.setCanCastleKingSide(Color.BLACK, false);
+	}
+	
+	if(str.charAt(66)=='t'){
+		stateO.setCanCastleKingSide(Color.WHITE, true);
+	}
+	else{
+		stateO.setCanCastleKingSide(Color.WHITE, false);
+	}
+	
+	if(str.charAt(67)=='t'){
+		stateO.setCanCastleQueenSide(Color.BLACK, true);
+	}
+	else{
+		stateO.setCanCastleQueenSide(Color.BLACK, false);
+	}
+	
+	if(str.charAt(68)=='t'){
+		stateO.setCanCastleQueenSide(Color.WHITE, true);
+	}
+	else{
+		stateO.setCanCastleQueenSide(Color.WHITE, false);
+	}
+	
+	if(str.charAt(69)!='_'){
+		int erow = Integer.parseInt(str.substring(69, 70));
+		int ecol = Integer.parseInt(str.substring(70, 71));
+		stateO.setEnpassantPosition(new Position(erow,ecol));		
+	}
+	
+	if(str.charAt(71)=='e'){
+		switch(str.charAt(72)){
+		case 'w':{
+			stateO.setGameResult(new GameResult(Color.WHITE, GameResultReason.CHECKMATE));
+			break;
+		}
+		case 'b':{
+			stateO.setGameResult(new GameResult(Color.BLACK, GameResultReason.CHECKMATE));
+			break;
+		}
+		case 'd':{
+			switch(str.charAt(73)){
+			case 'f':{
+				stateO.setGameResult(new GameResult(null, GameResultReason.FIFTY_MOVE_RULE));
+				break;
+			}
+			case 's':{
+				stateO.setGameResult(new GameResult(null, GameResultReason.STALEMATE));
+				break;
+			}
+			default:{
+				break;
+			}
+			}
+		}
+		default:{
+			break;
+		}
+		}
+	}else{
+		stateO.setGameResult(null);
+	}
+	
+	int moves1 = Integer.parseInt(str.substring(74, 75));
+	int moves2 = Integer.parseInt(str.substring(75, 76));
+	if(moves1==0){
+		stateO.setNumberOfMovesWithoutCaptureNorPawnMoved(moves2);
+	}else{
+		stateO.setNumberOfMovesWithoutCaptureNorPawnMoved(10*moves1+moves2);
+	}
+	
+	
+	return stateO;
+}
+
+}

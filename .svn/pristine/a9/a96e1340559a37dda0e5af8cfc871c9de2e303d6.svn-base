@@ -1,0 +1,13 @@
+package org.shihweihuang.hw5;
+
+import java.util.Date;
+
+import com.google.gwt.i18n.client.DateTimeFormat;
+
+
+public class MyCalender {
+	private static DateTimeFormat dtf = DateTimeFormat.getFormat("MM/dd/yyyy HH:mm:ss");
+	public static String getTime(){
+		return dtf.format(new Date());
+	}
+}

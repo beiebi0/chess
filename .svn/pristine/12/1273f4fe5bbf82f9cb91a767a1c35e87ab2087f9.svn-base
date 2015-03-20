@@ -1,0 +1,25 @@
+package org.karthikmahadevan.hw6.client;
+
+import java.util.List;
+
+import com.google.gwt.user.client.rpc.RemoteService;
+import com.google.gwt.user.client.rpc.RemoteServiceRelativePath;
+
+@RemoteServiceRelativePath("playGame")
+public interface GameService extends RemoteService {
+	public String getToken(String clientID);
+	public void updateState(String clientID, String state);
+	public void testCommunication();
+	public String addNewConnection();
+	public void getOpponentThroughAutoMatch();
+	public void updateMove(Long matchID, String state);
+	public List<Long> getMatches();
+	public String getMatchInfo(Long matchID);
+	public void deleteMatch(Long matchID);
+	public String playWith(String opponent);
+	public String getCurrentUserEmailAndRating();
+	public void updateRating(String white, String black, String winner);
+	public void newMatchWithAI();
+}
+
+

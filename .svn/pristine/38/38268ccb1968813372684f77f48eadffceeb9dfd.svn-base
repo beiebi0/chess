@@ -1,0 +1,96 @@
+package org.sanjana.hw7;
+
+import java.io.Serializable;
+import java.util.Date;
+
+import org.sanjana.hw7.Player;
+import org.shared.chess.Color;
+
+import com.googlecode.objectify.Key;
+import com.googlecode.objectify.annotation.Entity;
+import com.googlecode.objectify.annotation.Id;
+
+@SuppressWarnings("serial")
+@Entity
+public class Match implements Serializable {
+
+	@Id 
+	private Long id;
+	private Key<Player> white;
+	private Key<Player> black;
+	private String state;
+	private Date startDate;
+
+	public Match() {
+	}
+
+	public Match(Key<Player> white,Key<Player> black, Date startDate,String state) {
+		this.white = white;
+		this.black = black;
+		this.state = state;
+		this.startDate = startDate;
+	}
+
+	public Long getId() {
+		return id;
+	}
+
+	public void setId(Long id) {
+		this.id= id;
+	}
+
+	public Key<Player> getPlayer1() {
+		return white;
+	}
+
+	public void setPlayer1(Key<Player> white){
+		this.white=white;
+	}
+
+	public Key<Player> getPlayer2() {
+		return black;
+	}
+
+	public void setPlayer2(Key<Player> black){
+		this.black=black;
+	}
+
+	public String getState() {
+		return state;
+	}
+
+	public void setState(String state) {
+		this.state = state;
+	}
+
+	public Date getDate() {
+		return startDate;
+	}
+
+	public void setDate(Date startDate) {
+		this.startDate=startDate;
+	}
+
+	public Key<Player> getOpponent(Key<Player> player) {
+		if (player.equals(white))
+			return black;
+		else
+			return white;
+	}
+
+	public Color getPlayerColor(Key<Player> player) {
+		if (player.equals(white))
+			return Color.WHITE;
+		else
+			return Color.BLACK;
+	}
+
+	public Date getStartDate() {
+		return startDate;
+	}
+
+	public void setStartDate(Date startDate) {
+		this.startDate = startDate;
+	}
+
+}

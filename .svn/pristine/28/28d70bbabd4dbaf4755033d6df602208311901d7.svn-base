@@ -1,0 +1,8 @@
+package org.mengyanhuang.hw6.client;
+
+import com.google.gwt.user.client.rpc.AsyncCallback;
+
+public interface ChessMoveServiceAsync {
+
+	void getCurrentState(String state,String Uid, AsyncCallback<String> callback);
+}

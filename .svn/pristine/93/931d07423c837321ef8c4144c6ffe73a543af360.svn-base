@@ -1,0 +1,51 @@
+package org.kuangchelee.hw5;
+
+import com.google.gwt.resources.client.ClientBundle;
+import com.google.gwt.resources.client.ImageResource;
+
+public interface GameImages extends ClientBundle {
+  @Source("black_tile.png")
+  ImageResource blackTile();
+  
+  @Source("white_tile.png")
+  ImageResource whiteTile();
+  
+  @Source("blank.png")
+  ImageResource blank();
+  
+  @Source("Black_K.png")
+  ImageResource blackKing();
+  
+  @Source("Black_Q.png")
+  ImageResource blackQueen();
+  
+  @Source("Black_B.png")
+  ImageResource blackBishop();
+  
+  @Source("Black_N.png")
+  ImageResource blackKnight();
+  
+  @Source("Black_R.png")
+  ImageResource blackRook();
+  
+  @Source("Black_P.png")
+  ImageResource blackPawn();
+  
+  @Source("White_K.png")
+  ImageResource whiteKing();
+  
+  @Source("White_Q.png")
+  ImageResource whiteQueen();
+  
+  @Source("White_B.png")
+  ImageResource whiteBishop();
+  
+  @Source("White_N.png")
+  ImageResource whiteKnight();
+  
+  @Source("White_R.png")
+  ImageResource whiteRook();
+  
+  @Source("White_P.png")
+  ImageResource whitePawn();
+}

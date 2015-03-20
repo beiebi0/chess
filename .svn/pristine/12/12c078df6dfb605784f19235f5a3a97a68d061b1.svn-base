@@ -1,0 +1,33 @@
+<!DOCTYPE ui:UiBinder SYSTEM "http://dl.google.com/gwt/DTD/xhtml.ent">
+<ui:UiBinder xmlns:ui="urn:ui:com.google.gwt.uibinder"
+  xmlns:g="urn:import:com.google.gwt.user.client.ui">
+  <ui:image field="background" src="Board black.png" />
+  
+  <ui:style field="css" type="org.corinnetaylor.hw3.GameCss">
+    .highlighted {
+      outline: dotted green 2px;
+    }
+    
+    @sprite .board {
+      gwt-image: "background";
+    }
+    
+    .grid {
+      margin-top: 2x;
+      margin-left: 2px;
+      border-spacing: 0px;
+      border-collapse: collapse;
+    }
+    
+    .cellsizefix {
+      font-size: 0px;
+    }
+  </ui:style>
+  <g:HTMLPanel>
+    <g:Label ui:field="gameStatus" text="Status"/>
+    <br />
+    <div class="{css.board}">
+      <g:Grid ui:field="gameGrid" styleName="{css.grid}" />
+    </div>
+  </g:HTMLPanel>
+</ui:UiBinder> 

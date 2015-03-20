@@ -1,0 +1,54 @@
+package org.harshmehta.hw3;
+
+import com.google.gwt.resources.client.ClientBundle;
+import com.google.gwt.resources.client.ImageResource;
+
+public interface GameImages extends ClientBundle {
+  @Source("board.jpg")
+  ImageResource board();
+  
+  @Source("black_tile.png")
+  ImageResource blackTile();
+  
+  @Source("white_tile.png")
+  ImageResource whiteTile();
+  
+  @Source("noPiece.png")
+  ImageResource noPiece();
+  
+  @Source("B_pawn.png")
+  ImageResource blackPawn();
+  
+  @Source("B_rook.png")
+  ImageResource blackRook();
+  
+  @Source("B_knight.png")
+  ImageResource blackKnight();
+  
+  @Source("B_bishop.png")
+  ImageResource blackBishop();
+  
+  @Source("B_queen.png")
+  ImageResource blackQueen();
+  
+  @Source("B_king.png")
+  ImageResource blackKing();
+  
+  @Source("W_pawn.png")
+  ImageResource whitePawn();
+  
+  @Source("W_rook.png")
+  ImageResource whiteRook();
+  
+  @Source("W_knight.png")
+  ImageResource whiteKnight();
+  
+  @Source("W_bishop.png")
+  ImageResource whiteBishop();
+  
+  @Source("W_queen.png")
+  ImageResource whiteQueen();
+  
+  @Source("W_king.png")
+  ImageResource whiteKing();
+}

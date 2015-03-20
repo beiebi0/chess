@@ -1,0 +1,401 @@
+package org.harshmehta.hw7.server;
+
+import static com.googlecode.objectify.ObjectifyService.ofy;
+
+import java.text.DecimalFormat;
+import java.util.Date;
+import java.util.List;
+import java.util.Set;
+
+import org.harshmehta.hw7.client.Match;
+import org.harshmehta.hw7.client.MultiplayerChessService;
+import org.harshmehta.hw7.client.Player;
+import org.harshmehta.hw8.GlickoRating;
+
+import com.google.appengine.api.channel.ChannelMessage;
+import com.google.appengine.api.channel.ChannelService;
+import com.google.appengine.api.channel.ChannelServiceFactory;
+import com.google.appengine.api.users.User;
+import com.google.appengine.api.users.UserService;
+import com.google.appengine.api.users.UserServiceFactory;
+import com.google.gwt.user.server.rpc.RemoteServiceServlet;
+import com.googlecode.objectify.Key;
+import com.googlecode.objectify.ObjectifyService;
+
+/**
+ * Contains remote server methods that provide services for multiplayer chess gameplay
+ * @author Harsh
+ *
+ */
+public class MultiplayerChessServiceImpl extends RemoteServiceServlet 
+implements MultiplayerChessService {
+  
+  private static final long serialVersionUID = 1L;
+  
+  static {
+    ObjectifyService.register(Player.class);
+    ObjectifyService.register(Match.class);
+  }
+  
+  UserService userService = UserServiceFactory.getUserService();
+  ChannelService channelService = ChannelServiceFactory.getChannelService();
+  
+  private DecimalFormat decimal = new DecimalFormat("#.##");
+  
+  @Override
+  public String connectPlayer() {
+    if (userService.isUserLoggedIn()) {
+      User user = userService.getCurrentUser();
+      String channelId = user.getEmail();
+      Key<Player> playerKey = Key.create(Player.class, user.getEmail());
+      Player player = ofy().load().key(playerKey).get();
+      if (player == null) {  // New player
+        player = new Player(user.getEmail(), user.getNickname());
+      }
+      double rating = player.getRating();
+      double RD = player.getRD();
+      ofy().save().entity(player).now();
+      //channelId += "-"+System.currentTimeMillis();
+      String tokens = channelService.createChannel(channelId)+"#"+rating+"#"+RD;
+      return tokens;
+    }
+    return null;
+  }
+
+  @Override
+  public String[] loadMatches() {
+    if (userService.isUserLoggedIn()) {
+      User user = userService.getCurrentUser();
+      Key<Player> playerKey = Key.create(Player.class, user.getEmail());
+      Player player = ofy().load().key(playerKey).get();
+      String [] matches = new String[player.getMatchesList().size()];
+      Set<Key<Match>> matchesList = player.getMatchesList();
+      int index = 0;
+      for (Key<Match> matchKey : matchesList) {
+        Match match = ofy().load().key(matchKey).get();
+        if (match == null) {
+          continue;
+        }
+        Key<Player> otherPlayerKey = match.getOpponent(playerKey);
+        //Key<Player> aiKey = Key.create(Player.class, "AI");
+        String turn, oppName, oppEmail, whitePlayer;
+        if (match.isSinglePlayer()) {
+          turn = player.getPlayerName();
+          oppName = "Computer";
+          oppEmail = "AI";
+          whitePlayer = match.isWhitePlayer(playerKey) ? player.getEmail() : oppName;
+        }
+        else {
+          Player otherPlayer = ofy().load().key(otherPlayerKey).get();
+          if ((match.isWhitePlayer(playerKey) && match.isWhiteTurn()) ||
+              (match.isBlackPlayer(playerKey) && !match.isWhiteTurn())) {
+            turn = player.getPlayerName();
+          }
+          else {
+            turn = otherPlayer.getPlayerName();
+          }
+          whitePlayer = (match.isWhitePlayer(playerKey) ? 
+              player.getEmail() : otherPlayer.getEmail());
+          oppName = otherPlayer.getPlayerName();
+          oppEmail = otherPlayer.getEmail();
+          ofy().save().entity(otherPlayer).now();
+        }
+        matches[index++] = match.getMatchId()+"#"+oppEmail+
+            "#"+oppName+"#"+turn+"#"+whitePlayer+"#"+match.getState();
+        ofy().save().entity(match).now();
+      }
+      ofy().save().entity(player).now();
+      return matches;
+    }
+    return null;
+  }
+
+  @Override
+  public void automatch() {
+    if (userService.isUserLoggedIn()) {
+      User user = userService.getCurrentUser();
+      final Key<Player> playerKey = Key.create(Player.class, user.getEmail());
+      final Player player = ofy().load().key(playerKey).get();
+      // Get list of players waiting to be automatched
+      List<Player> otherPlayers = 
+          ofy().load().type(Player.class).filter("automatchPooled", true).list();
+      if (otherPlayers.isEmpty()) {
+        player.setAutomatchEligible(true);  // Put this player in the automatch pool
+        ofy().save().entity(player).now();
+      }
+      else {
+        // Extract a random waiting player
+        if (otherPlayers.get(0).equals(player)) {
+          ofy().save().entity(player).now();
+          return;  // Can't play against the same player
+        }
+        final Player randomPlayer = otherPlayers.remove(0);
+        randomPlayer.setAutomatchEligible(false);  // Remove this player from the automatch pool
+        final Key<Player> randomPlayerKey = Key.create(Player.class, randomPlayer.getEmail());
+        /*Match match = ofy().transact(new Work<Match>() {
+          @Override
+          public Match run() {
+            Match match = new Match(playerKey, randomPlayerKey, "");
+            System.out.println(match.getMatchId());
+            Key<Match> matchKey = ofy().save().entity(match).now();
+            if (!player.containsMatchKey(matchKey))
+              player.addMatch(matchKey);
+            if (!randomPlayer.containsMatchKey(matchKey))
+              randomPlayer.addMatch(matchKey);
+            ofy().save().entities(player, randomPlayer, match).now();
+            return match;
+          }
+        });*/
+        Match match = new Match(randomPlayerKey, playerKey,"");
+        Key<Match> matchKey = ofy().save().entity(match).now();
+        player.addMatch(matchKey);
+        randomPlayer.addMatch(matchKey);
+        
+        String matchDate = getLocalizedDate(match.getStartDate());
+        // Send both players messages
+        // Here, randomPlayer is the first player (White)
+        String message1 = "newgame#"+match.getMatchId()+"#W#"+player.getPlayerName()+"#"+
+            decimal.format(player.getRating())+"#"+decimal.format(player.getRD())+"#"+matchDate;
+        String message2 = "newgame#"+match.getMatchId()+"#B#"+randomPlayer.getPlayerName()+"#"+
+            decimal.format(randomPlayer.getRating())+"#"+decimal.format(randomPlayer.getRD())+
+            "#"+matchDate;
+        Set<String> tokens1 = randomPlayer.getConnectedTokens();
+        Set<String> tokens2 = player.getConnectedTokens();
+        ofy().save().entities(player, randomPlayer, match).now();
+        for (String connection : tokens1) {
+          channelService.sendMessage(new ChannelMessage(connection, message1));
+        }
+        for (String connection : tokens2) {
+          channelService.sendMessage(new ChannelMessage(connection, message2));
+        }
+      }
+    }
+  }
+
+  @Override
+  public Boolean newEmailGame(String email) {
+    if (userService.isUserLoggedIn()) {
+      User user = userService.getCurrentUser();
+      Key<Player> playerKey = Key.create(Player.class, user.getEmail());
+      Player player = ofy().load().key(playerKey).get();
+      Key<Player> opponentKey = Key.create(Player.class, email);
+      Player opponent = ofy().load().key(opponentKey).get();
+      if (opponent == null) {
+        // No such player exists in the data store
+        return new Boolean(false);
+      }
+      Match match = new Match(playerKey, opponentKey, "");
+      String matchDate = getLocalizedDate(match.getStartDate());
+      Key<Match> matchKey = ofy().save().entity(match).now();
+      player.addMatch(matchKey);
+      opponent.addMatch(matchKey);
+      // Send both players messages
+      String message1 = "newgame#"+match.getMatchId()+"#W#"+opponent.getPlayerName()+"#"+
+          decimal.format(opponent.getRating())+"#"+decimal.format(opponent.getRD())+"#"+matchDate;
+      String message2 = "newgame#"+match.getMatchId()+"#B#"+player.getPlayerName()+
+          "#"+decimal.format(player.getRating())+"#"+decimal.format(player.getRD())+"#"+matchDate;
+      Set<String> tokens1 = player.getConnectedTokens();
+      Set<String> tokens2 = opponent.getConnectedTokens();
+      ofy().save().entities(player, opponent, match).now();
+      for (String connection : tokens1) {
+        channelService.sendMessage(new ChannelMessage(connection, message1));
+      }
+      for (String connection : tokens2) {
+        channelService.sendMessage(new ChannelMessage(connection, message2));
+      }
+      return new Boolean(true);
+    }
+    return new Boolean(false);
+  }
+
+  @Override
+  public void deleteMatch(Long matchId) {
+    if (userService.isUserLoggedIn()) {
+      User user = userService.getCurrentUser();
+      Key<Player> playerKey = Key.create(Player.class, user.getEmail());
+      Player player = ofy().load().key(playerKey).get();
+      Key<Match> matchKey = Key.create(Match.class, matchId);
+      player.removeMatch(matchKey);  // Remove match from this player
+      ofy().save().entity(player).now();
+      
+      Match match = ofy().load().key(matchKey).get();
+      if (match.isSinglePlayer()) {
+        ofy().delete().entity(match);
+        return;
+      }
+      Player opponent = ofy().load().key(match.getOpponent(playerKey)).get();
+      /*// Remove player from match
+      if (match.isBlackPlayer(playerKey)) {
+        match.removePlayer(playerKey);
+      }
+      else if (match.isWhitePlayer(playerKey)) {
+        match.removePlayer(playerKey);
+      }*/
+      if (! opponent.containsMatchKey(matchKey)) {
+        // Delete the match from the datastore, if opponent has also deleted it
+        ofy().delete().entity(match);
+      }
+      ofy().save().entities(match, opponent).now();
+    }
+  }
+
+  @Override
+  public String changeMatch(Long matchId) {
+    if (userService.isUserLoggedIn()) {
+      if (matchId == null) {
+        return "no match";
+      }
+      User user = userService.getCurrentUser();
+      Key<Player> playerKey = Key.create(Player.class, user.getEmail());
+      Player player = ofy().load().key(playerKey).get();
+      Key<Match> matchKey = Key.create(Match.class, matchId);
+      Match match = ofy().load().key(matchKey).get();
+      String stateStr = match.getState();
+      String turn, oppName;
+      double rating, RD;
+      if (match.isSinglePlayer()) {
+        if ((match.isWhitePlayer(playerKey) && match.isWhiteTurn()) ||
+            (match.isBlackPlayer(playerKey) && !match.isWhiteTurn())) {
+          turn = player.getEmail();
+        }
+        else {
+          turn = "AI";
+        }
+        oppName = "AI";
+        rating = 0;
+        RD = 0;
+      }
+      else {
+        Key<Player> otherPlayerKey = match.getOpponent(playerKey);
+        Player otherPlayer = ofy().load().key(otherPlayerKey).get();
+        if ((match.isWhitePlayer(playerKey) && match.isWhiteTurn()) ||
+            (match.isBlackPlayer(playerKey) && !match.isWhiteTurn())) {
+          turn = player.getEmail();
+        }
+        else {
+          turn = otherPlayer.getEmail();
+        }
+        oppName = otherPlayer.getPlayerName();
+        rating = otherPlayer.getRating();
+        RD = otherPlayer.getRD();
+        ofy().save().entity(otherPlayer).now();
+      }
+      
+      String matchDate = getLocalizedDate(match.getStartDate());
+      String userColor = match.isWhitePlayer(playerKey) ? "White" : "Black";
+      String msg = matchId+"#"+turn+"#"+oppName+"#"+userColor+"#"+decimal.format(rating)+"#"+
+          decimal.format(RD)+"#"+matchDate+"#"+stateStr;
+      ofy().save().entities(match,player).now();
+      return msg;
+    }
+    return null;
+  }
+  
+  @Override
+  public void makeMove(Long matchId, String moveString, String stateString) {
+    if (userService.isUserLoggedIn()) {
+      //System.out.println("in makemove");
+      //System.out.println("match id: "+matchId);
+      Key<Match> matchKey = Key.create(Match.class, matchId);
+      Match match = ofy().load().key(matchKey).get();
+      //System.out.println("match.id: "+match.getMatchId());
+      User user = userService.getCurrentUser();
+      Key<Player> playerKey = Key.create(Player.class, user.getEmail());
+      Key<Player> otherPlayerKey = match.getOpponent(playerKey);
+      Player player = ofy().load().key(playerKey).get();
+      Player otherPlayer = ofy().load().key(otherPlayerKey).get();
+      /*if (otherPlayer == null) {
+        // Other player not found; must have deleted the match
+        ofy().save().entities(player, match).now();
+        return;
+      }*/
+      match.setState(stateString);
+      
+      // Rating (Glicko) stuff:
+      String splits[] = stateString.split("-");
+      String winner = splits[8];
+      double s;
+      // Winner: 0-White; 1-Black; 2-Draw; _-Game not yet over
+      if (!winner.equals("_")) {
+        if (winner.equals("0")) {  // White winner
+          s = match.isWhitePlayer(playerKey) ? 1.0 : 0.0;
+        }
+        else if (winner.equals("1")) {  // Black winner
+          s = match.isBlackPlayer(playerKey) ? 1.0 : 0.0;
+        }
+        else {  // Draw
+          s = 0.5;
+        }
+        Date today = new Date();
+        int t = GlickoRating.getNumDays(match.getStartDate(), today);
+        double playerNewRD = GlickoRating.newRD(player.getRating(), player.getRD(), 
+            otherPlayer.getRD(), otherPlayer.getRating(), t);
+        double otherPlayerNewRD = GlickoRating.newRD(otherPlayer.getRating(), otherPlayer.getRD(), 
+            player.getRD(), player.getRating(), t);
+        double playerNewRating = GlickoRating.newRating(player.getRating(), player.getRD(), 
+            otherPlayer.getRating(), otherPlayer.getRD(), s, t);
+        double otherPlayerNewRating = GlickoRating.newRating(otherPlayer.getRating(), 
+            otherPlayer.getRD(), player.getRating(), player.getRD(), 1-s, t);
+        player.setRating(playerNewRating);
+        player.setRD(playerNewRD);
+        otherPlayer.setRating(otherPlayerNewRating);
+        otherPlayer.setRD(otherPlayerNewRD);
+      }
+      
+      ofy().save().entity(match).now();
+      String msg = "opponentmoved#"+matchId+"#"+stateString+"#"+moveString;
+      //System.out.println("Message to be sent: "+msg);
+      //System.out.println("Other player: "+otherPlayer.getPlayerName());
+      //System.out.println("Other player tokens: "+otherPlayer.getConnectedTokens().size());
+      Set<String> tokens = otherPlayer.getConnectedTokens();
+      ofy().save().entities(otherPlayer, player).now();
+      for (String connection : tokens) {
+        //System.out.println("token :"+connection);
+        channelService.sendMessage(new ChannelMessage(connection, msg));
+      }
+    }
+  }
+  
+  private String getLocalizedDate(Date date) {
+    //return DateTimeFormat.getFormat(DateTimeFormat.PredefinedFormat.DATE_TIME_MEDIUM).format(date);
+    // GWT Issue: https://code.google.com/p/google-web-toolkit/issues/detail?q=i18n&id=8095
+    return date.toString();
+  }
+
+  @Override
+  public String registerAImatch(Boolean aiWhite) {
+    if (userService.isUserLoggedIn()) {
+      User user = userService.getCurrentUser();
+      Key<Player> playerKey = Key.create(Player.class, user.getEmail());
+      Player player = ofy().load().key(playerKey).get();
+      Key<Player> aiKey = Key.create(Player.class, "AI");
+      Match match;
+      if (aiWhite) {
+        match = new Match(aiKey, playerKey, "");
+      }
+      else {
+        match = new Match(playerKey, aiKey, "");
+      }
+      match.setSinglePlayer(true);
+      String matchDate = getLocalizedDate(match.getStartDate());
+      Key<Match> matchKey = ofy().save().entity(match).now();
+      player.addMatch(matchKey);
+      String message1 = "newAIgame#"+match.getMatchId()+"#W#"+matchDate;
+      ofy().save().entities(player, match).now();
+      return message1;
+    }
+    return null;
+  }
+
+  @Override
+  public void makeAImove(Long matchId, String moveString, String stateString) {
+    if (userService.isUserLoggedIn()) {
+      Key<Match> matchKey = Key.create(Match.class, matchId);
+      Match match = ofy().load().key(matchKey).get();
+      //User user = userService.getCurrentUser();
+      //Key<Player> playerKey = Key.create(Player.class, user.getEmail());
+      match.setState(stateString);
+      ofy().save().entity(match).now();
+    }
+  }
+}

@@ -1,0 +1,114 @@
+package org.harshmehta.hw9;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Set;
+
+import org.harshmehta.hw2.StateChangerImpl;
+import org.harshmehta.hw2_5.StateExplorerImpl;
+import org.shared.chess.Color;
+import org.shared.chess.GameResult;
+import org.shared.chess.IllegalMove;
+import org.shared.chess.Move;
+import org.shared.chess.Piece;
+import org.shared.chess.PieceKind;
+import org.shared.chess.Position;
+import org.shared.chess.State;
+
+import com.google.common.collect.Lists;
+
+/**
+ * Contains methods to calculate the value of a particular game state
+ * @author Harsh
+ *
+ */
+public class Heuristic {
+  
+  private StateExplorerImpl stateExplorer = new StateExplorerImpl();
+  private StateChangerImpl stateChanger = new StateChangerImpl();
+  
+  public int getStateValue(State state) {
+    GameResult result = state.getGameResult();
+    if (result != null) {
+      if (result.getWinner() == Color.WHITE) {
+        return Integer.MAX_VALUE-1;
+      }
+      else if (result.getWinner() == Color.BLACK) {
+        return Integer.MIN_VALUE+1;
+      }
+      else {
+        return 0;
+      }
+    }
+    int score=0;
+    for (int r=0; r<8; r++) {
+      for (int c=0; c<8; c++) {
+        Piece piece = state.getPiece(r, c);
+        if (piece != null) {
+          score += getPieceValue(state, piece, r, c);
+        }
+      }
+    }
+    if (stateChanger.isKingUnderCheck(state, state.getTurn().getOpposite())) {
+      score += (state.getTurn() == Color.WHITE) ? 50 : -50;
+    }
+    return score;
+  }
+  
+  /**
+   * Return the best possible moves from this state. Higher captures are ordered first.
+   * @param state The current state
+   * @return
+   */
+  public Iterable<Move> getOrderedMoves(State state) {
+    Set<Move> possibleMoves = stateExplorer.getPossibleMoves(state);
+    List<MoveScore<Move>> scores = Lists.newArrayList();
+    for (Move possibleMove : possibleMoves) {
+      State copy = state.copy();
+      try {
+        stateChanger.makeMove(copy, possibleMove);
+        int score = (state.getTurn() == Color.WHITE) ? getStateValue(copy) : -getStateValue(copy);
+        MoveScore<Move> moveScore = new MoveScore<Move>();
+        moveScore.move = possibleMove;
+        moveScore.score = score;
+        scores.add(moveScore);
+      }
+      catch (IllegalMove e) {
+        // This is not possible but still included (for science! / lulz)
+      }
+    }
+    Collections.sort(scores);
+    List<Move> orderedMoves = new ArrayList<Move>();
+    for (MoveScore<Move> moveScore : scores) {
+      orderedMoves.add(moveScore.move);
+    }
+    //System.out.println(orderedMoves);
+    return orderedMoves;
+  }
+  
+  private int getPieceValue(State state, Piece piece, int r, int c) {
+    PieceKind pieceKind = piece.getKind();
+    int numMoves = stateExplorer.getPossibleMovesFromPosition(state, new Position(r, c)).size();
+    int isWhite = 1;
+    if (piece.getColor() == Color.BLACK) {
+      isWhite = -1;
+      numMoves = -numMoves;
+    }
+    switch(pieceKind) {
+    case QUEEN:
+      return isWhite*9+(numMoves/2);
+    case ROOK:
+      return isWhite*5+(numMoves/2);
+    case BISHOP:
+      return isWhite*3+(numMoves/2);
+    case KNIGHT:
+      return isWhite*3+(numMoves/2);
+    case PAWN:
+      return isWhite*1+(numMoves/2);
+    default:
+      return 0;
+    }
+  }
+  
+}

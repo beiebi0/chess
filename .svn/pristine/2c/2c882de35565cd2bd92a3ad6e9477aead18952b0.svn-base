@@ -1,0 +1,57 @@
+package org.zhihanli.hw3;
+
+import org.shared.chess.Position;
+
+import com.allen_sauer.gwt.dnd.client.DragEndEvent;
+import com.allen_sauer.gwt.dnd.client.DragHandler;
+import com.allen_sauer.gwt.dnd.client.DragStartEvent;
+import com.allen_sauer.gwt.dnd.client.VetoDragException;
+import com.google.gwt.user.client.ui.Image;
+
+public class DragHandlerImpl implements DragHandler {
+
+	private Presenter presenter;
+
+	public DragHandlerImpl(Presenter presenter) {
+		this.presenter = presenter;
+	}
+
+	@Override
+	public void onDragEnd(DragEndEvent event) {
+		// TODO Auto-generated method stub
+
+		// Window.alert("on drag end");
+
+		Image image = (Image) event.getSource();
+		Position pos = presenter.getImagePostion(image);
+
+		presenter.highLightPossibleMove(pos, false);
+
+	}
+
+	@Override
+	public void onDragStart(DragStartEvent event) {
+		// TODO Auto-generated method stub
+		// Window.alert("on drag Start");
+		
+		Image image = (Image) event.getSource();
+		Position pos = presenter.getImagePostion(image);
+
+		presenter.highLightPossibleMove(pos, true);
+		presenter.setDragFrom(pos);
+	}
+
+	@Override
+	public void onPreviewDragEnd(DragEndEvent event) throws VetoDragException {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void onPreviewDragStart(DragStartEvent event)
+			throws VetoDragException {
+		// TODO Auto-generated method stub
+
+	}
+
+}

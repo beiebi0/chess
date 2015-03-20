@@ -1,0 +1,97 @@
+package org.longjuntan.hw3;
+
+import org.longjuntan.hw6.client.LoginInfo;
+import org.longjuntan.hw6.client.LoginService;
+import org.longjuntan.hw6.client.LoginServiceAsync;
+import org.longjuntan.hw8.GameConstants;
+import org.shared.chess.State;
+
+import com.google.gwt.core.client.EntryPoint;
+import com.google.gwt.core.client.GWT;
+import com.google.gwt.i18n.client.LocaleInfo;
+import com.google.gwt.user.client.History;
+import com.google.gwt.user.client.rpc.AsyncCallback;
+import com.google.gwt.user.client.ui.Anchor;
+import com.google.gwt.user.client.ui.Label;
+import com.google.gwt.user.client.ui.RootPanel;
+import com.google.gwt.user.client.ui.VerticalPanel;
+
+public class ChessEntryPoint implements EntryPoint {
+        private static GameConstants constants = GWT.create(GameConstants.class);
+        
+        private LoginInfo loginInfo = null;
+          private VerticalPanel loginPanel = new VerticalPanel();
+          private VerticalPanel logoutPanel = new VerticalPanel();
+          private Label loginLabel = new Label(constants.loginInfo());
+          private Anchor signInLink = new Anchor(constants.loginAnchor());
+          private Anchor signOutLink = new Anchor(constants.logoutAnchor());
+
+        @Override
+        public void onModuleLoad() {
+                 // Check login status using login service.
+            LoginServiceAsync loginService = GWT.create(LoginService.class);
+            loginService.login(GWT.getHostPageBaseURL()+"longjuntan.html?locale=" + LocaleInfo.getCurrentLocale().getLocaleName(), new AsyncCallback<LoginInfo>() {
+              public void onFailure(Throwable error) {
+              }
+
+              public void onSuccess(LoginInfo result) {
+                loginInfo = result;
+                if(loginInfo.isLoggedIn()) {
+                        loadLogout();
+                        final Graphics graphics = new Graphics();
+                        Presenter presenter = new Presenter();
+                        presenter.setView(graphics);
+                        graphics.setPresenter(presenter);
+
+                        State state;
+                        if (History.getToken().isEmpty()) {
+                                state = new State();
+                        } else {
+                                state = Utils.setStateByHistory(History.getToken());
+                        }
+
+//                      presenter.setState(state);
+                        presenter.setEmail(loginInfo.getEmailAddress());
+                        presenter.init();
+                        RootPanel.get().add(graphics);
+                } else {
+                  loadLogin();
+                }
+              }
+            });
+                
+                
+                
+                
+//              final Graphics graphics = new Graphics();
+//              Presenter presenter = new Presenter();
+//              presenter.setView(graphics);
+//              graphics.setPresenter(presenter);
+//
+//              State state;
+//              if (History.getToken().isEmpty()) {
+//                      state = new State();
+//              } else {
+//                      state = HistoryParser.setStateByHistory(History.getToken());
+//              }
+//
+//              presenter.setState(state);
+//              RootPanel.get().add(graphics);
+        }
+        
+        public void loadLogin() {
+                // TODO Auto-generated method stub
+                 signInLink.setHref(loginInfo.getLoginUrl());
+                    loginPanel.add(loginLabel);
+                    loginPanel.add(signInLink);
+                    RootPanel.get().add(loginPanel);
+        }
+        
+        public void loadLogout(){
+                signOutLink.setHref(loginInfo.getLogoutUrl());
+                Label logoutLabel = new Label(constants.greeting()+loginInfo.getNickname());
+                 logoutPanel.add(logoutLabel);
+                    logoutPanel.add(signOutLink);
+                    RootPanel.get().add(logoutPanel);
+        }
+}

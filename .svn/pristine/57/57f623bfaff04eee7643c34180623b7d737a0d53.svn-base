@@ -1,0 +1,35 @@
+package org.ashishmanral.hw6.server;
+import java.util.HashMap;
+
+/**
+ * BoardManager.java
+ * @author Ashish
+ * This is the class that handless all the boards that are currently active. It is 
+ * responsible for getting/setting a board as well as increamenting the boards.
+ */
+public class BoardManager {
+	
+  // Contains all the games currently being played.	
+  private static HashMap<Integer,BoardDetails> board = new HashMap<Integer,BoardDetails>();
+  private static int boardId = -1;
+
+  public static BoardDetails getBoard(int boardId) {
+    if (board.containsKey(boardId)) {
+      return board.get(boardId);
+    }
+    return null;
+  }
+  
+  public static void setBoard(BoardDetails boardDetails){
+    board.put(boardId,boardDetails);
+  }
+  
+  public static int getBoardId(){
+    return boardId;
+  }
+  
+  public static void increamentBoardId(){
+    ++boardId;
+  }
+
+}

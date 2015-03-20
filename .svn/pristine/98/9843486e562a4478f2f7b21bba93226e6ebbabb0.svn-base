@@ -1,0 +1,175 @@
+package org.corinnetaylor.hw3;
+
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Set;
+
+import org.chenji.hw2.StateChangerImpl;
+import org.chenji.hw2_5.StateExplorerImpl;
+import org.shared.chess.Color;
+import org.shared.chess.GameResult;
+import org.shared.chess.Move;
+import org.shared.chess.Piece;
+import org.shared.chess.Position;
+import org.shared.chess.State;
+
+import com.google.gwt.event.logical.shared.ValueChangeEvent;
+import com.google.gwt.event.logical.shared.ValueChangeHandler;
+import com.google.gwt.user.client.History;
+
+
+public class Presenter {
+	  public interface View {
+		    /**
+		     * Renders the piece at this position.
+		     * If piece is null then the position is empty.
+		     */
+		    void setPiece(int row, int col, Piece piece);
+		    /**
+		     * Turns the highlighting on or off at this cell.
+		     * Cells that can be clicked should be highlighted.
+		     */
+		    void setHighlighted(int row, int col, boolean highlighted);
+		    /**
+		     * Indicate whose turn it is.
+		     */
+		    void setWhoseTurn(Color color);
+		    /**
+		     * Indicate whether the game is in progress or over.
+		     */
+		    void setGameResult(GameResult gameResult);
+		  }
+		 
+		  public View view;
+		  public State state;
+		  public Position selected;
+		  public Set<Move> highlightedMoves = new HashSet<Move>();
+		  public ArrayList<State> stateHistory = new ArrayList<State>();
+		  public int historyNum = 0;		  
+
+
+		  
+		  public void setView(View view) {
+		    this.view = view;
+		  }
+		  
+		  public void initNewGame(State state){
+			  stateHistory.clear();
+			  this.historyNum = 0;
+			  History.newItem("Page 0");
+			  
+			  this.state = state;
+			  setState(state);
+			  
+			  stateHistory.add(state.copy());
+		  }
+		  
+		  public boolean noMove() {
+				return state.getGameResult() != null;
+			}
+		  
+		  public void clickedOn(int row, int col) {
+				if (noMove()) {
+					return;
+				}
+				if (selected != null && highlightedMoves.size() != 0) {
+					System.out.println("selected TO position: " + selected);
+					Position toPos = new Position(row, col);
+
+					for (Move m : highlightedMoves) {
+						if (m.getTo().equals(toPos)) {
+
+							State newState = this.state.copy();
+							StateChangerImpl changer = new StateChangerImpl();
+							changer.makeMove(
+									newState,
+									new Move(selected, m.getTo(), m.getPromoteToPiece()));
+							if (stateHistory.size()-1 > historyNum) {
+								for (int i = stateHistory.size() - 1; i >= historyNum+1; i--) {
+									stateHistory.remove(i);
+								}
+							}
+
+							History.newItem("page" + (++historyNum));
+							stateHistory.add(newState);										
+							setState(newState);
+							this.state = newState;
+							
+							// Logic for History
+							History.addValueChangeHandler(new ValueChangeHandler<String>() {
+								public void onValueChange(ValueChangeEvent<String> event) {
+									String historyToken = event.getValue();
+									try {
+										if (historyToken.substring(0, 4).equals("page")) {
+											String indexToken = historyToken.substring(4, 5);
+											int tabIndex = Integer.parseInt(indexToken);
+											if (tabIndex == historyNum - 1) {
+												System.out.println(historyToken);
+
+												state = stateHistory.get(tabIndex);
+												setState(state);
+												historyNum--;
+											} else if (tabIndex == historyNum + 1) {
+												System.out.println(historyToken);
+												state = stateHistory.get(tabIndex);
+												historyNum++;
+											}
+										}
+									} catch (IndexOutOfBoundsException e) {
+										System.out.println("Out Of bounds");
+									}
+								}
+							});
+						}
+					}
+					unselectPiece();
+					return;
+				}
+				Position piecePos = new Position(row, col);
+				Piece piece = state.getPiece(piecePos);
+
+				if (piece != null && piece.getColor().equals(state.getTurn())) {
+					unselectPiece();
+					selectPiece(piecePos);
+				} else {
+					unselectPiece();
+				}
+
+				selectPiece(new Position(row, col));
+
+
+		  }
+		  
+		  public void selectPiece(Position pos) {
+			    selected = pos;
+			    highlightedMoves = new StateExplorerImpl()
+				.getPossibleMovesFromPosition(state, selected);
+			    for (Move move : highlightedMoves) {
+			      // Enable highlight
+			      view.setHighlighted(move.getTo().getRow(), move.getTo().getCol(), true);
+			    }
+			  }
+			 
+			  public void unselectPiece() {
+			    selected = null;
+			    // Disable highlight
+			    for (int i = 0; i < 8; ++i) {
+			      for (int j = 0; j < 8; ++j) {
+			        view.setHighlighted(i, j, false);
+			      }
+			    }    
+			  }
+
+		  
+		  public void setState(State state) {
+		    view.setWhoseTurn(state.getTurn());
+		    view.setGameResult(state.getGameResult());
+		    for (int r = 0; r < 8; r++) {
+		      for (int c = 0; c < 8; c++) {
+		    	  view.setPiece(r, c, state.getPiece(r, c));
+		      }
+		    } 
+		  }
+		  
+		  
+}

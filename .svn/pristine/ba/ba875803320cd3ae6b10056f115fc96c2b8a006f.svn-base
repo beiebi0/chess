@@ -1,0 +1,30 @@
+<!DOCTYPE ui:UiBinder SYSTEM "http://dl.google.com/gwt/DTD/xhtml.ent">
+<ui:UiBinder xmlns:ui="urn:ui:com.google.gwt.uibinder"
+  xmlns:g="urn:import:com.google.gwt.user.client.ui">
+  <ui:style field="css" type="org.kuangchelee.hw3.GameCss">
+    .highlighted {
+      background-color: lightgreen !important;
+    }
+    .draghighlighted {
+      background-color: orangered !important;
+    }
+    .whitebackground {
+      background-color: white !important;
+    }
+    .greybackground {
+      background-color: grey !important;
+    }
+    .img{
+      background-color: #777777 !important;
+    }
+    td img {
+      display: block
+    }
+  </ui:style>
+  <g:HTMLPanel>
+	<g:Grid ui:field="controlPanel" />
+	<g:Grid ui:field="gameGrid" />
+	<g:Label ui:field="gameStatus" text="Status" />
+	<g:Grid ui:field="promotePanel" />
+</g:HTMLPanel>
+</ui:UiBinder> 

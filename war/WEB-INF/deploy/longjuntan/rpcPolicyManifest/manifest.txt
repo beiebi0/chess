@@ -1,0 +1,4 @@
+# Module longjuntan
+# RPC service class, partial path of RPC policy file
+org.longjuntan.hw6.client.GameService, B60BC08455620AB65F6309918C93C847.gwt.rpc
+com.googlecode.gwtphonegap.client.log.shared.PhoneGapLogService, 494CE8726AF01D805A89EBBBCED02B7A.gwt.rpc

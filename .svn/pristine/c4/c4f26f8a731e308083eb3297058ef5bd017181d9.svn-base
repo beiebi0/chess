@@ -1,0 +1,51 @@
+package org.harshmehta.hw6.server;
+
+import org.harshmehta.hw6.client.Message;
+import org.harshmehta.hw6.client.MessageService;
+import org.harshmehta.hw6.client.Update;
+
+import com.google.appengine.api.channel.ChannelMessage;
+import com.google.appengine.api.channel.ChannelService;
+import com.google.appengine.api.channel.ChannelServiceFactory;
+import com.google.gwt.user.server.rpc.RemoteServiceServlet;
+
+public class MessageServiceImpl extends RemoteServiceServlet implements MessageService {
+  private static final long serialVersionUID = 1L;
+  public Message getMessage(String input) {
+    String messageString = "Hello " + input + "!";
+    Message message = new Message();
+    message.setMessage(messageString);
+    return message;
+  }
+  
+  @Override
+  public Message getToken(String clientId) {
+    ChannelService channelService = ChannelServiceFactory.getChannelService();
+    int playerNum = ChessServer.getPlayerId();  // Important: This stmt should appear FIRST
+    Game game = ChessServer.addPlayer(clientId);
+    String token = channelService.createChannel(clientId);
+    Message message = new Message();
+    message.setMessage(token);
+    message.setGameId(game.getGameId());
+    message.setPlayerNum(playerNum);
+    return message;
+  }
+  
+  @Override
+  public Boolean getUpdate(Update update) {
+    int gameId = update.getGameId();
+    String stateStr = update.getState();
+    int playerNum = update.getPlayerNum();
+    Game game = ChessServer.getGame(gameId);
+    if (game.getTurn() != playerNum) {
+      // Not this player's turn
+      return new Boolean(false);
+    }
+    game.setTurn(game.getTurn() == 0 ? 1 : 0);  // Toggle turn
+    ChannelService channelService = ChannelServiceFactory.getChannelService();
+    String playerId = (game.getTurn() == 0) ? game.getPlayer1ClientId() : game.getPlayer2ClientId();
+    channelService.sendMessage(new ChannelMessage(playerId, stateStr));
+    return new Boolean(true);
+  }
+  
+}

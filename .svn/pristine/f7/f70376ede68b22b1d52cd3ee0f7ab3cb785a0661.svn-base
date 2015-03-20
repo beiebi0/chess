@@ -1,0 +1,17 @@
+package org.yuehlinchung.hw6.server;
+
+import org.yuehlinchung.hw6.shared.LoginInfo;
+import org.yuehlinchung.hw6.shared.Match;
+import com.googlecode.objectify.Objectify;
+import com.googlecode.objectify.ObjectifyService;
+
+public class OfyService {
+	static {
+		ObjectifyService.register(Match.class);
+		ObjectifyService.register(LoginInfo.class);
+	}
+	
+	public static Objectify ofy() {
+		return ObjectifyService.ofy();
+	}
+}

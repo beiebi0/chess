@@ -1,0 +1,72 @@
+/**
+ * 
+ */
+package org.vorasahil.hw5;
+
+import com.google.gwt.animation.client.Animation;
+import com.google.gwt.dom.client.Style;
+import com.google.gwt.dom.client.Style.Position;
+import com.google.gwt.user.client.Element;
+
+/**
+ * @author Sahil Vora
+ *
+ */
+public class ChessAnimation extends Animation{
+
+	  private  Element element;
+	    private int startX;
+	    private int startY;
+	    private int finalX;
+	    private int finalY;
+	    public ChessAnimation(Element element)
+	    {
+	        this.element = element;
+	    }
+	 
+	    /**
+	     * Initiates the animation.
+	     * @param x1
+	     * @param y1
+	     * @param x2
+	     * @param y2
+	     * @param milliseconds
+	     */
+	    public void scrollTo(int x1,int y1,int x2,int y2, int milliseconds)
+	    {
+
+			this.finalX = 0;
+	        this.finalY = 0;
+	 
+	        startX = x1-x2;
+	        startY = y1-y2;
+		     
+	        element.getStyle().setPosition(Position.RELATIVE);
+	        element.getParentElement().getStyle().setPosition(Position.RELATIVE);
+	        
+	        run(milliseconds);
+	    }
+	
+	 
+	 
+	    @Override
+	    protected void onUpdate(double progress)
+	    {
+	        double positionX = startX + (progress * (this.finalX - startX));
+	        double positionY = startY + (progress * (this.finalY - startY));
+	        this.element.getStyle().setLeft(positionX, Style.Unit.PX);
+	        this.element.getStyle().setTop(positionY, Style.Unit.PX);
+	    }
+	 
+	    @Override
+	    protected void onComplete()
+	    {
+	        super.onComplete();
+	        this.element.getStyle().setLeft(this.finalX, Style.Unit.PX);
+	        this.element.getStyle().setTop(this.finalY, Style.Unit.PX);
+	        element.getStyle().setPosition(Position.STATIC);
+	        element.getParentElement().getStyle().setPosition(Position.STATIC);
+	        
+	    }
+
+}

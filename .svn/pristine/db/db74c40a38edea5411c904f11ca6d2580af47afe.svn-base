@@ -1,0 +1,56 @@
+package org.corinnetaylor.hw3;
+
+import com.google.gwt.resources.client.ClientBundle;
+import com.google.gwt.resources.client.ImageResource;
+
+public interface GameImages extends ClientBundle {
+	
+	@Source("Board black.png")
+	ImageResource chessboard();
+	
+  @Source("black_tile.png")
+  ImageResource blackTile();
+  
+  @Source("white_tile.png")
+  ImageResource whiteTile();
+  
+  @Source("Black B.png")
+  ImageResource black_bishop();
+  
+  @Source("Black K.png")
+  ImageResource black_king();
+  
+  @Source("Black N.png")
+  ImageResource black_knight();
+  
+  @Source("Black P.png")
+  ImageResource black_pawn();
+  
+  @Source("Black Q.png")
+  ImageResource black_queen();
+  
+  @Source("Black R.png")
+  ImageResource black_rook();
+  
+  @Source("White B.png")
+  ImageResource white_bishop();
+  
+  @Source("White K.png")
+  ImageResource white_king();
+  
+  @Source("White N.png")
+  ImageResource white_knight();
+  
+  @Source("White P.png")
+  ImageResource white_pawn();
+  
+  @Source("White Q.png")
+  ImageResource white_queen();
+  
+  @Source("White R.png")
+  ImageResource white_rook();
+  
+  @Source("blank.png")
+  ImageResource blank();
+  
+}

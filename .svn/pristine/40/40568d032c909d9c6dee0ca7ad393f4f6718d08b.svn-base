@@ -1,0 +1,60 @@
+package org.mengyanhuang.hw6.server;
+
+import java.util.HashMap;
+
+import org.mengyanhuang.hw3.Presenter;
+import org.mengyanhuang.hw6.client.ChessMoveService;
+import org.shared.chess.State;
+
+import com.google.appengine.api.channel.ChannelMessage;
+import com.google.appengine.api.channel.ChannelService;
+import com.google.appengine.api.channel.ChannelServiceFactory;
+import com.google.gwt.user.server.rpc.RemoteServiceServlet;
+
+import com.google.api.server.spi.config.Api;
+
+
+@SuppressWarnings("serial")
+public class ChessMoveServiceImpl extends RemoteServiceServlet implements
+		ChessMoveService {
+	
+    public static HashMap<String,String> users = new HashMap<String,String>();
+  
+	@Override
+	public String getCurrentState(String state, String Uid) {
+		// TODO Auto-generated method 
+		
+		//Server Sends update messages to clients via their channels
+		//ChannelService channelService = ChannelServiceFactory.getChannelService();
+		//String token = channelService.createChannel("aimeehwang90@gmail.com");
+		//channelService.sendMessage(new ChannelMessage("aimeehwang90@gmail.com", state));
+		
+		ChannelService channelService = ChannelServiceFactory.getChannelService();	
+		
+		if(!UserLoginServiceImpl.wait.equals("")){
+			UserLoginServiceImpl.wait =Uid;
+			channelService.sendMessage(new ChannelMessage(Uid, "castling=YYYY&turn=W&numberOfMovesWithoutCaptureNorPawnMoved=0&board=00:WR,01:WN,02:WB,03:WQ,04:WK,05:WB,06:WN,07:WR,10:WP,11:WP,12:WP,13:WP,14:WP,15:WP,16:WP,17:WP,60:BP,61:BP,62:BP,63:BP,64:BP,65:BP,66:BP,67:BP,70:BR,71:BN,72:BB,73:BQ,74:BK,75:BB,76:BN,77:BR"));
+		}else{
+			if(users.containsKey(Uid)){
+				String ChannelKey = users.get(Uid);
+				channelService.sendMessage(new ChannelMessage(ChannelKey,state));
+		    	channelService.sendMessage(new ChannelMessage(Uid,state));
+			
+			}else{
+				String ChannelKey="";
+				for (String key: users.keySet()){
+					if(users.get(key).equals(Uid)) ChannelKey= key;
+				}
+				 channelService.sendMessage(new ChannelMessage(ChannelKey,state));
+		    	 channelService.sendMessage(new ChannelMessage(Uid,state));	
+					
+			}
+		}	
+			
+		
+		
+		
+		return state;
+	}
+
+}

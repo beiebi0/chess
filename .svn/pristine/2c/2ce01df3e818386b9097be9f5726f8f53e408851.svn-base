@@ -1,0 +1,348 @@
+package org.ashishmanral.hw7;
+
+import static com.googlecode.objectify.ObjectifyService.ofy;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.Set;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+import org.ashishmanral.hw7.Match;
+import org.ashishmanral.hw7.MultiplayerChessService;
+import org.ashishmanral.hw7.Player;
+import org.ashishmanral.hw8.GlickoRatingSystem;
+
+import com.google.appengine.api.channel.ChannelMessage;
+import com.google.appengine.api.channel.ChannelService;
+import com.google.appengine.api.channel.ChannelServiceFactory;
+import com.google.appengine.api.users.UserService;
+import com.google.appengine.api.users.UserServiceFactory;
+import com.google.gwt.user.client.rpc.AsyncCallback;
+import com.google.gwt.user.server.rpc.RemoteServiceServlet;
+import com.googlecode.objectify.Key;
+import com.googlecode.objectify.ObjectifyService;
+
+public class MultiplayerChessServiceImpl extends RemoteServiceServlet 
+implements MultiplayerChessService {
+  
+  private static final long serialVersionUID = 1L;
+  private static Logger logger = Logger.getLogger(MultiplayerChessServiceImpl.class.toString());
+  
+  static {
+    ObjectifyService.register(Player.class);
+    ObjectifyService.register(Match.class);
+  }
+  
+  UserService userService = UserServiceFactory.getUserService();
+  ChannelService channelService = ChannelServiceFactory.getChannelService();
+  
+  /**
+   * This method initializes the players. If a new player comes, it is added to datastore otherwise 
+   * it is retrieved from it.
+   */
+  @Override
+  public String initializePlayer(String currentPlayerEmail) {
+
+	String token = null;
+	String channelId = currentPlayerEmail;
+    Key<Player> playerKey = Key.create(Player.class, channelId);
+    Player player = ofy().load().key(playerKey).get();
+    token = channelService.createChannel(channelId);
+    if(player == null) player = new Player(channelId);
+    ofy().save().entity(player).now();
+    int rankMin = player.getRank() - (2*player.getRD());
+    int rankMax = player.getRank() + (2*player.getRD());
+    return token + "&&&" + rankMin + "&&&" + rankMax;
+
+  }
+
+  /**
+   * This method is used for automatching.
+   */
+  @Override
+  public Message autoMatch(String userEmail, String opponentEmail, Long matchId, String stateString, Boolean myTurn) {
+	  if(!stateString.equals("BlankState")){
+    	  Key<Match> currentMatchKey = Key.create(Match.class, matchId);
+          Match currentMatch = ofy().load().key(currentMatchKey).get();
+          currentMatch.setState(stateString);
+          currentMatch.setTurnOfPlayer((myTurn==true?userEmail:opponentEmail));
+          ofy().save().entity(currentMatch).now();
+      }
+	  Key<Player> currentPlayerKey = Key.create(Player.class, userEmail);
+	  Player currentPlayer = ofy().load().key(currentPlayerKey).get();
+      Player opponent = null;
+      Message message = null;
+      List<Player> waitingPlayers = ofy().load().type(Player.class).list();
+      for(Player currentWaitingPlayer : waitingPlayers){
+		  if(!currentWaitingPlayer.equals(currentPlayer)){
+			  opponent = currentWaitingPlayer;
+			  break;
+		  }
+	  }
+      if(opponent!=null){
+    	Key<Player> opponentKey = Key.create(Player.class, opponent.getEmail());
+    	Date currentDate = new Date();
+    	Match newMatch = new Match(currentPlayerKey, opponentKey, userEmail, currentDate);
+    	Key<Match> newMatchKey = ofy().save().entity(newMatch).now();
+    	currentPlayer.addMatchToSetOfMatches(newMatchKey);
+    	opponent.addMatchToSetOfMatches(newMatchKey);
+    	ofy().save().entities(currentPlayer, opponent, newMatch).now();
+    	int currentPlayerRankMin=currentPlayer.getRank() - (2*currentPlayer.getRD());
+    	int currentPlayerRankMax=currentPlayer.getRank() + (2*currentPlayer.getRD());
+    	int opponentRankMin=opponent.getRank() - (2*opponent.getRD());
+    	int opponentRankMax=opponent.getRank() + (2*opponent.getRD());
+    	message = new Message(newMatch.getMatchId(), GameType.NEWGAME);
+    	message.setOpponent(userEmail);
+    	message.setDateStarted(currentDate);
+    	message.setYourRankMin(opponentRankMin);
+    	message.setYourRankMax(opponentRankMax);
+    	message.setOppRankMin(currentPlayerRankMin);
+    	message.setOppRankMax(currentPlayerRankMax);
+    	channelService.sendMessage(new ChannelMessage(opponent.getEmail(), message.toString()));
+    	message.setOpponent(opponent.getEmail());
+    	message.setYourTurn(true);
+    	message.setOppRankMin(opponentRankMin);
+    	message.setOppRankMax(opponentRankMax);
+    	message.setYourRankMin(currentPlayerRankMin);
+    	message.setYourRankMax(currentPlayerRankMax);
+      }
+      return message;
+  }
+
+  /**
+   * This method is used for matching with an opponent using an email address.
+   */
+  @Override
+  public Message opponentEmailMatch(String currentPlayerEmail, String opponentEmail, String currentState, Long matchId, Boolean yourTurn) {
+      
+	  Key<Player> currentPlayerKey = Key.create(Player.class, currentPlayerEmail);
+      Key<Player> opponentKey = Key.create(Player.class, opponentEmail);
+      Player currentPlayer = ofy().load().key(currentPlayerKey).get();
+      Player opponent = ofy().load().key(opponentKey).get();
+      if (opponent == null) return null;
+      if(!currentState.equals("BlankState")) saveMatch(matchId, currentState, yourTurn, currentPlayerEmail);
+      Date dateStarted = new Date();
+      Match newMatch = new Match(currentPlayerKey, opponentKey, currentPlayerEmail, dateStarted);
+      Key<Match> newMatchKey = ofy().save().entity(newMatch).now();
+      currentPlayer.addMatchToSetOfMatches(newMatchKey);
+      opponent.addMatchToSetOfMatches(newMatchKey);
+      ofy().save().entities(currentPlayer, opponent, newMatch).now();
+      int currentPlayerRankMin=currentPlayer.getRank() - (2*currentPlayer.getRD());
+  	  int currentPlayerRankMax=currentPlayer.getRank() + (2*currentPlayer.getRD());
+  	  int opponentRankMin=opponent.getRank() - (2*opponent.getRD());
+  	  int opponentRankMax=opponent.getRank() + (2*opponent.getRD());
+      Message message = new Message(newMatch.getMatchId(), GameType.NEWGAMEREQUEST);
+      message.setOpponent(currentPlayerEmail);
+      message.setDateStarted(dateStarted);
+      message.setYourRankMin(opponentRankMin);
+  	  message.setYourRankMax(opponentRankMax);
+  	  message.setOppRankMin(currentPlayerRankMin);
+  	  message.setOppRankMax(currentPlayerRankMax);
+  	  channelService.sendMessage(new ChannelMessage(opponent.getEmail(), message.toString()));
+      message.setOpponent(opponent.getEmail());
+	  message.setYourTurn(true);
+	  message.setOppRankMin(opponentRankMin);
+	  message.setOppRankMax(opponentRankMax);
+	  message.setYourRankMin(currentPlayerRankMin);
+	  message.setYourRankMax(currentPlayerRankMax);
+      return message;
+      
+  }
+
+  /**
+   * This method is called when a user changes it's match by clicking on some other match
+   * in it's match list.
+   */
+  @Override
+  public Message changeMatch(String userEmail, Long matchId, Long newMatchId, String currentState, String turn) {
+	  logger.log(Level.WARNING,userEmail + " " + matchId + " " + newMatchId + " " + currentState + " " + turn);
+	  Key<Player> currentPlayerKey = Key.create(Player.class, userEmail);
+	  Player currentPlayer = ofy().load().key(currentPlayerKey).get();
+	  if(matchId!=null){
+		  Key<Match> currentMatchKey = Key.create(Match.class, matchId);
+	      Match currentMatch = ofy().load().key(currentMatchKey).get();
+	      currentMatch.setState(currentState);
+	      currentMatch.setTurnOfPlayer(turn);
+	      ofy().save().entity(currentMatch).now();
+	  }
+	  Key<Match> restoreMatchKey = Key.create(Match.class, newMatchId);
+	  Match restoreMatch = ofy().load().key(restoreMatchKey).get();
+	  Key<Player> opponentKey = restoreMatch.getOpponent(currentPlayerKey);
+	  Player opponent = ofy().load().key(opponentKey).get();
+	  Message message = new Message(restoreMatch.getMatchId(), GameType.GAMEINPROGRESS);
+	  if(opponent!=null){
+		  int currentPlayerRankMin=currentPlayer.getRank() - (2*currentPlayer.getRD());
+	  	  int currentPlayerRankMax=currentPlayer.getRank() + (2*currentPlayer.getRD());
+	  	  int opponentRankMin=opponent.getRank() - (2*opponent.getRD());
+		  int opponentRankMax=opponent.getRank() + (2*opponent.getRD());
+		  message.setOppRankMin(opponentRankMin);
+		  message.setOppRankMax(opponentRankMax);
+		  message.setYourRankMin(currentPlayerRankMin);
+		  message.setYourRankMax(currentPlayerRankMax);
+	  }
+	  message.setOpponent(opponent==null?"Computer":opponent.getEmail());
+	  message.setYourTurn(restoreMatch.getTurnOfPlayer().equals(userEmail)?true:false);
+	  message.setWinner(restoreMatch.getWinner());
+	  message.setState(restoreMatch.getState());
+	  message.setDateStarted(restoreMatch.getDateStarted());
+	  return message;
+  }
+  
+  /**
+   * This method is used to delete a match.
+   */
+  @Override
+  public void deleteMatch(String userEmail, Long matchId) {
+	  Key<Player> currentPlayerKey = Key.create(Player.class, userEmail);
+	  Player currentPlayer = ofy().load().key(currentPlayerKey).get();
+	  Key<Match> currentMatchKey = Key.create(Match.class, matchId);
+	  Match currentMatch = ofy().load().key(currentMatchKey).get();
+	  currentMatch.deletePlayer(currentPlayerKey);
+	  currentPlayer.deleteMatchFromSetOfMatches(currentMatchKey);
+	  ofy().save().entity(currentPlayer).now();
+	  if(currentMatch.getOpponent(currentPlayerKey)==null) ofy().delete().entity(currentMatch);
+	  else ofy().save().entity(currentMatch).now();
+  }
+
+  /**
+   * This method is called when a user makes a move.
+   */
+  @Override
+  public void makeMove(String userEmail, String opponentEmail, Long matchId, String stateString, String winner) {
+      
+	  Key<Match> currentMatchKey = Key.create(Match.class, matchId);
+      Match currentMatch = ofy().load().key(currentMatchKey).get();
+      Key<Player> opponentKey = Key.create(Player.class, opponentEmail);
+      Player opponent = ofy().load().key(opponentKey).get();
+      Player currentPlayer = ofy().load().key(Key.create(Player.class, userEmail)).get();
+      currentMatch.setState(stateString);
+      currentMatch.setTurnOfPlayer(opponentEmail);
+      currentMatch.setWinner(winner);
+      if(!winner.equals("No Winner")) updateRanksForPlayers(currentPlayer, opponent, winner, currentMatch);
+      ofy().save().entity(currentMatch).now();
+      if(!opponent.isPlayingMatch(currentMatchKey)) return;
+      int currentPlayerRankMin=currentPlayer.getRank() - (2*currentPlayer.getRD());
+  	  int currentPlayerRankMax=currentPlayer.getRank() + (2*currentPlayer.getRD());
+  	  int opponentRankMin=opponent.getRank() - (2*opponent.getRD());
+	  int opponentRankMax=opponent.getRank() + (2*opponent.getRD());
+      Message message = new Message(matchId, GameType.GAMEINPROGRESS);
+      message.setYourTurn(true);
+      message.setOpponent(userEmail);
+      message.setState(stateString);
+      message.setWinner(winner);
+      message.setDateStarted(currentMatch.getDateStarted());
+      message.setYourRankMin(opponentRankMin);
+  	  message.setYourRankMax(opponentRankMax);
+  	  message.setOppRankMin(currentPlayerRankMin);
+  	  message.setOppRankMax(currentPlayerRankMax);
+  	  if(!winner.equals("No Winner"))channelService.sendMessage(new ChannelMessage(userEmail, "&" + currentPlayerRankMin + "&" + currentPlayerRankMax + "&" + opponentRankMin + "&" + opponentRankMax));
+  	  channelService.sendMessage(new ChannelMessage(opponentEmail, message.toString()));
+  }
+  
+  /**
+   * This is to initially load the list of matches in the user match list.
+   */
+  @Override
+  public ArrayList<Message> loadMatchList(String userId){
+	  Key<Player> currentPlayerKey = Key.create(Player.class, userId);
+	  Player currentPlayer = ofy().load().key(currentPlayerKey).get();
+	  Set<Key<Match>> setOfMatches = currentPlayer.getSetOfMatches();
+	  ArrayList<Message> listOfMatches = new ArrayList<Message>();
+	  for(Key<Match> currentMatchKey:setOfMatches){
+		  Match currentMatch = ofy().load().key(currentMatchKey).get();
+		  Message message = new Message();
+		  message.setMatchId(currentMatch.getMatchId());
+		  message.setYourTurn(currentMatch.getTurnOfPlayer().equals(userId)?true:false);
+		  message.setWinner(currentMatch.getWinner());
+		  Key<Player> opponentKey = currentMatch.getOpponent(currentPlayerKey);
+		  if(opponentKey!=null) {
+			  if(opponentKey.getName().equals("Computer")) message.setOpponent("Computer");
+			  else message.setOpponent(ofy().load().key(opponentKey).get().getEmail());
+		  }
+		  listOfMatches.add(message);
+	  }
+	  return listOfMatches;
+  }
+  
+  /**
+   * This method is used to save the state of the game in case of interruptions.
+   * @param matchId
+   * @param currentState
+   * @param turn
+   */
+  public void saveMatch(Long matchId, String currentState, boolean turn, String currentPlayerEmail){
+	  Key<Match> currentMatchKey = Key.create(Match.class, matchId);
+      Match currentMatch = ofy().load().key(currentMatchKey).get();
+      Key<Player> currentPlayerKey = Key.create(Player.class, currentPlayerEmail);
+      Key<Player> opponentKey = currentMatch.getOpponent(currentPlayerKey);
+      Player opponent = ofy().load().key(opponentKey).get();
+      currentMatch.setState(currentState);
+      currentMatch.setTurnOfPlayer(turn==true?currentPlayerEmail:(opponent==null)?"Computer":opponent.getEmail());
+      ofy().save().entity(currentMatch).now();
+  }
+  
+  /**
+   * 
+   */
+  @Override
+  public String AIGame(String currentPlayerEmail, String currentState, Long matchId, boolean yourTurn, boolean isAIWhite){
+	  if(!currentState.equals("BlankState")) saveMatch(matchId, currentState, yourTurn, currentPlayerEmail);
+	  Key<Player> AIKey = Key.create(Player.class, "Computer");
+	  Key<Player> currentPlayerKey = Key.create(Player.class, currentPlayerEmail);
+	  Player currentPlayer = ofy().load().key(currentPlayerKey).get();
+	  Date currentDate = new Date();
+	  Match newMatch = null;
+	  if(isAIWhite) newMatch = new Match(AIKey, Key.create(Player.class, currentPlayerEmail), "Computer", currentDate);
+	  else newMatch = new Match(Key.create(Player.class, currentPlayerEmail), AIKey, currentPlayerEmail, currentDate);
+	  Key<Match> newMatchKey = ofy().save().entity(newMatch).now();
+	  currentPlayer.addMatchToSetOfMatches(newMatchKey);
+	  ofy().save().entity(currentPlayer).now();
+	  return newMatch.getMatchId() + "&&" + (new Long(currentDate.getTime()).toString());
+  }
+  
+  @Override
+  public void saveAIState(String userEmail, Long matchId, String stateString, String winner, boolean isUserTurn){
+	  
+	  Key<Match> currentMatchKey = Key.create(Match.class, matchId);
+      Match currentMatch = ofy().load().key(currentMatchKey).get();
+      currentMatch.setState(stateString);
+      currentMatch.setTurnOfPlayer(isUserTurn?userEmail:"Computer");
+      currentMatch.setWinner(winner);
+      ofy().save().entity(currentMatch).now();
+      
+  }
+  
+  /**
+   * This method updates the ranks of both the players after game is finished.
+   * @param currentPlayer
+   * @param opponent
+   * @param winner
+   * @param currentMatch
+   */
+  public void updateRanksForPlayers(Player currentPlayer, Player opponent, String winner, Match currentMatch){
+	  double s = 0.5;
+	  if(winner.equals("Game Drawn")) s=0.5;
+	  else{
+		  String[] winnerStr = winner.split(" ");
+		  if(currentPlayer.getEmail().equals(winnerStr[0])) s=1;
+		  else s=0;
+	  }
+	  currentPlayer.setRD(GlickoRatingSystem.RD(currentPlayer.getRD(), (int)((new Date()).getTime() - currentMatch.getDateStarted().getTime())/ 86400000));
+	  opponent.setRD(GlickoRatingSystem.RD(opponent.getRD(), (int)((new Date()).getTime() - currentMatch.getDateStarted().getTime())/ 86400000));
+	  int tempCurrentPlayerRank = currentPlayer.getRank();
+	  currentPlayer.setRank(GlickoRatingSystem.findRating(currentPlayer.getRank()    , 
+			  												currentPlayer.getRD()    ,
+			  												s						 , 
+			  												opponent.getRank()	     , 
+			  												opponent.getRD()));
+	  opponent.setRank(GlickoRatingSystem.findRating(opponent.getRank()           , 
+													   opponent.getRD()           ,
+													   1-s						  , 
+													   tempCurrentPlayerRank      , 
+													   currentPlayer.getRD()));
+	  ofy().save().entities(currentPlayer, opponent).now();
+  }
+  
+}

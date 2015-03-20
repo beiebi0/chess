@@ -1,0 +1,689 @@
+package org.harshmehta.hw3;
+
+import static org.shared.chess.Color.BLACK;
+import static org.shared.chess.Color.WHITE;
+import static org.shared.chess.PieceKind.BISHOP;
+import static org.shared.chess.PieceKind.KING;
+import static org.shared.chess.PieceKind.KNIGHT;
+import static org.shared.chess.PieceKind.PAWN;
+import static org.shared.chess.PieceKind.QUEEN;
+import static org.shared.chess.PieceKind.ROOK;
+
+import java.util.Set;
+
+import org.harshmehta.hw2.StateChangerImpl;
+import org.harshmehta.hw2_5.StateExplorerImpl;
+import org.harshmehta.hw8.ChessMessages;
+import org.harshmehta.hw9.AlphaBetaPruning;
+import org.harshmehta.hw9.DateTimer;
+import org.harshmehta.hw9.Heuristic;
+import org.shared.chess.Color;
+import org.shared.chess.GameResult;
+import org.shared.chess.GameResultReason;
+import org.shared.chess.IllegalMove;
+import org.shared.chess.Move;
+import org.shared.chess.Piece;
+import org.shared.chess.PieceKind;
+import org.shared.chess.Position;
+import org.shared.chess.State;
+
+import com.google.gwt.core.client.GWT;
+import com.google.gwt.storage.client.Storage;
+
+public class Presenter {
+  public interface View {
+    /**
+     * Renders the piece at this position.
+     * If piece is null then the position is empty.
+     */
+    void setPiece(int row, int col, Piece piece);
+    /**
+     * Turns the highlighting on or off at this cell.
+     */
+    void setHighlighted(int row, int col, boolean highlighted);
+    /**
+     * Turns the highlighting on or off at this cell.
+     * Cells that can be clicked should be selected.
+     */
+    void setSelected(int row, int col, boolean selected);
+    /**
+     * Indicate whose turn it is.
+     */
+    void setWhoseTurn(Color color);
+    /**
+     * Indicate whether the game is in progress or over.
+     */
+    void setGameResult(String gameResultText);
+    /**
+     * Displays the choice of piece to promote the pawn to
+     * @param color The color of the current turn's pieces
+     * @return The index of the piece to promote to
+     */
+    void showPromotionPieces(Color color);
+    /**
+     * Hides the piece selection
+     */
+    void hidePromotionPieces();
+    /**
+     * To send an updated state representation to the View
+     * Used for History
+     */
+    void updateState(String state);
+    /**
+     * Tell the view to animate this piece to move to new position
+     */
+    void animatePiece(int fromR, int fromC, int toR, int toC, int durationInMs);
+    /**
+     * Tell the view to play the required sound.
+     * SoundNum 1: Click
+     * SoundNum 2: Knock
+     * SoundNum 3: Game Over
+     * 
+     * @param soundNum The index of the sound to be played
+     */
+    void playSound(int soundNum);
+    /**
+     * Informs the server about a change of state so it can 
+     * communicate the new state to the other player
+     * @param stateStr String representation of the state to render
+     */
+    void updateOtherPlayer(String stateStr);
+    /**
+     * Send the move just made to the server
+     * @param serializedMove The String representation of the move
+     * @param stateString The String representation of the state
+     */
+    void sendMoveToServer(String serializedMove, String stateString);
+    /**
+     * Updates the matches listbox
+     */
+    void updateMatchList();
+    /**
+     * @return true if playing against AI
+     */
+    boolean isAiMatch();
+    /**
+     * Send the move just made in a single-player game to the server
+     * @param serializedMove The String representation of the move
+     * @param stateString The String representation of the state
+     */
+    void sendMoveToServerAI(String serializedMove, String stateString);
+    /**
+     * Send the move just made in a single-player game to the server and then do nothing
+     * @param serializedMove The String representation of the move
+     * @param stateString The String representation of the state
+     */
+    void sendMoveToServerAIDoNothing(String serializedMove, String stateString);
+  }
+  
+  private State state;
+  private StateChangerImpl stateChanger;
+  private StateExplorerImpl stateExplorer;
+  private View view;
+  private Position fromPos;
+  private Set<Move> moves;
+  private Move promotionMoveTo;
+  private boolean enableClicks = true;
+  private static ChessMessages messages = GWT.create(ChessMessages.class);
+  
+  public void setView(View view) {
+    this.view = view;
+  }
+  
+  /**
+   * Initializes game state and begins a new game
+   */
+  public void startGame(String stateToken) {
+    stateChanger = new StateChangerImpl();
+    stateExplorer = new StateExplorerImpl();
+    promotionMoveTo = null;
+    if (fromPos != null) {
+      clearFromPos();
+    }
+    fromPos = null;
+    if (stateToken != null) {
+      setState(stateToken);
+    }
+    else {
+      state = new State();
+      setState(state, null);
+    }
+  }
+  
+  /**
+   * Restore the state given by the parameter stateString
+   * @param stateString The unique token which represents the State
+   */
+  public void setState(String stateString) {
+    view.hidePromotionPieces();
+    promotionMoveTo = null;
+    clearHighlightedMoves();
+    view.setGameResult("In Progress");
+    try {
+      State deserializedState = deserializeState(stateString);
+      if (! isStatePossible(deserializedState)) {
+        return;  // This state is not possible
+      }
+      setState(deserializedState, null);
+    } catch (Exception e) {
+      // Do nothing; Invalid state
+    }
+  }
+  
+  /**
+   * Renders the current state on the board
+   * If setting the initial state, copy is null
+   * @param state The state to set
+   * @param copy The previous state
+   */
+  public void setState(State state, State copy) {
+    //String serializedState = serializeState(state);
+    this.state = state;
+    //view.updateState(serializedState);
+    view.setWhoseTurn(state.getTurn());
+    if (state.getGameResult() != null) {
+      String winner = state.getGameResult().getWinner() == null ? "Draw" : 
+        state.getGameResult().getWinner().name();
+      if (winner.equals("WHITE")) {
+        winner = messages.white();
+      }
+      else if (winner.equals("BLACK")) {
+        winner = messages.black();
+      }
+      String gameResultReason = state.getGameResult().getGameResultReason().name();
+      String gameResultText = messages.gameOver(winner, gameResultReason);
+      view.setGameResult(gameResultText);
+      view.playSound(3);  // Play sound
+    }
+    if (copy == null) {
+      for (int r = 0; r < 8; r++) {
+        for (int c = 0; c < 8; c++) {
+            view.setPiece(r, c, state.getPiece(r, c));
+        }
+      }
+    }
+    else {  // Only render the changed pieces
+      for (int r = 0; r < 8; r++) {
+        for (int c = 0; c < 8; c++) {
+          Piece newPiece = state.getPiece(r, c);
+          Piece oldPiece = copy.getPiece(r, c);
+          if (newPiece != oldPiece) {
+            view.setPiece(r, c, state.getPiece(r, c));
+          }
+        }
+      }
+    }
+  }
+  
+  /**
+   * Board's click handlers will respond to clicks
+   */
+  public void enableBoard() {
+    enableClicks = true;
+  }
+  
+  /**
+   * Board clicks will be ignored
+   */
+  public void disableBoard() {
+    enableClicks = false;
+  }
+  
+  /**
+   * Handles a cell clicked on the board
+   * @param row Row on the board which was clicked
+   * @param col Column on the board which was clicked
+   */
+  public void cellClicked(int row, int col) {
+    if (enableClicks) {
+      if (promotionMoveTo != null) {
+        // A promotion move is underway. Ignore board clicks
+        return;
+      }
+      if (state.getGameResult() != null) {
+        // Game has already ended! Cannot select pieces now
+        return;
+      }
+      if (fromPos == null) {
+        // This is the 'from' move
+        fromMove(row, col);
+      }
+      else { // This is the 'to' move
+        if (fromPos.equals(new Position(row, col))) {
+          // Cancel the proposed move
+          clearFromPos();
+          clearHighlightedMoves();
+          return;
+        }
+        toMove(row, col);
+      }
+    }
+  }
+  
+  /**
+   * Handles the 'from' move (first click sequence)
+   * @param row Row on the board which was clicked
+   * @param col Column on the board which was clicked
+   */
+  public void fromMove(int row, int col) {
+    //view.setSelected(row, col, true);
+    Piece selectedPiece = state.getPiece(row,col);
+    if (selectedPiece == null) {
+      // No piece to move
+      return;
+    }
+    if (selectedPiece.getColor() != state.getTurn()) {
+      // Other color piece
+      return;
+    }
+    view.playSound(1);  // Play sound
+    fromPos = new Position(row,col);  // Set the 'from' position
+    moves = stateExplorer.getPossibleMovesFromPosition(state, fromPos);
+    view.setSelected(row, col, true);  // Select the piece
+    for (Move move : moves) {
+      // Highlight the possible moves from this position
+      view.setHighlighted(move.getTo().getRow(), move.getTo().getCol(), true);
+      //isPromotion = (move.getPromoteToPiece()) == null ? false : true;
+    }
+  }
+  
+  /**
+   * Handles the 'to' move (second click sequence)
+   * @param row Row on the board which was clicked
+   * @param col Column on the board which was clicked
+   */
+  public void toMove(int row, int col) {
+    clearHighlightedMoves();
+    Move proposedMove = new Move(fromPos, new Position(row,col), null);
+    Move proposedMoveWithPromotion = new Move(fromPos, new Position(row,col), QUEEN);
+    if (! (moves.contains(proposedMove) || moves.contains(proposedMoveWithPromotion))) {
+      // Not a possible move
+      clearFromPos();
+      return;
+    }
+    if (moves.contains(proposedMoveWithPromotion)) {
+      // If this move is a promotion
+      promotionMoveTo = proposedMoveWithPromotion;  // Remember the move's positions
+      view.setSelected(fromPos.getRow(), fromPos.getCol(), false);
+      view.showPromotionPieces(state.getTurn());
+      return;
+    }
+    makeMove(proposedMove);
+  }
+  
+  /**
+   * Make and test if move is valid
+   * @param proposedMove The move to make
+   */
+  public void makeMove(Move proposedMove) {
+    try {
+      State copy = state.copy();
+      stateChanger.makeMove(state, proposedMove);
+      clearFromPos();
+      setState(state, copy);
+      view.playSound(2);  // Play sound
+      //view.updateOtherPlayer(serializeState(state));
+      String moveStr = serializeMove(proposedMove);
+      view.sendMoveToServer(moveStr, serializeState(state));
+      view.updateMatchList();
+      disableBoard();
+      // Animate the piece
+      view.animatePiece(proposedMove.getFrom().getRow(), proposedMove.getFrom().getCol(),
+          proposedMove.getTo().getRow(), proposedMove.getTo().getCol(), 300);
+    }
+    catch (IllegalMove exc) {
+      clearFromPos();
+      // Can also make view display this error msg
+    }
+  }
+  
+  public void makeAImove() {
+    if (state.getGameResult() != null) {
+      return;
+    }
+    AlphaBetaPruning ai = new AlphaBetaPruning(new Heuristic());
+    Move aiMove = ai.findBestMove(state, 4, new DateTimer(3000));
+    State copy = state.copy();
+    stateChanger.makeMove(state, aiMove);
+    setState(state, copy);
+    view.playSound(2);  // Play sound
+    enableBoard();
+    view.updateMatchList();
+    view.sendMoveToServerAIDoNothing(serializeMove(aiMove), serializeState(state));
+    // Animate the piece
+    view.animatePiece(aiMove.getFrom().getRow(), aiMove.getFrom().getCol(),
+        aiMove.getTo().getRow(), aiMove.getTo().getCol(), 300);
+  }
+  
+  public void setAImove(boolean value) {
+    //isAImove = value;
+  }
+  
+  /**
+   * Handles which piece is to be selected to promote the pawn to
+   * @param index The index of the piece to promote the pawn to (1-4)
+   */
+  public void selectPromotedPiece(int index) {
+    PieceKind pieceKind;
+    switch (index) {
+    case 1:
+      pieceKind = QUEEN;
+      break;
+    case 2:
+      pieceKind = KNIGHT;
+      break;
+    case 3:
+      pieceKind = ROOK;
+      break;
+    case 4:
+      pieceKind = BISHOP;
+      break;
+    default:
+      pieceKind = QUEEN;
+      break;
+    }
+    view.hidePromotionPieces();
+    Move proposedMove = new Move(promotionMoveTo.getFrom(), promotionMoveTo.getTo(), pieceKind);
+    makeMove(proposedMove);
+    promotionMoveTo = null;  // Reset the promotion move state
+  }
+  
+  /**
+   * Clears the board of any highlighted cells
+   */
+  public void clearHighlightedMoves() {
+    for (int r = 0; r < 8; r++) {
+      for (int c = 0; c < 8; c++) {
+        view.setHighlighted(r, c, false);
+      }
+    }
+  }
+  
+  /**
+   * Clear the 'from' position currently selected on the board
+   */
+  public void clearFromPos() {
+    if (fromPos == null) {
+      return;
+    }
+    view.setSelected(fromPos.getRow(), fromPos.getCol(), false);
+    fromPos = null;
+  }
+  
+  /**
+   * Serializes the state to a dash-separated format
+   * @param state State object to serialize
+   * @return String representation of the state
+   */
+  public String serializeState(State state) {
+    StringBuilder stateStr = new StringBuilder();
+    stateStr.append(state.getTurn().ordinal());
+    stateStr.append("-");
+    stateStr.append(state.getNumberOfMovesWithoutCaptureNorPawnMoved());
+    stateStr.append("-");
+    Position enp = state.getEnpassantPosition();
+    stateStr.append((enp == null) ? "_-_" : enp.getRow()+"-"+enp.getCol());
+    stateStr.append("-");
+    stateStr.append(state.isCanCastleKingSide(WHITE) == true ? 1 : 0);
+    stateStr.append("-");
+    stateStr.append(state.isCanCastleKingSide(BLACK) == true ? 1 : 0);
+    stateStr.append("-");
+    stateStr.append(state.isCanCastleQueenSide(WHITE) == true ? 1 : 0);
+    stateStr.append("-");
+    stateStr.append(state.isCanCastleQueenSide(BLACK) == true ? 1 : 0);
+    stateStr.append("-");
+    GameResult gameResult = state.getGameResult();
+    if (gameResult == null) {
+      stateStr.append("_-_");
+    }
+    else {
+      stateStr.append(gameResult.getWinner() == WHITE ? 0 : (gameResult.getWinner() == BLACK ? 1 : 2));
+      stateStr.append("-");
+      GameResultReason reason = gameResult.getGameResultReason();
+      stateStr.append(reason.ordinal());
+    }
+    for (int r = 0; r < 8; r++) {
+      for (int c = 0; c < 8; c++) {
+        Piece piece = state.getPiece(r, c);
+        if (piece != null) {
+          stateStr.append("-");
+          stateStr.append(""+getPieceCode(piece)+r+c);
+        }
+      }
+    }
+    return stateStr.toString();
+  }
+  
+  private char getPieceCode(Piece piece) {
+    PieceKind kind = piece.getKind();
+    Color color = piece.getColor();
+    switch(kind) {
+    case KING:
+      return (color == WHITE) ? 'K' : 'k';
+    case QUEEN:
+      return (color == WHITE) ? 'Q' : 'q';
+    case ROOK:
+      return (color == WHITE) ? 'R' : 'r';
+    case BISHOP:
+      return (color == WHITE) ? 'B' : 'b';
+    case KNIGHT:
+      return (color == WHITE) ? 'H' : 'h';
+    case PAWN:
+      return (color == WHITE) ? 'P' : 'p';
+    default:
+      return '_';
+    }
+  }
+  
+  /**
+   * Parse the string representation of the state and return appropriate State object
+   * @param stateStr The string representation of the state (dash separated)
+   * @return the State represented by this string
+   * @throws Exception if stateStr is invalid
+   */
+  public State deserializeState(String stateStr) throws Exception {
+    String [] splits = stateStr.split("-");
+    if (splits.length <= 10) {
+      // ERROR - handle appropriately
+      throw new Exception();
+    }
+    // Here consider repopulating existing state
+    boolean canCastleArray[] = {false, false};
+    State state = new State(null, new Piece[8][8], canCastleArray,
+            canCastleArray, null, 0, null);
+    state.setTurn(splits[0].equals("0") ? WHITE : BLACK);
+    state.setNumberOfMovesWithoutCaptureNorPawnMoved(Integer.parseInt(splits[1]));
+    state.setEnpassantPosition(splits[2].equals("_") ? 
+        null : new Position(Integer.parseInt(splits[2]),Integer.parseInt(splits[3])));
+    state.setCanCastleKingSide(WHITE, (splits[4].equals("1") ? true : false));
+    state.setCanCastleKingSide(BLACK, (splits[5].equals("1") ? true : false));
+    state.setCanCastleQueenSide(WHITE, (splits[6].equals("1") ? true : false));
+    state.setCanCastleQueenSide(BLACK, (splits[7].equals("1") ? true : false));
+    if (splits[8].equals("_")) {
+      state.setGameResult(null);
+    }
+    else {
+      GameResultReason reason = GameResultReason.CHECKMATE;
+      if (splits[9].equals("1")) {
+        reason = GameResultReason.FIFTY_MOVE_RULE;
+      }
+      else if (splits[9].equals("2")) {
+        reason = GameResultReason.THREEFOLD_REPETITION_RULE;
+      }
+      else if (splits[9].equals("3")) {
+        reason = GameResultReason.STALEMATE;
+      }
+      state.setGameResult(new GameResult(splits[8].equals("0") ?
+          WHITE : (splits[8].equals("1") ? BLACK : null), reason));
+    }
+    for (int i=10; i<splits.length; i++) {
+      String str = splits[i];
+      Piece piece = getPieceFromChar(str.charAt(0));
+      int row = str.charAt(1)-48;
+      int col = str.charAt(2)-48;
+      state.setPiece(row, col, piece);
+    }
+    return state;
+  }
+  
+  private Piece getPieceFromChar(char pieceChar) {
+    switch (pieceChar) {
+    case 'K':
+      return new Piece(WHITE, KING);
+    case 'k':
+      return new Piece(BLACK, KING);
+    case 'Q':
+      return new Piece(WHITE, QUEEN);
+    case 'q':
+      return new Piece(BLACK, QUEEN);
+    case 'R':
+      return new Piece(WHITE, ROOK);
+    case 'r':
+      return new Piece(BLACK, ROOK);
+    case 'B':
+      return new Piece(WHITE, BISHOP);
+    case 'b':
+      return new Piece(BLACK, BISHOP);
+    case 'H':
+      return new Piece(WHITE, KNIGHT);
+    case 'h':
+      return new Piece(BLACK, KNIGHT);
+    case 'P':
+      return new Piece(WHITE, PAWN);
+    case 'p':
+      return new Piece(BLACK, PAWN);
+    default:
+      return null;
+    }
+  }
+  
+  /**
+   * Check if the state is legally possible
+   * @param state State to check
+   * @return true if state is possible; false otherwise
+   */
+  public static boolean isStatePossible(State state) {
+    int[][] piecesCount = new int[2][PieceKind.values().length];
+    for (int r = 0; r < 8; r++) {
+      for (int c = 0; c < 8; c++) {
+        Piece piece = state.getPiece(r, c);
+        if (piece == null) {
+          continue;
+        }
+        piecesCount[piece.getColor().ordinal()][piece.getKind().ordinal()]++;
+      }
+    }
+    for (Color color : Color.values()) {
+      if (piecesCount[color.ordinal()][PieceKind.KING.ordinal()] != 1) {
+        return false;
+      }
+      int promotedCount = 0;
+      promotedCount += Math.max(0, piecesCount[color.ordinal()][PieceKind.QUEEN.ordinal()] - 1);
+      promotedCount += Math.max(0, piecesCount[color.ordinal()][PieceKind.ROOK.ordinal()] - 2);
+      promotedCount += Math.max(0, piecesCount[color.ordinal()][PieceKind.KNIGHT.ordinal()] - 2);
+      promotedCount += Math.max(0, piecesCount[color.ordinal()][PieceKind.BISHOP.ordinal()] - 2);
+      if (! (piecesCount[color.ordinal()][PieceKind.PAWN.ordinal()] + promotedCount <= 8)) {
+        return false;
+      }
+    }
+    return true;
+  }
+  
+  /**
+   * Use local storage to save the current state
+   */
+  public void saveState() {
+    Storage storage = Storage.getLocalStorageIfSupported();
+    if (storage != null) {
+      storage.setItem("savedState", serializeState(this.state));
+    }
+  }
+  
+  /**
+   * Load a previously stored state
+   */
+  public void loadState() {
+    Storage storage = Storage.getLocalStorageIfSupported();
+    if (storage != null) {
+      String stateString = storage.getItem("savedState");
+      if (stateString != null) {
+        startGame(stateString);
+      }
+    }
+  }
+  
+  /**
+   * Returns a String representation of the Move
+   * @param move The move to serialize
+   * @return The String representation of the move
+   */
+  public static String serializeMove(Move move) {
+    int fromRow = move.getFrom().getRow();
+    int fromCol = move.getFrom().getCol();
+    int toRow = move.getTo().getRow();
+    int toCol = move.getTo().getCol();
+    String moveStr = fromRow+"-"+fromCol+"-"+toRow+"-"+toCol+"-";
+    PieceKind kind = move.getPromoteToPiece();
+    if (kind == null) {
+      moveStr += "_";
+    }
+    else {
+      switch (kind) {
+      case QUEEN:
+        moveStr += 1;
+        break;
+      case ROOK:
+        moveStr += 2;
+        break;
+      case BISHOP:
+        moveStr += 3;
+        break;
+      case KNIGHT:
+        moveStr += 4;
+        break;
+      default:
+        break;
+      }
+    }
+    return moveStr;    
+  }
+  
+  /**
+   * Reconstructs the Move object from its String representation
+   * @param moveStr The String representation of the move
+   * @return The Move object
+   */
+  public static Move deserializeMove(String moveStr) {
+    String [] tokens = moveStr.split("-");
+    int fromRow = Integer.parseInt(tokens[0]);
+    int fromCol = Integer.parseInt(tokens[1]);
+    int toRow = Integer.parseInt(tokens[2]);
+    int toCol = Integer.parseInt(tokens[3]);
+    PieceKind kind = null;
+    if (!tokens[4].equals("_")) {
+      switch (Integer.parseInt(tokens[4])) {
+      case 1:
+        kind = QUEEN;
+        break;
+      case 2:
+        kind = ROOK;
+        break;
+      case 3:
+        kind = BISHOP;
+        break;
+      case 4:
+        kind = KNIGHT;
+        break;
+      }
+    }
+    Move move = new Move(new Position(fromRow, fromCol), new Position(toRow, toCol), kind);
+    return move;
+  }
+  
+  public void clearBoard() {
+    State blankState = new State(null, new Piece[State.ROWS][State.COLS], 
+        new boolean[2], new boolean[2], null, 0, null);
+    setState(blankState, null);
+  }
+  
+}

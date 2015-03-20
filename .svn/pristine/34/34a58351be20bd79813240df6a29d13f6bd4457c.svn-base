@@ -1,0 +1,260 @@
+package org.kanwang.hw2_5;
+
+import static org.junit.Assert.assertEquals;
+
+import java.util.Set;
+
+import org.junit.Test;
+import org.shared.chess.AbstractStateExplorerTest;
+import org.shared.chess.Color;
+import org.shared.chess.Move;
+import org.shared.chess.Piece;
+import org.shared.chess.PieceKind;
+import org.shared.chess.Position;
+import org.shared.chess.State;
+import org.shared.chess.StateExplorer;
+
+import com.google.common.collect.Sets;
+
+public class StateExplorerImplTest extends AbstractStateExplorerTest {
+
+	@Override
+	public StateExplorer getStateExplorer() {
+		return new StateExplorerImpl();
+	}
+
+	/**
+	 * test for general case
+	 */
+
+	State initStateKanWang1() {
+		Piece[][] board = new Piece[8][8];
+		board[7][7] = new Piece(Color.BLACK, PieceKind.KING);
+		board[7][6] = new Piece(Color.BLACK, PieceKind.ROOK);
+		board[6][5] = new Piece(Color.BLACK, PieceKind.KNIGHT);
+		board[6][1] = new Piece(Color.WHITE, PieceKind.ROOK);
+		board[5][6] = new Piece(Color.WHITE, PieceKind.PAWN);
+		board[4][5] = new Piece(Color.WHITE, PieceKind.KING);
+
+		State state = new State(Color.WHITE, board, new boolean[] { false, false },
+				new boolean[] { false, false }, null, 0, null);
+		return state;
+	}
+
+	@Test
+	public void testGetPossibleStartPositions_state1() {
+		Set<Position> e = Sets.newHashSet();
+		State begin = initStateKanWang1();
+
+		e.add(new Position(6, 1));
+		e.add(new Position(4, 5));
+		e.add(new Position(5, 6));
+		assertEquals(e, stateExplorer.getPossibleStartPositions(begin));
+	}
+
+	@Test
+	public void testGetPossibleMoveFromPosition_state1p1() {
+		Set<Move> e = Sets.newHashSet();
+		State begin = initStateKanWang1();
+
+		e.add(new Move(new Position(5, 6), new Position(6, 6), null));
+		e.add(new Move(new Position(5, 6), new Position(6, 5), null));
+
+		assertEquals(e, stateExplorer.getPossibleMovesFromPosition(begin,
+				new Position(5, 6)));
+	}
+
+	@Test
+	public void testGetPossibleMoveFromPosition_state1p2() {
+		Set<Move> e = Sets.newHashSet();
+		State begin = initStateKanWang1();
+
+		e.add(new Move(new Position(4, 5), new Position(5, 5), null));
+		e.add(new Move(new Position(4, 5), new Position(3, 5), null));
+		e.add(new Move(new Position(4, 5), new Position(5, 4), null));
+		e.add(new Move(new Position(4, 5), new Position(3, 4), null));
+		e.add(new Move(new Position(4, 5), new Position(3, 6), null));
+
+		assertEquals(e, stateExplorer.getPossibleMovesFromPosition(begin,
+				new Position(4, 5)));
+	}
+
+	@Test
+	public void testGetPossibleMoveFromPosition_state1p3() {
+		Set<Move> e = Sets.newHashSet();
+		State begin = initStateKanWang1();
+
+		e.add(new Move(new Position(6, 1), new Position(0, 1), null));
+		e.add(new Move(new Position(6, 1), new Position(1, 1), null));
+		e.add(new Move(new Position(6, 1), new Position(2, 1), null));
+		e.add(new Move(new Position(6, 1), new Position(3, 1), null));
+		e.add(new Move(new Position(6, 1), new Position(4, 1), null));
+		e.add(new Move(new Position(6, 1), new Position(5, 1), null));
+		e.add(new Move(new Position(6, 1), new Position(7, 1), null));
+
+		e.add(new Move(new Position(6, 1), new Position(6, 0), null));
+		e.add(new Move(new Position(6, 1), new Position(6, 2), null));
+		e.add(new Move(new Position(6, 1), new Position(6, 3), null));
+		e.add(new Move(new Position(6, 1), new Position(6, 4), null));
+		e.add(new Move(new Position(6, 1), new Position(6, 5), null));
+
+		assertEquals(e, stateExplorer.getPossibleMovesFromPosition(begin,
+				new Position(6, 1)));
+	}
+
+	@Test
+	public void testGetPossibleMoves_state1() {
+		Set<Move> e = Sets.newHashSet();
+		State begin = initStateKanWang1();
+		begin.setTurn(Color.BLACK);
+
+		e.add(new Move(new Position(7, 6), new Position(7, 0), null));
+		e.add(new Move(new Position(7, 6), new Position(7, 1), null));
+		e.add(new Move(new Position(7, 6), new Position(7, 2), null));
+		e.add(new Move(new Position(7, 6), new Position(7, 3), null));
+		e.add(new Move(new Position(7, 6), new Position(7, 4), null));
+		e.add(new Move(new Position(7, 6), new Position(7, 5), null));
+		e.add(new Move(new Position(7, 6), new Position(6, 6), null));
+		e.add(new Move(new Position(7, 6), new Position(5, 6), null));
+
+		e.add(new Move(new Position(6, 5), new Position(7, 3), null));
+		e.add(new Move(new Position(6, 5), new Position(5, 3), null));
+		e.add(new Move(new Position(6, 5), new Position(4, 4), null));
+		e.add(new Move(new Position(6, 5), new Position(4, 6), null));
+		e.add(new Move(new Position(6, 5), new Position(5, 7), null));
+
+		e.add(new Move(new Position(7, 7), new Position(6, 6), null));
+		assertEquals(e, stateExplorer.getPossibleMoves(begin));
+	}
+
+	/**
+	 * test for promotion
+	 */
+
+	State initStateKanWang2() {
+		Piece[][] board = new Piece[8][8];
+		board[6][0] = new Piece(Color.BLACK, PieceKind.KING);
+		board[1][0] = new Piece(Color.WHITE, PieceKind.KING);
+		board[6][4] = new Piece(Color.WHITE, PieceKind.PAWN);
+		board[7][3] = new Piece(Color.BLACK, PieceKind.ROOK);
+
+		State state = new State(Color.WHITE, board, new boolean[] { false, false },
+				new boolean[] { false, false }, null, 0, null);
+		return state;
+	}
+
+	@Test
+	public void testGetPossibleStartPosition_Promotion() {
+		Set<Position> e = Sets.newHashSet();
+		State begin = initStateKanWang2();
+
+		e.add(new Position(1, 0));
+		e.add(new Position(6, 4));
+
+		assertEquals(e, stateExplorer.getPossibleStartPositions(begin));
+
+	}
+
+	@Test
+	public void testGetPossibleMovesFromPosition_Promotion() {
+		Set<Move> e = Sets.newHashSet();
+		State begin = initStateKanWang2();
+
+		e.add(new Move(new Position(6, 4), new Position(7, 4), PieceKind.BISHOP));
+		e.add(new Move(new Position(6, 4), new Position(7, 4), PieceKind.QUEEN));
+		e.add(new Move(new Position(6, 4), new Position(7, 4), PieceKind.ROOK));
+		e.add(new Move(new Position(6, 4), new Position(7, 4), PieceKind.KNIGHT));
+
+		e.add(new Move(new Position(6, 4), new Position(7, 3), PieceKind.BISHOP));
+		e.add(new Move(new Position(6, 4), new Position(7, 3), PieceKind.QUEEN));
+		e.add(new Move(new Position(6, 4), new Position(7, 3), PieceKind.ROOK));
+		e.add(new Move(new Position(6, 4), new Position(7, 3), PieceKind.KNIGHT));
+
+		assertEquals(e, stateExplorer.getPossibleMovesFromPosition(begin,
+				new Position(6, 4)));
+	}
+
+	/**
+	 * test for enpassant
+	 */
+
+	State initStateKanWang3() {
+		Piece[][] board = new Piece[8][8];
+		board[6][0] = new Piece(Color.BLACK, PieceKind.KING);
+		board[1][0] = new Piece(Color.WHITE, PieceKind.KING);
+		board[3][6] = new Piece(Color.WHITE, PieceKind.PAWN);
+		board[3][5] = new Piece(Color.BLACK, PieceKind.PAWN);
+
+		return new State(Color.BLACK, board, new boolean[] { false, false },
+				new boolean[] { false, false }, new Position(3, 6), 0, null);
+	}
+
+	@Test
+	public void testGetPossibleStartPosition_Enpassant() {
+		Set<Position> e = Sets.newHashSet();
+		State begin = initStateKanWang3();
+
+		e.add(new Position(3, 5));
+		e.add(new Position(6, 0));
+
+		assertEquals(e, stateExplorer.getPossibleStartPositions(begin));
+
+	}
+
+	@Test
+	public void testGetPossibleMovesFromPosition_Enpassant() {
+		Set<Move> e = Sets.newHashSet();
+		State begin = initStateKanWang3();
+
+		e.add(new Move(new Position(3, 5), new Position(2, 6), null));
+		e.add(new Move(new Position(3, 5), new Position(2, 5), null));
+
+		assertEquals(e, stateExplorer.getPossibleMovesFromPosition(begin,
+				new Position(3, 5)));
+	}
+
+	/**
+	 * test for castling
+	 */
+
+	State initStateKanWang4() {
+		Piece[][] board = new Piece[8][8];
+		board[7][4] = new Piece(Color.BLACK, PieceKind.KING);
+		board[1][0] = new Piece(Color.WHITE, PieceKind.KING);
+		board[7][0] = new Piece(Color.BLACK, PieceKind.ROOK);
+		board[7][7] = new Piece(Color.BLACK, PieceKind.ROOK);
+		board[6][6] = new Piece(Color.WHITE, PieceKind.PAWN);
+
+		return new State(Color.BLACK, board, new boolean[] { false, true },
+				new boolean[] { false, true }, new Position(3, 6), 0, null);
+	}
+
+	@Test
+	public void testGetPossibleStartPosition_Castling() {
+		Set<Position> e = Sets.newHashSet();
+		State begin = initStateKanWang4();
+
+		e.add(new Position(7, 4));
+		e.add(new Position(7, 0));
+		e.add(new Position(7, 7));
+
+		assertEquals(e, stateExplorer.getPossibleStartPositions(begin));
+
+	}
+
+	@Test
+	public void testGetPossibleMovesFromPosition_Castling() {
+		Set<Move> e = Sets.newHashSet();
+		State begin = initStateKanWang4();
+		
+		e.add(new Move(new Position(7, 4), new Position(7, 2), null));
+		e.add(new Move(new Position(7, 4), new Position(7, 3), null));
+		e.add(new Move(new Position(7, 4), new Position(6, 3), null));
+		e.add(new Move(new Position(7, 4), new Position(6, 4), null));
+		e.add(new Move(new Position(7, 4), new Position(6, 5), null));
+
+		assertEquals(e, stateExplorer.getPossibleMovesFromPosition(begin,
+				new Position(7, 4)));
+	}
+
+}

@@ -1,0 +1,28 @@
+package org.bohuang.hw6.client;
+
+import java.util.LinkedList;
+
+import org.bohuang.hw7.Match;
+
+import com.google.gwt.user.client.rpc.AsyncCallback;
+
+public interface ChessServiceAsync {
+
+	void login(String requestUri, AsyncCallback<LoginInfo> callback);
+	void LoadMatch(String UserToken, AsyncCallback<LinkedList<Match>> callback);
+	
+	
+	void SearchGame(String userId, AsyncCallback<Match> callback);
+
+	void MakeMove(String state, String userId, Long gameId,
+			AsyncCallback<Match> callback);
+
+	void PlayWith(String userId, String opponent, AsyncCallback<Match> callback);
+
+	void Delete(String userId, Long gameId, AsyncCallback<String> callback);
+
+	void LoadMatchById(Long id, AsyncCallback<Match> callback);
+	
+	void getRank(String userId, AsyncCallback<Double> callback);
+
+}

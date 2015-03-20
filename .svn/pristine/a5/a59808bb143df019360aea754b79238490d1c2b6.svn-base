@@ -1,0 +1,10 @@
+package org.kuangchelee.hw3;
+
+import com.google.gwt.resources.client.CssResource;
+
+public interface GameCss extends CssResource {
+  String highlighted();
+  String draghighlighted();
+  String greybackground();
+  String whitebackground();
+}

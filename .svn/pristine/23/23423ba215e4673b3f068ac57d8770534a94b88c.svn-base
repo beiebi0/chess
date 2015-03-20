@@ -1,0 +1,140 @@
+<!DOCTYPE ui:UiBinder SYSTEM "http://dl.google.com/gwt/DTD/xhtml.ent">
+<ui:UiBinder xmlns:ui="urn:ui:com.google.gwt.uibinder"
+	xmlns:g="urn:import:com.google.gwt.user.client.ui" xmlns:o="urn:import:com.sun.org.apache.xpath.internal.operations">
+
+	<ui:image field="background" src="background.jpg" />
+	<ui:style field="css" type="org.sanjana.hw5.GameCss">
+		.highlighted {
+		outline: solid purple
+		3px;
+		}
+
+		td img {
+		display: block
+		}
+
+		@sprite .board {
+		gwt-image: "background";
+		margin-top: 30px;
+		}
+
+		.grid {
+		margin-top: 20px;
+		margin-left: 20px;
+		border-spacing: 0px;
+		border-collapse: collapse;
+		}
+
+		.promotegrid {
+		margin-top: 20px;
+		margin-left: 20px;
+		border-spacing: 0px;
+		border-collapse: collapse;
+		border-style:groove;
+		}
+
+		.flex {
+		left: 55px;
+		background-color:
+		#B8B8B8;
+		}
+
+		.gameStatus {
+		font-size:
+		15px;
+		font-weight:
+		bold;
+		color: #A00000 ;
+		}
+
+		.matchInfo {
+		font-size: 20px;
+		font-weight: bold;
+		color: #880000 ;
+		}
+
+		.gwt-SuggestBox
+		{
+		border : 1px solid #666;
+		text-align :
+		left;
+		width : 400px;
+		}
+	</ui:style>
+
+	<g:HTMLPanel>
+
+		<br />
+
+		<g:HorizontalPanel spacing="10">
+			<g:Button ui:field="AIWhiteGameButton"></g:Button>
+			<!-- <g:Button ui:field="AIBlackGameButton"></g:Button> -->
+		</g:HorizontalPanel>
+
+		<g:HorizontalPanel spacing="10">
+			<g:Button ui:field="autoGameButton"></g:Button>
+			<g:Button ui:field="cancelGameButton"></g:Button>
+		</g:HorizontalPanel>
+
+		<g:HorizontalPanel spacing="10">
+			<g:TextBox ui:field="emailBox"></g:TextBox>
+			<g:Button ui:field="playButton"></g:Button>
+		</g:HorizontalPanel>
+
+		<g:HorizontalPanel spacing="10">
+		<!-- 	<g:SuggestBox ui:field="contacts"></g:SuggestBox> -->
+			<!-- <g:Button ui:field="playButton"></g:Button> -->
+		</g:HorizontalPanel>
+		
+		<g:VerticalPanel spacing="10">
+			<g:ListBox ui:field="listOfMatches"></g:ListBox>
+					<g:Button ui:field="deleteButton"></g:Button>
+		</g:VerticalPanel>
+		<br />
+		
+		<div>
+			<div class="{css.gameStatus}">
+				<g:Label ui:field="playerInfo" />
+			</div>
+
+			<br />
+			<div class="{css.gameStatus}">
+				<g:Label ui:field="opponentInfo" />
+			</div>
+			<br />
+		</div>
+
+		<g:Label ui:field="playerTurn" styleName="{css.gameStatus}" />
+		<g:Label ui:field="opponentTurn" styleName="{css.gameStatus}" />
+
+		<g:Grid ui:field="controlGrid" styleName="{css.grid}" />
+		<br />
+		<br />
+		<g:Label ui:field="gameStatus" styleName="{css.gameStatus}" />
+		<g:Label ui:field="matchInfo" styleName="{css.gameStatus}" />
+
+		<div>
+			<g:Grid ui:field="whitepromotionGrid" styleName="{css.promotegrid}" />
+			<g:Grid ui:field="blackpromotionGrid" styleName="{css.promotegrid}" />
+		</div>
+
+		<div class="{css.board}">
+			<g:Grid ui:field="gameGrid" styleName="{css.grid}" />
+		</div>
+
+		<br />
+		<div>
+			<g:Button ui:field="SaveButton" />
+			<g:TextBox ui:field="saveStatus" />
+			<g:Button ui:field="LoadButton" />
+			<g:Button ui:field="ClearButton" />
+
+		</div>
+
+		<div>
+			<g:FlexTable ui:field="flexTable" styleName="{css.flex}" />
+		</div>
+
+	</g:HTMLPanel>
+
+</ui:UiBinder> 

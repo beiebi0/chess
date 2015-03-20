@@ -1,0 +1,61 @@
+<!DOCTYPE ui:UiBinder SYSTEM "http://dl.google.com/gwt/DTD/xhtml.ent">
+<ui:UiBinder xmlns:ui="urn:ui:com.google.gwt.uibinder"
+  xmlns:g="urn:import:com.google.gwt.user.client.ui"
+  ui:generateFormat='com.google.gwt.i18n.rebind.format.PropertiesFormat'
+  ui:generateKeys="com.google.gwt.i18n.rebind.keygen.MD5KeyGenerator">
+  
+   <ui:image field="background" src="background.jpg"/>
+  <ui:style field="css" type="org.vorasahil.hw3.GameCss">
+    .highlighted {
+      outline: solid green 4px;
+    }
+    .showMove {
+      outline: dotted red 1px;
+    }
+    td img {
+      display: block
+    }
+    @sprite .board {
+            gwt-image: "background";
+          }
+    .grid {
+            margin-top: 20px;
+            margin-left: 20px;
+            border-spacing: 0px;
+            border-collapse: collapse;
+    }
+  </ui:style>
+  
+  <g:HTMLPanel>
+    <g:Label ui:field="playerDetails" text=""/>
+    <g:Label ui:field="rankDetails" text=""/>
+    <g:Label ui:field="matchDetails" text=""/>
+    <g:Label ui:field="dateDetails" text=""/>
+    <g:Label ui:field="gameStatus" text=""/>
+    <g:Label ui:field="whoseTurn" text=""/>
+    
+    <div class="{css.board}">
+      <g:Grid ui:field="gameGrid" styleName="{css.grid}"/>
+    </div>
+    
+     <div>
+      <g:Grid ui:field="pieceGrid" styleName="{css.grid}"/>
+    </div>
+    <div>
+    <g:TextBox ui:field="inviteContact"/> 
+    <g:Button ui:field="button"/>
+     </div>
+     <g:Button ui:field="autoMatchButton"/>
+     <g:Button ui:field="aiWhite"/>
+     <g:Button ui:field="aiBlack"/>
+    <div>
+     
+    <g:ListBox ui:field="gameList"/>
+     <g:Button ui:field="loadButton"/>
+     <g:Button ui:field="deleteButton"/>
+     <g:Button ui:field="loadGameButton"/>
+    </div>
+     
+    
+  </g:HTMLPanel>
+</ui:UiBinder> 

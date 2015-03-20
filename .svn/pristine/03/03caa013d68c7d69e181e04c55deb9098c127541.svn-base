@@ -1,0 +1,66 @@
+package org.jiangfengchen.hw6.client;
+
+import com.google.gwt.i18n.client.Messages;
+import com.google.gwt.safehtml.shared.SafeHtml;
+
+public interface MyMessages extends Messages {
+	@DefaultMessage("welcome")
+	String welcome();
+	
+	@DefaultMessage("load")
+	String load();
+	
+	@DefaultMessage("delete")
+	String delete();
+	
+	@DefaultMessage("Play With")
+	String playwith();
+	
+	@DefaultMessage("Auto Match")
+	String quickmatch();
+	
+	@DefaultMessage("Start Date:")
+	String startdate();
+	
+	@DefaultMessage("GameList:")
+	String currentgames();
+	
+	@DefaultMessage("(white) turn")
+	String wturn();
+	
+	@DefaultMessage("(black) turn")
+	String bturn();
+	
+	@DefaultMessage("GameStatus")
+	String gamestatus();
+	
+	@DefaultMessage("Black wins")
+	String bwins();
+	
+	@DefaultMessage("White wins")
+	String wwins();
+	
+	@DefaultMessage("Stalemate")
+	String stalemate();
+	
+	@DefaultMessage("50 moves acheived")
+	String fiftymove();
+	
+	@DefaultMessage("threefold repeted")
+	String threefold();
+	
+	@DefaultMessage("You are white")
+	String urw();
+	
+	@DefaultMessage("You are black")
+	String urb();
+	
+	@DefaultMessage("opponent : ''{0}''")
+	String op(String id);
+
+	@DefaultMessage("your rating:")
+	String rank();
+	
+	@DefaultMessage("Against AI")
+	String playwithai();
+}

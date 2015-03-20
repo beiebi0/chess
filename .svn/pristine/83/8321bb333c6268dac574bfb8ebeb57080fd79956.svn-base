@@ -1,0 +1,406 @@
+package org.kuangchelee.hw3;
+
+import java.util.Set;
+
+import org.kuangchelee.hw2.StateChangerImpl;
+import org.kuangchelee.hw2_5.StateExplorerImpl;
+import org.shared.chess.Color;
+import org.shared.chess.GameResult;
+import org.shared.chess.IllegalMove;
+import org.shared.chess.Move;
+import org.shared.chess.Piece;
+import org.shared.chess.PieceKind;
+import org.shared.chess.Position;
+import org.shared.chess.State;
+
+//import com.google.gwt.dom.client.Style.Position;
+import com.google.common.collect.Sets;
+import com.google.gwt.event.dom.client.DragOverEvent;
+import com.google.gwt.event.dom.client.DragOverHandler;
+import com.google.gwt.event.dom.client.DragStartEvent;
+import com.google.gwt.event.dom.client.DragStartHandler;
+import com.google.gwt.event.dom.client.DropEvent;
+import com.google.gwt.event.dom.client.DropHandler;
+import com.google.gwt.event.logical.shared.ValueChangeEvent;
+import com.google.gwt.event.logical.shared.ValueChangeHandler;
+import com.google.gwt.storage.client.Storage;
+import com.google.gwt.user.client.Element;
+import com.google.gwt.user.client.History;
+import com.google.gwt.user.client.Window;
+import com.google.gwt.user.client.ui.Image;
+//import com.google.gwt.event.logical.shared.SelectionEvent;
+//import com.google.gwt.event.logical.shared.SelectionHandler;
+//import com.google.gwt.user.client.rpc.core.java.util.Arrays;
+
+public class Presenter {
+  public interface View {
+    /**
+     * Renders the piece at this position.
+     * If piece is null then the position is empty.
+     */
+    void setPiece(int row, int col, Piece piece);
+    /**
+     * Turns the highlighting on or off at this cell.
+     * Cells that can be clicked should be highlighted.
+     */
+    void setHighlighted(int row, int col, boolean highlighted);
+    /**
+     * Indicate whose turn it is.
+     */
+    void setWhoseTurn(Color color);
+    /**
+     * Indicate whether the game is in progress or over.
+     */
+    void setGameResult(GameResult gameResult);
+    void setGameText(String string);
+    void setPromotePanel(boolean isPromotePanelVisible);
+    void initControlPanel();
+    void setBackground();
+    void setBackground(int row, int col);
+    void initBoard();
+    void initPromotePanel();
+    void setDragHighlighted(int row, int col, boolean highlighted);
+    void setLoadItem(String string);
+    Image getBoard(int row, int col);
+    Image getPieceImage(Color color, PieceKind piecekind);
+  }
+  private View view;
+  private boolean soundCheck = false;
+  private boolean animationCheck = false;
+  private Storage stateStorage = null;
+  public State state = new State();
+  public Position clickedPosition = null;
+  public Position PromotePosition = null;
+  public Position dragStartPosition = null;
+  public Position dragOverPosition = null;
+  public PieceKind PromotePieceKind = null;
+  public StateEncoder stateEncoder = new StateEncoder();
+  public StateExplorerImpl  StateExplorer= new StateExplorerImpl();
+  public StateChangerImpl  StateChanger= new StateChangerImpl();
+  public Set<Move> PossibleMovesFromPosition = Sets.newHashSet();
+  public Set<Position> HighlightedPositions = Sets.newHashSet();
+  public int ThreeFoldRepetitionRecord[][][] = new int[12][8][8];
+  /* ThreeFoldRepetitionRecord Index
+   * 0. WhiteKing		6. BlackKing
+   * 1. WhiteQueen		7. BlackQueen
+   * 2. WhiteBishop		8. BlackBishop
+   * 3. WhiteKnight		9. BlackKnight
+   * 4. WhiteRook		10.BlackRook
+   * 5. WhitePawn		11.BlackPawn
+   */
+  public void setView(View view) {
+    this.view = view;
+  }
+  public void setup(){
+	  for (int r = 0; r < 8; r++) {
+		  for (int c = 0; c < 8; c++) {
+			  view.setPiece(r, c, state.getPiece(7 - r, c));
+		  }
+	  }
+	  view.setBackground();
+	  loadAllFromStorage();
+	  HistoryListener();
+  }
+  // Initialize a New State of New Game
+  public void initState() {
+	  state = new State();
+	  setState(state);
+	  setDragHandler();
+	  stateStorage = Storage.getLocalStorageIfSupported();
+	  History.newItem("state" + stateEncoder.Encode(state));
+	  for(int i = 0; i < 12; i++){
+		  for(int j = 0; j < 8; j++){
+			  for(int k = 0; k < 8; k++){
+				  ThreeFoldRepetitionRecord[i][j][k] = 0;
+			  }
+		  }
+	  }
+  }
+  public void setState(State state) {
+	  this.state = state.copy();
+	  view.setWhoseTurn(state.getTurn());
+	  if(state.getGameResult() != null)
+	  {
+		  view.setGameResult(state.getGameResult());
+	  }
+	  else
+		  view.setGameResult(null);
+	  for (int r = 0; r < 8; r++) {
+		  for (int c = 0; c < 8; c++) {
+			  view.setPiece(r, c, state.getPiece(7 - r, c));
+		  }
+	  }
+	  view.setBackground();
+	  view.setPromotePanel(false);
+  }
+  public void clickOnBoard(int row, int col){
+	  moveOnBoard(row, col);
+  }
+  public void dragStartOnBoard(int row, int col){
+	  clickedPosition = null;
+	  dragStartPosition = new Position(7 - row, col);
+	  dragOverPosition = new Position(7 - row, col);
+	  
+	  moveOnBoard(row, col);
+  }
+  public void dragOverBoard(int row, int col){
+	  // Un-highlighted previous drag over position
+	  if(HighlightedPositions.contains(dragOverPosition))
+		  view.setHighlighted(7 - dragOverPosition.getRow(), dragOverPosition.getCol(), true);
+	  else
+		  view.setBackground(7 - dragOverPosition.getRow(), dragOverPosition.getCol());
+	  // Highlighted current drag over position
+	  for(Move move : PossibleMovesFromPosition){
+		  if(move.getTo().equals(new Position(7 - row, col))){
+			  view.setDragHighlighted(row, col, true);
+			  dragOverPosition = new Position(7 - row, col);
+			  break;
+		  }
+	  }
+  }
+  public void dragEndOnBoard(int row, int col){
+	  view.setDragHighlighted(row, col, false);
+	  dragOverPosition = null;
+	  moveOnBoard(row, col);
+  }
+  public void moveOnBoard(int row, int col){
+	  if(!soundCheck){
+		  // For sound later
+	  }
+	  clearAllHighlights();
+	  // Promotion
+	  if(clickedPosition != null){
+		  if((state.getTurn() == state.getPiece(clickedPosition).getColor()) &&
+		    ((state.getPiece(clickedPosition).getColor() == Color.WHITE && clickedPosition.getRow() == 6 && row == 0 && state.getPiece(clickedPosition).getKind() == PieceKind.PAWN) || 
+		     (state.getPiece(clickedPosition).getColor() == Color.BLACK && clickedPosition.getRow() == 1 && row == 7 && state.getPiece(clickedPosition).getKind() == PieceKind.PAWN))){
+			  if((clickedPosition.getCol() == col) && (state.getPiece(7 - row, col) == null) ||
+			     (Math.abs(clickedPosition.getCol() - col) == 1) && (state.getPiece(7 - row, col) != null)){
+				  view.setGameText("Choose one piecekind below for promotion.");
+				  view.setPromotePanel(true);
+				  PromotePosition = new Position(7 - row, col);
+				  return;
+			  }
+		  }
+	  }
+	  // Reset Promotion
+	  if(PromotePosition != null){
+		  PromotePosition = null;
+		  view.setPromotePanel(false);
+		  view.setWhoseTurn(state.getTurn());
+	  }
+	  // Clicking on empty cell
+	  if(clickedPosition == null && state.getPiece(7 - row, col) == null)
+		  return;
+	  if(clickedPosition == null){
+		  view.setHighlighted(row, col, true);
+		  PossibleMovesFromPosition = StateExplorer.getPossibleMovesFromPosition(state, new Position(7 - row, col));
+		  for(Move move : PossibleMovesFromPosition) {
+			  HighlightedPositions.add(new Position(move.getTo().getRow(), move.getTo().getCol()));
+			  view.setHighlighted(7 - move.getTo().getRow(), move.getTo().getCol(), true);
+		  }
+		  clickedPosition = new Position(7 - row, col);
+	  }
+      else{
+    	  view.setHighlighted(7 - clickedPosition.getRow(), clickedPosition.getCol(), false);
+    	  State tryState = state.copy();
+    	  Move move = new Move(clickedPosition, new Position(7 - row, col), null);
+    	  clickedPosition = null;
+    	  try{
+    		  StateChanger.makeMove(tryState, move);
+    	  }
+    	  catch(IllegalMove illegalMove){
+    		  //Window.alert("Illegal Move!");
+    		  return;
+    	  }
+    	  setThreeFoldRepetitionRecord(7 - row, col, tryState.getPiece(7 - row, col).getKind(),  tryState.getPiece(7 - row, col).getColor());
+
+    	  /*
+    	  if(isThreeFoldRepetition())
+    		  tryState.setGameResult(new GameResult(null, GameResultReason.THREEFOLD_REPETITION_RULE));
+		  */
+    	  state = tryState.copy();
+    	  this.setState(state);
+    	  if(!animationCheck){
+    		  // For animation later
+    	  }
+    	  //if((animationCheck) && (!soundCheck))
+    		//  chessSound.playMove();
+    	  History.newItem("state" + stateEncoder.Encode(state));
+      }
+  }
+  public void clearAllHighlights() {
+	  for (Move move : PossibleMovesFromPosition) {
+		  view.setHighlighted(7 - move.getTo().getRow(), move.getTo().getCol(), false);
+	  }
+	  view.setBackground();
+	  PossibleMovesFromPosition.clear();
+	  HighlightedPositions.clear();
+  }
+  public void clickedOnPromotePanel(int row, int col) {
+	  if(col == 0)
+		  PromotePieceKind = PieceKind.QUEEN;
+	  else if(col == 1)
+		  PromotePieceKind = PieceKind.BISHOP;
+	  else if(col == 2)
+		  PromotePieceKind = PieceKind.KNIGHT;
+	  else if(col == 3)
+		  PromotePieceKind = PieceKind.ROOK;
+	  view.setHighlighted(7 - clickedPosition.getRow(), clickedPosition.getCol(), false);
+	  State tryState = state.copy();
+	  Move move = new Move(clickedPosition, PromotePosition, PromotePieceKind);
+	  clickedPosition = null;
+	  try{
+		  StateChanger.makeMove(tryState, move);
+	  }
+	  catch(IllegalMove illegalMove){
+		  //Window.alert("Illegal Move!");
+		  PromotePosition = null;
+		  return;
+	  }
+	  
+	  setThreeFoldRepetitionRecord(7 - row, col, tryState.getPiece(7 - row, col).getKind(),  tryState.getPiece(7 - row, col).getColor());
+	  /*
+	  if(isThreeFoldRepetition())
+		  tryState.setGameResult(new GameResult(null, GameResultReason.THREEFOLD_REPETITION_RULE));
+	  */
+	  state = tryState.copy();
+	  this.setState(state);
+
+	  PromotePosition = null;
+	  History.newItem("state" + stateEncoder.Encode(state));
+	  
+	  view.setPromotePanel(false);
+  }
+  public void restart(){
+	  boolean confirm;
+	  confirm = Window.confirm("Are you sure you want to restart?");
+	  if(confirm){
+		  initState();
+	  }
+  }
+  public void save(){
+	  stateStorage = Storage.getLocalStorageIfSupported();
+	  if(stateStorage == null){
+		  Window.alert("Your browser does not support local storage!");
+	  }
+	  else{
+		  String key = Window.prompt("Please enter a name for your state:", "");
+		  if(key != null){
+			  view.setLoadItem(key);
+			  stateStorage.setItem(key, stateEncoder.Encode(state));
+		  }
+	  }
+  }
+  public void load(String key){
+	  String data = stateStorage.getItem(key);
+	  state = stateEncoder.Decode(data);
+	  setState(state);
+	  History.newItem("state" + stateEncoder.Encode(state));
+  }
+  public void animationDisable(boolean checked){
+	  animationCheck = (checked == true) ? true : false;
+  }
+  public void soundDisable(boolean checked){
+	  soundCheck = (checked == true) ? true : false;
+  }
+  public void setThreeFoldRepetitionRecord(int row, int col, PieceKind piecekind, Color color){
+	  int i = (color == Color.WHITE) ? 0 : 6;
+	  switch(piecekind){
+	  case KING:   
+		  break;
+	  case QUEEN: 
+		  i += 1;
+		  break;
+	  case BISHOP:
+		  i += 2;
+		  break;
+	  case KNIGHT:
+		  i += 3;
+		  break;
+	  case ROOK:
+		  i += 4;
+		  break;
+	  case PAWN:
+		  i += 5;
+		  break;
+	  default:
+		  return;
+	  }
+	  ThreeFoldRepetitionRecord[i][row][col] += 1;
+  }
+  public boolean isThreeFoldRepetition(){
+	  for(int i = 0; i < 12; i++){
+		  for(int j = 0; j < 8; j++){
+			  for(int k = 0; k < 8; k++){
+				  if(ThreeFoldRepetitionRecord[i][j][k] >= 3)
+					  return true;
+			  }
+		  }
+	  }
+	  return false;
+  }
+  public void HistoryListener(){
+	  History.addValueChangeHandler(new ValueChangeHandler<String>() {
+		  @Override
+		  public void onValueChange(ValueChangeEvent<String> event) {
+			  String historyToken = event.getValue();
+			  /* parse the history token */
+			  try {
+				  if (historyToken.substring(0, 5).equals("state")) {
+					  String stateInfo = historyToken.substring(5, historyToken.length());
+					  state = stateEncoder.Decode(stateInfo);
+					  setState(state);
+				  } else {
+					  state = new State();
+					  setState(state);
+				  }
+			  } catch (IndexOutOfBoundsException e) {
+				  state = new State();
+				  setState(state);
+			  }
+		  }
+	  });
+  }
+  public void setDragHandler(){
+	  for(int row = 0; row < 8; row++){
+		  for(int col = 0; col < 8; col++){
+			  final Image image = view.getBoard(row, col);
+			  final int frow = row;
+			  final int fcol = col;
+			  image.getElement().setDraggable(Element.DRAGGABLE_TRUE);
+			  image.setStyleName("img");
+			  image.addDragStartHandler(new DragStartHandler(){
+				  @Override
+				  public void onDragStart(DragStartEvent event){
+					  event.setData("text", Integer.toString(frow) + Integer.toString(fcol));
+					  event.getDataTransfer().setDragImage(image.getElement(), 25, 25);
+					  dragStartOnBoard(frow, fcol);
+				  }
+			  });  
+			  image.addDragOverHandler(new DragOverHandler(){
+				  @Override
+				  public void onDragOver(DragOverEvent event){
+					  dragOverBoard(frow, fcol);
+				  }
+			  });
+			  image.addDropHandler(new DropHandler(){
+				  @Override
+				  public void onDrop(DropEvent event){
+					  event.preventDefault();
+					  //String pos = event.getData("text");
+					  dragEndOnBoard(frow, fcol);
+				  }
+			  });
+		  }
+	  }
+  }
+  public void loadAllFromStorage(){
+	  stateStorage = Storage.getLocalStorageIfSupported();
+	  if(stateStorage != null){
+		  for(int i = 0; i < stateStorage.getLength(); i++){
+			  String key = stateStorage.key(i);
+			  view.setLoadItem(key);
+		  }
+	  }
+  }
+}

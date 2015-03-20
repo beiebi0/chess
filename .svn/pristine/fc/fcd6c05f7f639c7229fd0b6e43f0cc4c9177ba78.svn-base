@@ -1,0 +1,20 @@
+package org.ashishmanral.hw11;
+
+import java.util.ArrayList;
+
+import com.google.gwt.user.client.rpc.AsyncCallback;
+import com.google.gwt.user.client.rpc.RemoteService;
+import com.google.gwt.user.client.rpc.RemoteServiceRelativePath;
+
+@RemoteServiceRelativePath("multiplayer")
+public interface MultiplayerChessService extends RemoteService {
+  String initializePlayer(String playerEmailId);
+  Message autoMatch(String userEmail, String opponentEmail, Long matchId, String stateString, Boolean myTurn);
+  Message opponentEmailMatch(String currentPlayerEmail, String opponentEmail, String currentState, Long matchId, Boolean yourTurn);
+  void deleteMatch(String userEmail, Long matchId);
+  Message changeMatch(String userEmail, Long matchId, Long newMatchId, String currentState, String turn);
+  void makeMove(String userEmail, String opponentEmail, Long matchId, String stateString, String winner);
+  ArrayList<Message> loadMatchList(String userId); 
+  String AIGame(String userEmail, String currentState, Long matchId, boolean yourTurn, boolean isAIWhite);
+  void saveAIState(String userEmail, Long matchId, String stateString, String winner, boolean isUserTurn);
+}

@@ -1,0 +1,27 @@
+package org.kuangchelee.hw3;
+
+import org.shared.chess.State;
+
+import com.google.gwt.core.client.EntryPoint;
+import com.google.gwt.user.client.ui.RootPanel;
+import com.google.gwt.user.client.History;
+
+public class ChessEntryPoint implements EntryPoint {
+  @Override
+  public void onModuleLoad() {
+	  Presenter presenter = new Presenter();
+	  final Graphics graphics = new Graphics(presenter);
+	  presenter.setView(graphics);
+	  RootPanel.get().add(graphics);
+	  State state = new State();
+	  if(!History.getToken().isEmpty()){
+		  String stateInfo = History.getToken().substring(5, History.getToken().length());
+		  state = presenter.stateEncoder.Decode(stateInfo);
+		  presenter.setState(state);
+	  }
+	  else
+		  presenter.initState();
+	  
+	  presenter.setup();
+  }
+}

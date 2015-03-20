@@ -1,0 +1,484 @@
+package org.yuehlinchung.hw6.client;
+
+import java.util.Set;
+import com.google.gwt.storage.client.Storage;
+import com.google.gwt.user.client.Timer;
+import com.google.gwt.user.client.Window;
+import com.google.gwt.user.client.rpc.AsyncCallback;
+
+import org.shared.chess.Color;
+import org.shared.chess.Piece;
+import org.shared.chess.PieceKind;
+import org.shared.chess.State;
+import org.shared.chess.Position;
+import org.shared.chess.Move;
+import org.shared.chess.GameResultReason;
+import org.yuehlinchung.hw2.StateChangerImpl;
+import org.yuehlinchung.hw2_5.StateExplorerImpl;
+import com.google.gwt.core.client.GWT;
+import com.google.gwt.dom.client.AudioElement;
+import com.google.gwt.dom.client.MediaElement;
+import com.google.gwt.media.client.Audio;
+
+import com.google.common.collect.Sets;
+
+public class Presenter {
+  
+  public interface View {
+    /**
+     * Renders the piece at this position.
+     * If piece is null then the position is empty.
+     */
+    void setPiece(int row, int col, Piece piece, Color side);
+    /**
+     * Turns the highlighting on or off at this cell.
+     * Cells that can be clicked should be highlighted.
+     */
+    void setHighlighted(int row, int col, boolean highlighted);
+    /**
+     * Indicate whose turn it is.
+     */
+    void setWhoseTurn(Color color, Color side, String self, String opponent);
+    /**
+     * Indicate whether the game is in progress or over.
+     */
+    void setGameResult(String str);
+    void displayPromoteOption();
+    void hidePromoteOption();
+    void addHistoryToken(String token);
+    void moveAnimation(int tR, int tC, int fR, int fC, Piece piece);
+    void setTest(String str);
+  }
+
+  private static ChessMessages messages = GWT.create(ChessMessages.class);
+  private View view;
+  private State state;
+  private Set<Position> highlightedPositions = Sets.newHashSet();
+  private Set<Move> possibleMovesFromPosition = Sets.newHashSet();
+  private Set<Position> possibleStartPositions = Sets.newHashSet();
+  public int currentMove = 0;
+  public int dragTag = 0;
+  private Position startPosition;
+  private Position toPosition;
+  private StateChangerImpl changer = new StateChangerImpl();
+  private StateExplorerImpl explorer = new StateExplorerImpl();
+  private Heuristic heuristic = new Heuristic();
+  private AlphaBetaPruning ai= new AlphaBetaPruning(heuristic);
+  //private int[][][] times = new int[8][8][12];
+  protected Audio moveAudio;
+  protected Audio winAudio;
+  static GameServiceAsync chessService;
+  private String selfKey;
+  private String opponentKey;
+  private Color side;
+  //private boolean sync;
+  private Long id;
+  boolean AI = false;
+  static Storage storage = null;
+  
+  // Audio File
+  final static String audioMoveMp3 = "yuehlinchung_Resources/move.mp3";
+  final static String audioMoveOgg = "yuehlinchung_Resources/move.ogg";
+  final static String audioWinMp3 = "yuehlinchung_Resources/cheer.mp3";
+  final static String audioWinOgg = "yuehlinchung_Resources/cheer.ogg";
+          
+  private void clearHighlights() {
+	  for (Position position : highlightedPositions) {
+		  view.setHighlighted(position.getRow(), position.getCol(), false);
+	  }
+	  highlightedPositions.clear();
+  }
+  
+  public void highlightNextStep() {
+	  currentMove++;
+	  // Highlight next step in the move
+	  for (Move move : possibleMovesFromPosition) {
+		  Position position = move.getTo();
+		  view.setHighlighted(position.getRow(), position.getCol(), true);
+		  highlightedPositions.add(position);
+	  }
+  }
+  
+  private void showStartingPositions() {
+	  currentMove = 0;
+	  for (Position position : possibleStartPositions) {
+		  view.setHighlighted(position.getRow(), position.getCol(), true);
+		  highlightedPositions.add(position);
+	  }
+  }
+  
+  // Set the new State
+  public void initState() {
+	// Same Status With New Status So No Change
+	if (StateHistory.encode(this.state) == StateHistory.encode(new State())) {
+		if (currentMove == 0) {
+			return;	
+		}
+	}
+	clearHighlights();
+	currentMove = 0;
+	this.state = new State();
+	uploadState(StateHistory.encode(state));
+  }
+    
+  public void setView(View view) {
+    this.view = view;
+  }
+
+  public void setState(State changeState) {
+	this.state = changeState.copy();
+	view.hidePromoteOption();
+	// Render the pieces for this state
+	//Graphics.dragController.unregisterDropControllers();
+	for (int r = 0; r < 8; r++) {
+		for (int c = 0; c < 8; c++) {
+			view.setHighlighted(r, c, false);
+		    Piece piece = state.getPiece(r, c);
+		    view.setPiece(r, c, piece, side);
+		}
+	}
+	clearHighlights();
+	possibleStartPositions = explorer.getPossibleStartPositions(state);
+	showStartingPositions();
+	view.setWhoseTurn(state.getTurn(), side, selfKey, opponentKey);
+	// Check GameResult
+	//checkThreeFold();
+	showGameResult();
+  }
+  
+  public void showGameResult() {
+	  if (state.getGameResult() == null) {
+		  return;
+	  }
+	  if (state.getGameResult().getGameResultReason() == GameResultReason.CHECKMATE) {
+		  if (state.getGameResult().getWinner() == Color.BLACK) {
+			  view.setGameResult(messages.grCheckmateB());
+		  } else if (state.getGameResult().getWinner() == Color.WHITE) {
+			  view.setGameResult(messages.grCheckmateW());
+		  }
+		  winSound();
+	  } else if (state.getGameResult().getGameResultReason() == GameResultReason.FIFTY_MOVE_RULE) {
+		  view.setGameResult(messages.grFifty());
+	  } else if (state.getGameResult().getGameResultReason() == GameResultReason.STALEMATE) {
+		  view.setGameResult(messages.grStalement());
+	  } else if (state.getGameResult().getGameResultReason() == GameResultReason.THREEFOLD_REPETITION_RULE) {
+		  view.setGameResult(messages.grThreefole());
+	  } else if (state.getGameResult() == null){
+		  view.setGameResult(messages.gr());
+	  }
+  }
+    
+  public void clickedOn(int row, int col) {
+	  view.setTest(row + " " + col);
+	  if(isYourTurn()) {
+		  row = reverseR(row);
+		  Position clickedPosition = new Position(row, col);
+		  view.hidePromoteOption();
+		  // Click on the Piece
+		  if (currentMove == 0) {
+			  if (state.getPiece(clickedPosition) == null) {
+				  uploadState(StateHistory.encode(state));
+				  return;
+			  }
+			  if (!state.getTurn().equals(state.getPiece(clickedPosition).getColor())
+					  || state.getPiece(clickedPosition) == null) {
+				  uploadState(StateHistory.encode(state));
+				  return;
+			  }
+			  // Show place that Piece can move to
+			  possibleMovesFromPosition = 
+					  explorer.getPossibleMovesFromPosition(state, clickedPosition);
+			  if (!possibleMovesFromPosition.isEmpty()) {
+				  clearHighlights();
+				  startPosition = clickedPosition;
+				  highlightNextStep();
+			  } else {
+				  view.hidePromoteOption();
+				  clearHighlights();
+				  showStartingPositions();
+				  currentMove = 0;
+				  uploadState(StateHistory.encode(state));
+			  }
+		  // Click on the place that Piece move to
+		  } else if (currentMove != 0) {
+			  Piece piece = state.getPiece(startPosition);
+			  if (state.getPiece(startPosition) == null) {
+				  return;
+			  }
+			  // Pawn promote situation
+			  if (piece.getKind().equals(PieceKind.PAWN)
+					  && ((piece.getColor().equals(Color.WHITE) 
+							  && row == 7 && startPosition.getRow() == 6)
+					  || (piece.getColor().equals(Color.BLACK) 
+							  && row == 0 && startPosition.getRow() == 1))) {
+				  toPosition = clickedPosition;
+				  view.displayPromoteOption();
+			  } else {
+				  // Piece move
+				  if (highlightedPositions.contains(clickedPosition)) {
+					  currentMove = 0;
+					  Move move = new Move(startPosition, clickedPosition, null);
+					  moveSound();
+					  // Make Move
+					  changer.makeMove(state, move);
+					  if (dragTag != 1) {
+						  view.moveAnimation(clickedPosition.getRow(), clickedPosition.getCol(),
+						  startPosition.getRow(), startPosition.getCol(), piece);
+						  // Use Timer to wait 500ms
+						  Timer t = new Timer() {
+							  @Override
+							  public void run() {
+								  dragTag = 0;
+								  uploadState(StateHistory.encode(state));
+							  }
+						  };
+						  t.schedule(500);
+					  } else {
+						  dragTag = 0;
+						  uploadState(StateHistory.encode(state));
+					  }
+				  } else {
+					  view.hidePromoteOption();
+					  clearHighlights();
+					  showStartingPositions();
+					  currentMove = 0;
+					  uploadState(StateHistory.encode(state));
+				  }
+			  }
+		  } else {
+			  view.hidePromoteOption();
+			  clearHighlights();
+			  showStartingPositions();
+			  currentMove = 0;
+			  uploadState(StateHistory.encode(state));
+		  }
+	  }
+  }
+  // Handle Pawn Promotion
+  public void pawnPromoteMove(PieceKind kind) {
+	  view.hidePromoteOption();
+	  if (highlightedPositions.contains(toPosition)) {
+		  currentMove = 0;
+		  Move move = new Move(startPosition, toPosition, kind);
+		  dragTag = 0;
+		  moveSound();
+		  // Make Move
+		  changer.makeMove(state, move);
+		  uploadState(StateHistory.encode(state));
+	  } else {
+		  view.hidePromoteOption();
+		  clearHighlights();
+		  showStartingPositions();
+		  currentMove = 0;
+		  uploadState(StateHistory.encode(state));
+	  }
+  }
+  // Reverse Row
+  public int reverseR(int row) {
+	  int r = 0;
+		switch (row) {
+		case 0:
+			r = 7;
+			break;
+		case 1:
+			r = 6;
+			break;
+		case 2:
+			r = 5;
+			break;
+		case 3:
+			r = 4;
+			break;
+		case 4:
+			r = 3;
+			break;
+		case 5:
+			r = 2;
+			break;
+		case 6:
+			r = 1;
+			break;
+		case 7:
+			r = 0;
+			break;
+		}
+		return r;
+  }
+  // Move Audio
+  private void createMoveAudio() {
+	  moveAudio = Audio.createIfSupported();
+	  if (moveAudio == null) {
+		  return;
+	  }
+	  if (MediaElement.CAN_PLAY_PROBABLY.equals(
+			  moveAudio.canPlayType(AudioElement.TYPE_MP3))) {
+		  moveAudio.setSrc(audioMoveMp3);
+	  } else if (MediaElement.CAN_PLAY_PROBABLY.equals(
+			  moveAudio.canPlayType(AudioElement.TYPE_OGG))) {
+		  moveAudio.setSrc(audioMoveOgg);
+	  } else if (MediaElement.CAN_PLAY_MAYBE.equals(
+			  moveAudio.canPlayType(AudioElement.TYPE_MP3))) {
+		  moveAudio.setSrc(audioMoveMp3);
+	  } else if (MediaElement.CAN_PLAY_MAYBE.equals(
+			  moveAudio.canPlayType(AudioElement.TYPE_OGG))) {
+		  moveAudio.setSrc(audioMoveOgg);
+	  }
+	  moveAudio.load();
+  }
+  // Win Audio
+  private void createWinAudio() {
+	  winAudio = Audio.createIfSupported();
+	  if (winAudio == null) {
+		  return;
+	  }
+	  if (MediaElement.CAN_PLAY_PROBABLY.equals(
+			  winAudio.canPlayType(AudioElement.TYPE_MP3))) {
+		  winAudio.setSrc(audioWinMp3);
+	  } else if (MediaElement.CAN_PLAY_PROBABLY.equals(
+			  winAudio.canPlayType(AudioElement.TYPE_OGG))) {
+		  winAudio.setSrc(audioWinOgg);
+	  } else if (MediaElement.CAN_PLAY_MAYBE.equals(
+			  winAudio.canPlayType(AudioElement.TYPE_MP3))) {
+		  winAudio.setSrc(audioWinMp3);
+	  } else if (MediaElement.CAN_PLAY_MAYBE.equals(
+			  winAudio.canPlayType(AudioElement.TYPE_OGG))) {
+		  winAudio.setSrc(audioWinOgg);
+	  }
+	  winAudio.load();
+  }
+  // Call Move Audio
+  private void moveSound() {
+	  if (moveAudio != null)
+		  moveAudio.play();
+  }
+  // Call Win Audio
+  private void winSound() {
+	  if (winAudio != null)
+		  winAudio.play();
+  }
+  // Check If Browser Support Functions
+  public void checkFunction() {
+	  storage = Storage.getLocalStorageIfSupported();
+	  if (storage.getItem("list") == null)
+		  storage.setItem("list", ";");
+	  //storage.clear();
+	  // Audio Function
+	  createMoveAudio();
+	  createWinAudio();
+  }
+  // Upload State
+  public void uploadState(String msg) {
+	  setState(StateHistory.decode(msg));
+	  if (AI == false) {
+		  // Storage
+		  if (id != null && storage != null) {
+			  // Save Opponent
+			  storage.setItem(id+"_opponent", opponentKey);
+			  // Save State
+			  storage.setItem(id+"", msg);
+			  // Save Turn
+			  storage.setItem(id+"_turn", getTurn());
+			  // Save Over
+			  storage.setItem(id+"_over", getGameResult()+"");
+			  // Save GameResult
+			  storage.setItem(id+"_gameResult", getResult());
+		  }
+		  chessService.saveState(id, selfKey, opponentKey, msg, getTurn(), getGameResult(), getResult(), new AsyncCallback<Long>() {
+			  public void onFailure(Throwable caught) {
+				  Window.alert(messages.internetError());
+				  if (id != null && storage != null) {
+					  String tmpList = storage.getItem("list");
+					  storage.setItem("list", tmpList + id + ";");
+				  }
+				  //Window.alert("Saving State Error: " + caught.getMessage());
+			  }
+			  public void onSuccess(Long result) {
+				  setId(result);
+				  storage.removeItem(id+"");
+				  storage.removeItem(id+"_opponent");
+				  storage.removeItem(id+"_side");
+				  storage.removeItem(id+"_turn");
+				  storage.removeItem(id+"_over");
+				  storage.removeItem(id+"_gameResult");
+			 }
+		  });
+	  } else if (AI == true) {
+		  if (state.getTurn().isBlack()) {
+			  Timer t = new Timer() {
+				  @Override
+				  public void run() {
+					  Move aiMove = ai.findBestMove(state, 4, new DateTimer(2000));
+					  if (aiMove != null) {
+						  changer.makeMove(state, aiMove);
+						  uploadState(StateHistory.encode(state));
+					  }
+				  }
+			  };
+			  t.schedule(50);
+		  }
+	  }
+  }
+  // Get Game Result Detail
+  private String getResult() {
+	  if (state.getGameResult() == null) {
+		  return "0";
+	  }
+	  if (state.getGameResult().getGameResultReason() == GameResultReason.FIFTY_MOVE_RULE) {
+		  return "1";
+	  } else if (state.getGameResult().getGameResultReason() == GameResultReason.STALEMATE) {
+		  return "1";
+	  } else if (state.getGameResult().getGameResultReason() == GameResultReason.THREEFOLD_REPETITION_RULE) {
+		  return "1";
+	  }
+	  return "0";
+  }
+
+  // Update LoginInfo
+  public void setKey(String self, String opponent) {
+	  this.selfKey = self;
+	  this.opponentKey = opponent;
+  }
+  // Set GameService
+  public void setGameService(GameServiceAsync gameService) {
+	  Presenter.chessService = gameService;
+  }
+  // Decide side
+  public void setSide(char side) {
+	  this.side = (side == 'W') ? Color.WHITE : Color.BLACK;
+  }
+  private boolean isYourTurn() {
+	  if (state == null)
+		  return false;
+	  return (side == state.getTurn()) ? true : false;
+  }
+  // Get Turn
+  public String getTurn() {
+	  String tmp;
+	  if (state.getGameResult() == null) {
+		  tmp = (state.getTurn() == side) ? selfKey : opponentKey;
+	  } else {
+		  if (state.getGameResult().getGameResultReason() == GameResultReason.FIFTY_MOVE_RULE) {
+			  tmp = null;
+		  } else if (state.getGameResult().getGameResultReason() == GameResultReason.STALEMATE) {
+			  tmp = null;
+		  } else if (state.getGameResult().getGameResultReason() == GameResultReason.THREEFOLD_REPETITION_RULE) {
+			  tmp = null;
+		  } else {
+			  tmp = selfKey;
+		  }
+	  }
+	  return tmp;
+  }
+  // Get GameResult
+  public boolean getGameResult() {
+	  return (state.getGameResult() == null) ? false : true;
+  }
+  // Set Id
+  public void setId(Long id) {
+	  this.id = id;
+  }
+  // Set AI
+  public void setAi(boolean tmp) {
+	  this.AI = tmp;
+  }
+}

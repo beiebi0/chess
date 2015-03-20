@@ -1,0 +1,572 @@
+package org.zhihanli.hw3;
+
+import org.shared.chess.Color;
+import static org.shared.chess.Color.*;
+import static org.zhihanli.hw5.Situation.EAT;
+import static org.zhihanli.hw5.Situation.END_OF_GAME;
+import static org.zhihanli.hw5.Situation.SELECT;
+
+import org.shared.chess.GameResult;
+import org.shared.chess.Piece;
+import org.shared.chess.PieceKind;
+import org.shared.chess.Position;
+import org.zhihanli.hw3.Presenter.View;
+import org.zhihanli.hw5.AudioControl;
+import org.zhihanli.hw5.CellWithAnimation;
+import org.zhihanli.hw5.Situation;
+import org.zhihanli.hw8.GameMessages;
+
+import com.allen_sauer.gwt.dnd.client.PickupDragController;
+import com.google.gwt.core.client.GWT;
+import com.google.gwt.event.dom.client.HasChangeHandlers;
+import com.google.gwt.event.dom.client.HasClickHandlers;
+import com.google.gwt.event.dom.client.HasDragHandlers;
+import com.google.gwt.event.dom.client.HasDragOverHandlers;
+import com.google.gwt.event.dom.client.HasDropHandlers;
+import com.google.gwt.media.client.Audio;
+import com.google.gwt.uibinder.client.UiBinder;
+import com.google.gwt.uibinder.client.UiField;
+import com.google.gwt.user.client.DOM;
+import com.google.gwt.user.client.Element;
+import com.google.gwt.user.client.Timer;
+import com.google.gwt.user.client.ui.AbsolutePanel;
+import com.google.gwt.user.client.ui.Anchor;
+import com.google.gwt.user.client.ui.Composite;
+import com.google.gwt.user.client.ui.Grid;
+import com.google.gwt.user.client.ui.Image;
+import com.google.gwt.user.client.ui.Label;
+import com.google.gwt.user.client.ui.ListBox;
+import com.google.gwt.user.client.ui.MultiWordSuggestOracle;
+import com.google.gwt.user.client.ui.SuggestBox;
+import com.google.gwt.user.client.ui.Widget;
+import com.google.gwt.user.client.ui.Button;
+import com.google.gwt.user.client.History;
+import com.googlecode.mgwt.ui.client.widget.LayoutPanel;
+import com.googlecode.mgwt.ui.client.widget.RoundPanel;
+
+public class Graphics extends Composite implements View {
+	private static GameImages gameImages = GWT.create(GameImages.class);
+	private static GraphicsUiBinder uiBinder = GWT
+			.create(GraphicsUiBinder.class);
+
+	interface GraphicsUiBinder extends UiBinder<Widget, Graphics> {
+	}
+
+	@UiField
+	Button match;
+	@UiField(provided = true)
+	SuggestBox emailInputSuggest;
+	@UiField
+	LayoutPanel rootPanel;
+	@UiField
+	RoundPanel topPanel;
+
+	@UiField
+	GameCss css;
+	@UiField
+	Label gameStatus;
+	@UiField
+	Label playersInfo;
+	// @UiField
+	// Grid gameGrid;
+	@UiField
+	Grid promotionGrid;
+
+	@UiField
+	Button disconnect;
+	@UiField
+	ListBox matchList;
+	// @UiField
+	// TextBox emailInput;
+	@UiField
+	Button newMatch;
+	@UiField
+	Button deleteMatch;
+	@UiField
+	Label currentPlayer;
+	@UiField
+	Label rank;
+	@UiField
+	Button ai;
+
+	@UiField
+	AbsolutePanel gameBoard;
+	@UiField
+	Anchor signInLink;
+	@UiField
+	Anchor signOutLink;
+
+	PickupDragController dragController;
+	private final MultiWordSuggestOracle oracle = new MultiWordSuggestOracle();
+
+	private final Image[][] board = new Image[8][8];
+	private Image[] promotionBoard = new Image[4];
+
+	private Timer timer = null;
+	GameMessages messages = (GameMessages) GWT.create(GameMessages.class);
+
+	public Graphics() {
+
+		emailInputSuggest = new SuggestBox(oracle);
+
+		initWidget(uiBinder.createAndBindUi(this));
+	}
+
+	public void init() {
+		// Window.alert(Window.Location.getHref());
+		setButtons(false, false);
+		signInLink.setText("Sign in");
+		signOutLink.setText("Sign out");
+		dragController = new PickupDragController(gameBoard, false);
+		dragController.setBehaviorBoundaryPanelDrop(false);
+		// gameGrid.resize(8, 8);
+		// gameGrid.setCellPadding(0);
+		// gameGrid.setCellSpacing(0);
+		// gameGrid.setBorderWidth(0);
+		// gameGrid.setWidth("50px");
+		matchList.setVisibleItemCount(1);
+
+		// restart.setText("Start a new game");
+		// save.setText("Save game");
+		// load.setText("Load game");
+		// clearAll.setText("Delete all saved games");
+
+		// delete.setText(messages.setDeleteMatchLabel());
+		match.setText(messages.setAutoMatchLabel());
+		disconnect.setText("close connection");
+		disconnect.setVisible(false);
+
+		// saveList.setVisibleItemCount(8);
+		// saveList.setWidth("150px");
+
+		// emailInput.setWidth("150px");
+
+		newMatch.setText(messages.setStartGameLabel());
+		deleteMatch.setText(messages.setDeleteMatchLabel());
+
+		// matchList.setVisibleItemCount(5);
+
+		// restart.setVisible(false);
+		// load.setVisible(false);
+		// saveList.setVisible(false);
+		// save.setVisible(false);
+		// clearAll.setVisible(false);
+		// delete.setVisible(false);
+
+		gameBoard.setPixelSize(400, 400);
+		ai.setText("Play against computer");
+		for (int row = 0; row < 8; row++) {
+			for (int col = 0; col < 8; col++) {
+				final Image image = new Image();
+				board[row][col] = image;
+
+				image.setWidth("100%");
+				image.setResource(gameImages.empty());
+
+				gameBoard.add(image, 50 * col, 50 * row);
+				dragController.makeDraggable(image);
+
+				// gameGrid.setWidget(row, col, image);
+			}
+
+		}
+		// Window.alert(""+gameBoard.getWidgetIndex(board[0][1])+" "+gameBoard.getAbsoluteLeft()+" "+gameBoard.getAbsoluteTop());
+		dragController.setBehaviorDragStartSensitivity(4);
+		for (int row = 0; row < 4; row++) {
+			final Image image = new Image();
+			promotionBoard[row] = image;
+		}
+
+		promotionGrid.setBorderWidth(0);
+		promotionGrid.resize(4, 1);
+	}
+
+	@Override
+	public HasClickHandlers getAutoMatchButton() {
+
+		return match;
+	}
+
+	@Override
+	public HasClickHandlers getDisconnectButton() {
+
+		return disconnect;
+	}
+
+	@Override
+	public HasClickHandlers getNewMatchButton() {
+
+		return newMatch;
+	}
+
+	@Override
+	public HasClickHandlers getCellOnChessBoard(int row, int col) {
+		return board[7 - row][col];
+	}
+
+	@Override
+	public HasDragHandlers getDragCellOnChessBoard(int row, int col) {
+		return getCell(row, col);
+	}
+
+	@Override
+	public HasDropHandlers getDropCellOnChessBoard(int row, int col) {
+		return getCell(row, col);
+	}
+
+	@Override
+	public HasDragOverHandlers getDragOverCellOnChessBoard(int row, int col) {
+		return getCell(row, col);
+	}
+
+	@Override
+	public HasChangeHandlers getMatchList() {
+		return matchList;
+	}
+
+	@Override
+	public HasClickHandlers getDeleteMatchButton() {
+		return deleteMatch;
+	}
+
+	@Override
+	public void setMatchList(String match) {
+		matchList.addItem(match);
+	}
+
+	@Override
+	public void clearMatchList() {
+		matchList.clear();
+	}
+
+	@Override
+	public String getSelectionFromMatchList() {
+		int idx = matchList.getSelectedIndex();
+		if (idx == -1)
+			return null;
+		return matchList.getItemText(idx);
+	}
+
+	@Override
+	public Image getCell(int row, int col) {
+		return board[7 - row][col];
+	}
+
+	@Override
+	public void cellAppearAndDisappear(int row, int col, boolean isAppear,
+			int duration) {
+		CellWithAnimation cellAnimation = new CellWithAnimation(getCell(row,
+				col), isAppear);
+
+		cellAnimation.run(duration);
+	}
+
+	@Override
+	public void setPlayersInfo(String info) {
+		playersInfo.setText(info);
+	}
+
+	@Override
+	public HasClickHandlers getCellOnPromotionBoard(int row) {
+		return promotionBoard[row];
+	}
+
+	/*
+	 * @Override public HasClickHandlers getRestartButton() { return restart; }
+	 * 
+	 * @Override public HasClickHandlers getLoadButton() { return load; }
+	 * 
+	 * @Override public HasClickHandlers getClearAllButton() { return clearAll;
+	 * }
+	 * 
+	 * @Override public HasClickHandlers getDeleteButton() { return delete; }
+	 */
+	@Override
+	public void setTimer(Timer timer) {
+		this.timer = timer;
+	}
+
+	@Override
+	public Timer getTimer() {
+		return timer;
+	}
+
+	@Override
+	public void hidePromotionGrid() {
+		DOM.setStyleAttribute(promotionGrid.getElement(), "visibility",
+				"hidden");
+	}
+
+	@Override
+	public void showPromotionGrid() {
+		DOM.setStyleAttribute(promotionGrid.getElement(), "visibility", "");
+	}
+
+	@Override
+	public void setPromotionGrid(Color turn) {
+		if (turn == WHITE) {
+			promotionBoard[0].setResource(gameImages.whiteQueen());
+		} else {
+			promotionBoard[0].setResource(gameImages.blackQueen());
+		}
+		if (turn == WHITE) {
+			promotionBoard[1].setResource(gameImages.whiteRook());
+		} else {
+			promotionBoard[1].setResource(gameImages.blackRook());
+		}
+		if (turn == WHITE) {
+			promotionBoard[2].setResource(gameImages.whiteBishop());
+		} else {
+			promotionBoard[2].setResource(gameImages.blackBishop());
+		}
+		if (turn == WHITE) {
+			promotionBoard[3].setResource(gameImages.whiteKnight());
+
+		} else {
+			promotionBoard[3].setResource(gameImages.blackKnight());
+		}
+		for (int i = 0; i < 4; i++) {
+			promotionGrid.setWidget(i, 0, promotionBoard[i]);
+		}
+	}
+
+	@Override
+	public void setPiece(int row, int col, Piece piece) {
+		Image image = board[7 - row][col];
+
+		if (piece == null) {
+			image.setResource(gameImages.empty());
+			// ChessEntryPoint.dragController.makeNotDraggable(image);
+			// setDraggable(row,col,false);
+			return;
+		}
+
+		// setDraggable(row,col,true);
+
+		PieceKind kind = piece.getKind();
+		Color color = piece.getColor();
+		switch (kind) {
+		case KING:
+			if (color == Color.BLACK) {
+				image.setResource(gameImages.blackKing());
+			} else {
+				image.setResource(gameImages.whiteKing());
+			}
+			break;
+		case BISHOP:
+			if (color == Color.BLACK) {
+				image.setResource(gameImages.blackBishop());
+			} else {
+				image.setResource(gameImages.whiteBishop());
+			}
+			break;
+		case KNIGHT:
+			if (color == Color.BLACK) {
+				image.setResource(gameImages.blackKnight());
+			} else {
+				image.setResource(gameImages.whiteKnight());
+			}
+			break;
+		case PAWN:
+			if (color == Color.BLACK) {
+				image.setResource(gameImages.blackPawn());
+			} else {
+				image.setResource(gameImages.whitePawn());
+			}
+			break;
+		case QUEEN:
+			if (color == Color.BLACK) {
+				image.setResource(gameImages.blackQueen());
+			} else {
+				image.setResource(gameImages.whiteQueen());
+			}
+			break;
+		case ROOK:
+			if (color == Color.BLACK) {
+				image.setResource(gameImages.blackRook());
+			} else {
+				image.setResource(gameImages.whiteRook());
+			}
+			break;
+		}
+
+	}
+
+	@Override
+	public void setHighlighted(boolean isChessBoard, int row, int col,
+			boolean highlighted) {
+		Element element;
+		if (isChessBoard) {
+			element = board[7 - row][col].getElement();
+		} else {
+			element = promotionBoard[row].getElement();
+		}
+		if (highlighted) {
+			element.setClassName(css.highlighted());
+		} else {
+			element.removeClassName(css.highlighted());
+		}
+	}
+
+	@Override
+	public void setWhoseTurn(Color color) {
+
+		if (color == null) {
+
+			gameStatus.setText(messages.setWaitingStatus());
+		} else {
+			String turn = color == WHITE ? messages.colorWhite() : messages
+					.colorBlack();
+			gameStatus.setText(turn + messages.toPlay());
+		}
+	}
+
+	@Override
+	public void setGameResult(GameResult gameResult) {
+		if (gameResult != null) {
+
+			String winner = gameResult.getWinner() == WHITE ? messages
+					.colorWhite() : messages.colorBlack();
+			// Window.alert(gameResult.getWinner().toString() + " " +
+			// winner+" in set");
+			String reason = null;
+			switch (gameResult.getGameResultReason()) {
+			case CHECKMATE:
+				reason = messages.checkMate();
+				break;
+
+			case FIFTY_MOVE_RULE:
+				reason = messages.fiftyMoveRule();
+				break;
+			case THREEFOLD_REPETITION_RULE:
+				reason = messages.threeFoldRepetitionRule();
+				break;
+			case STALEMATE:
+				reason = messages.stalemate();
+				break;
+
+			}
+
+			gameStatus.setText(messages.gameEnd() + " " + winner + " "
+					+ messages.win() + " " + reason);
+		}
+	}
+
+	@Override
+	public void setOpacity(int row, int col, double value) {
+		getCell(row, col).getElement().getStyle().setOpacity(value);
+	}
+
+	@Override
+	public void setDraggable(int row, int col, boolean dragable) {
+		if (dragable) {
+			getCell(row, col).getElement().setDraggable(
+					"Element.DRAGGABLE_TRUE");
+		} else {
+			getCell(row, col).getElement().setDraggable(
+					"Element.DRAGGABLE_FALSE");
+
+		}
+	}
+
+	@Override
+	public void addHistoryItem(String record) {
+		History.newItem(record);
+	}
+
+	public void playSound(Situation situation) {
+		Audio audio = null;
+		switch (situation) {
+		case EAT:
+			audio = AudioControl.createAudio(EAT);
+			break;
+		case END_OF_GAME:
+			audio = AudioControl.createAudio(END_OF_GAME);
+			break;
+		case SELECT:
+			audio = AudioControl.createAudio(SELECT);
+			break;
+		}
+
+		if (audio != null)
+			audio.play();
+	}
+
+	@Override
+	public String getEmailInput() {
+		return emailInputSuggest.getText();
+		// return emailInput.getText();
+	}
+
+	@Override
+	public void setButtons(boolean visible, boolean signIn) {
+		match.setVisible(visible);
+		// disconnect.setVisible(visible);
+		matchList.setVisible(visible);
+
+		emailInputSuggest.setVisible(visible);
+		newMatch.setVisible(visible);
+
+		deleteMatch.setVisible(visible);
+
+		signOutLink.setVisible(visible);
+		signInLink.setVisible(signIn);
+
+	}
+
+	@Override
+	public void setCurrentPlayer(String player) {
+		currentPlayer.setText(player);
+	}
+
+	@Override
+	public void setRank(String rankRange) {
+		rank.setText(rankRange);
+	}
+
+	public Position getImagePosition(Image image) {
+		for (int i = 0; i < 8; i++) {
+			for (int j = 0; j < 8; j++) {
+				if (image == board[i][j])
+					return new Position(7 - i, j);
+			}
+		}
+		return null;
+	}
+
+	@Override
+	public PickupDragController getDragController() {
+		return dragController;
+	}
+
+	@Override
+	public AbsolutePanel getGameBoard() {
+		return gameBoard;
+	}
+
+	@Override
+	public int getImageIdx(Image image) {
+		return gameBoard.getWidgetIndex(image);
+	}
+
+	@Override
+	public HasClickHandlers getAIButton() {
+		return ai;
+	}
+
+	@Override
+	public void addOracleItem(String suggestion) {
+		oracle.add(suggestion);
+	}
+
+	@Override
+	public void setSignInLink(String url) {
+		signInLink.setHref(url);
+	}
+
+	@Override
+	public void setSignOutLink(String url) {
+		signOutLink.setHref(url);
+	}
+
+}

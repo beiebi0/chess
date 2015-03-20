@@ -1,0 +1,124 @@
+package org.shitianren.hw3;
+
+
+import org.shitianren.hw6.client.ChessGameService;
+import org.shitianren.hw6.client.ChessGameServiceAsync;
+
+import org.shitianren.hw8.ChessMessage;
+
+import com.google.gwt.core.client.EntryPoint;
+import com.google.gwt.core.client.GWT;
+import com.google.gwt.event.dom.client.ClickEvent;
+import com.google.gwt.event.dom.client.ClickHandler;
+import com.google.gwt.user.client.Window;
+import com.google.gwt.user.client.rpc.ServiceDefTarget;
+import com.google.gwt.user.client.ui.Button;
+import com.google.gwt.user.client.ui.Label;
+import com.google.gwt.user.client.ui.RootPanel;
+import com.google.gwt.user.client.ui.TextBox;
+import com.google.gwt.user.client.ui.VerticalPanel;
+import com.googlecode.gwtphonegap.client.PhoneGap;
+import com.googlecode.gwtphonegap.client.PhoneGapAvailableEvent;
+import com.googlecode.gwtphonegap.client.PhoneGapAvailableHandler;
+import com.googlecode.gwtphonegap.client.PhoneGapTimeoutEvent;
+import com.googlecode.gwtphonegap.client.PhoneGapTimeoutHandler;
+
+import com.googlecode.gwtphonegap.client.util.PhonegapUtil;
+
+
+public class ChessEntryPoint implements EntryPoint {
+	private ChessMessage chessMessage = GWT.create(ChessMessage.class);
+	final ChessGameServiceAsync service = GWT.create(ChessGameService.class);
+
+	final PhoneGap phoneGap = GWT.create(PhoneGap.class);
+
+	@Override
+	public void onModuleLoad() {
+		phoneGap.initializePhoneGap();
+		phoneGap.addHandler(new PhoneGapAvailableHandler() {
+			@Override
+			public void onPhoneGapAvailable(PhoneGapAvailableEvent event) {
+				// start your app - phonegap is ready
+				Window.alert("PhoneGapAvailable");
+				startApp();
+			}
+
+		});
+
+		phoneGap.addHandler(new PhoneGapTimeoutHandler() {
+
+			@Override
+			public void onPhoneGapTimeout(PhoneGapTimeoutEvent event) {
+				// can not start phonegap - something is for with your setup
+				Window.alert("PhoneGapTimeout");
+			}
+		});
+
+	}
+
+	public void startApp() {
+
+		PhonegapUtil.prepareService((ServiceDefTarget) service,
+				"http://renshitianchess.appspot.com/shitianren/",
+				"chessgameService");
+		
+		RootPanel.get().clear();
+		loadLoginPanel();
+
+	}
+
+	public void loadLoginPanel() {
+		VerticalPanel loginPanel = new VerticalPanel();
+		RootPanel.get().clear();
+		Button signInLink = new Button("Sign in");
+		final TextBox account = new TextBox();
+		account.setWidth("180px");
+		signInLink.addClickHandler(new ClickHandler() {
+
+			@Override
+			public void onClick(ClickEvent event) {
+				String userEmail = account.getText();
+				loadChessGame(userEmail);
+			}
+
+		});
+
+		loginPanel.add(new Label(
+				"Enter your Google email to play this chess game"));
+		loginPanel.add(account);
+		loginPanel.add(signInLink);
+
+		RootPanel.get().add(loginPanel);
+	}
+
+	public void loadChessGame(String userEmail) {
+		RootPanel.get().clear();
+		Button signOutLink = new Button("Sign out");
+		signOutLink.addClickHandler(new ClickHandler() {
+
+			@Override
+			public void onClick(ClickEvent event) {
+				// TODO Auto-generated method stub
+				loadLoginPanel();
+			}
+
+		});
+		final Graphics graphics = new Graphics();
+		graphics.initialGamePanel();
+
+		Presenter presenter = new Presenter();
+
+		presenter.setView(graphics);
+
+		presenter.initGamePanel(phoneGap,userEmail, service);
+
+		// RootPanel.get().add(new
+		// Label(chessMessage.hello()+", "+userInfo.getNickname()+", "+chessMessage.welcome()));
+		// RootPanel.get().add(new Label(chessMessage.logout()));
+		RootPanel.get().add(
+				new Label("Hello" + ", " + userEmail + ", " + "Welcome"));
+		RootPanel.get().add(new Label("You can sign out here"));
+		RootPanel.get().add(signOutLink);
+		RootPanel.get().add(graphics);
+	}
+}

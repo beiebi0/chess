@@ -1,0 +1,58 @@
+package org.paulsultan.hw2_5;
+
+import java.util.Set;
+
+import org.shared.chess.Move;
+import org.shared.chess.Piece;
+import org.shared.chess.Position;
+import org.shared.chess.State;
+import org.shared.chess.StateExplorer;
+import org.shared.chess.Color;
+import org.paulsultan.hw2.StateChangerImpl;
+
+import com.google.common.collect.Sets;
+
+public class StateExplorerImpl implements StateExplorer {
+
+	@Override
+	public Set<Move> getPossibleMoves(State state) {
+		//Returns all the possible moves from the given state.
+		Set<Move> moves = Sets.newHashSet();
+		Set<Position> positions = getPossibleStartPositions(state);
+		for(Position pos : positions){
+			moves.addAll(getPossibleMovesFromPosition(state, pos));
+		}
+		return moves;
+	}
+
+	@Override
+	public Set<Move> getPossibleMovesFromPosition(State state, Position start) {
+		//Returns the possible moves from the given state that begin at start.
+		StateChangerImpl stateChanger = new StateChangerImpl();		
+		return stateChanger.getPossibleMoves(state, start);
+	}
+
+	@Override
+	public Set<Position> getPossibleStartPositions(State state) {
+		//Returns the list of start positions of all possible moves for current turn
+		StateChangerImpl stateChanger = new StateChangerImpl();
+		Set<Position> positions = Sets.newHashSet();
+		
+		if(state.getGameResult()==null){
+			for(int col=0; col<8; col++) {
+				for(int row=0; row<8; row++) {
+					Position pos = new Position(col, row);
+					Piece piece = state.getPiece(pos);
+					Color color = state.getTurn();
+					
+					if(piece!=null && piece.getColor().equals(color)){
+						Set<Move> move = stateChanger.getPossibleMoves(state, pos);
+						if(!move.isEmpty())
+							positions.add(pos);
+					}
+				}
+			}
+		}
+		return positions;
+	}
+}

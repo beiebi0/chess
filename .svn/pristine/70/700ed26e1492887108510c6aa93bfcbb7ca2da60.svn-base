@@ -1,0 +1,10 @@
+signOut = 登出
+autoMatch = 自动游戏
+aiMatchBegin = 开始人机对战
+aiMatchEnd = 结束人机对战
+selectMatch = 选择对手
+loadMatch = 加载游戏
+save = 保存
+load = 加载
+restart = 重玩
+delete = 删除

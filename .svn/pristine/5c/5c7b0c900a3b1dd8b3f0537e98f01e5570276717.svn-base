@@ -1,0 +1,75 @@
+<!DOCTYPE ui:UiBinder SYSTEM "http://dl.google.com/gwt/DTD/xhtml.ent">
+<ui:UiBinder xmlns:ui="urn:ui:com.google.gwt.uibinder"
+	xmlns:g="urn:import:com.google.gwt.user.client.ui">
+	<ui:image field="background" src="Board brown.jpg" />
+	<ui:with field="images" type="org.yuanjia.hw3.GameImages"/>
+	<ui:style field="css" type="org.yuanjia.hw3.GameCss">
+		.reddot {
+			outline: solid 3px #FF0000;
+		}
+		
+		.greendot {
+			outline: solid 3px #00FFFF;
+		}
+		
+		@sprite .board {
+			padding-top: 20px;
+			padding-left: 20px;
+			gwt-image: "background";
+		}
+		
+		td img {
+			display: block;
+		}
+		
+		button{
+			height: 30px;
+		}
+		
+		.content {
+			max-width: 440px;
+			margin: auto;
+		}
+		
+	</ui:style>
+	<g:HTMLPanel>
+		<div class="{css.content}">
+			<g:HorizontalPanel>
+				<g:Label ui:field="userName"/>
+				<g:Anchor ui:field="signoutAnchor"/>
+			</g:HorizontalPanel>
+			
+			<g:Label ui:field="gameInfo"/>
+			<g:Label ui:field = "gameStartTime"/>
+			<g:Label ui:field="gameStatus" />
+			<div class="{css.board}">
+				<g:Grid ui:field="gameGrid" />
+			</div>
+			<g:FlowPanel ui:field="BlackButtons">
+				<g:Image ui:field="QueenButton" resource="{images.blackQueen}" />
+				<g:Image ui:field="RookButton" resource="{images.blackRook}" />
+				<g:Image ui:field="BishopButton" resource="{images.blackBishop}" />
+				<g:Image ui:field="KnightButton" resource="{images.blackKnight}" />
+			</g:FlowPanel>
+			<g:FlowPanel ui:field="WhiteButtons">
+				<g:Image ui:field="QueenButton1" resource="{images.whiteQueen}" />
+				<g:Image ui:field="RookButton1" resource="{images.whiteRook}" />
+				<g:Image ui:field="BishopButton1" resource="{images.whiteBishop}" />
+				<g:Image ui:field="KnightButton1" resource="{images.whiteKnight}" />
+			</g:FlowPanel>
+			<g:VerticalPanel ui:field="StorageButtons">
+				<g:FlowPanel ui:field="OpEmailPanel"/>
+				<g:FlowPanel>
+					<g:Button ui:field="AutoMatchButton"/>
+					<g:Button ui:field="InviteButton"/>
+					<g:Button ui:field="AIButton"/>
+				</g:FlowPanel>
+				<g:ListBox ui:field="MatchList"/>
+				<g:FlowPanel>
+				<g:Button ui:field="LoadButton"/>
+				<g:Button ui:field="DeleteButton"/>
+				</g:FlowPanel>
+			</g:VerticalPanel>
+		</div>
+	</g:HTMLPanel>
+</ui:UiBinder> 

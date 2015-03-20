@@ -1,0 +1,65 @@
+
+.grey-square {
+	background: #4e904f;
+	width: 50px;
+	height: 50px;
+}
+
+.white-square {
+	background: #b9cab9;
+	width: 50px;
+	height: 50px;
+}
+
+.sendButton {
+  display: block;
+  font-size: 16pt;
+}
+
+.gwt-Button {
+  color: black;
+  border: 1px solid rgba(0, 0, 0, 0.5);
+}
+
+.gwt-Button:active {
+  color: #fff;
+}
+
+@if user.agent safari {
+  .gwt-Button {
+    \-webkit-border-radius: 4px;
+    background-image: literal('-webkit-gradient(linear, left top, left bottom, from(rgb(180, 180, 180)), to(rgb(160, 160, 160)) )');
+  }
+  .gwt-Button:active {
+    background-image: literal('-webkit-gradient(linear, left top, left bottom, from(rgb(82, 163, 196)), to(rgb(62, 143, 176)) )');
+  }
+}
+
+@if user.agent gecko1_8 {
+  .gwt-Button {
+    \-moz-border-radius: 4px;
+    border-radius: 4px;
+    background-image: literal('-moz-linear-gradient(top, rgb(180, 180, 180), rgb(160, 160, 160))');
+  }
+  .gwt-Button:active {
+    background-image: literal('-moz-linear-gradient(top, rgb(82, 163, 196), rgb(62, 143, 176))');
+  }
+}
+
+/** Most GWT widgets already have a style name defined */
+.gwt-DialogBox {
+  width: 400px;
+}
+
+.dialogVPanel {
+  margin: 5px;
+}
+
+.serverResponseLabelError {
+  color: red;
+}
+
+/** Set ids using widget.getElement().setId("idOfElement") */
+#closeButton {
+  margin: 15px 6px 6px;
+}

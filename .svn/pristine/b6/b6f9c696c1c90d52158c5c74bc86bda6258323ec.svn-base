@@ -1,0 +1,1133 @@
+package org.bohuang.hw2;
+
+import java.util.HashSet;
+import java.util.Set;
+
+import org.shared.chess.Color;
+import org.shared.chess.GameResult;
+import org.shared.chess.GameResultReason;
+import org.shared.chess.IllegalMove;
+import org.shared.chess.Move;
+import org.shared.chess.Piece;
+import org.shared.chess.PieceKind;
+import org.shared.chess.Position;
+import org.shared.chess.State;
+import org.shared.chess.StateChanger;
+
+public class StateChangerImpl implements StateChanger{
+	
+
+	@Override
+	public void makeMove(State state, Move move) throws IllegalMove {
+		
+		State original = state.copy();
+		Position from = move.getFrom();
+		Piece piece = state.getPiece(from);
+		Color color = piece.getColor();
+		
+		if (state.getGameResult() != null
+				||(piece == null)
+				||(color != state.getTurn())
+				||(!moveLegal(state ,move , color ))) {
+		      // Game already ended!
+		      throw new IllegalMove();
+		    }			
+			
+		moveNow(state , move);
+		
+		if(checkedAfterMove (state , color )){
+			  //still checked after move
+			throw new IllegalMove();
+		}
+		
+		if(checkedAfterMove (state , state.getTurn())){
+			setGameResultCheckMate(state);
+		}
+		else{
+			setGameResultStaleMate(state);
+		}
+		
+		setNumberOfMovesWithoutCorP(state,original,move);
+		    	
+	}	   
+	
+	public void moveNow(State state , Move move){
+		
+		State original = state.copy();
+		
+		movePromotion(state ,original , move);
+		
+		moveEnpassant(state , original , move);
+		
+		moveCastling(state , original , move);
+		
+		setMovePiece(state,move);
+			
+		setTurn(state,original);
+		
+		setEnpassantPossition(state,original,move);
+		
+		setCanCastling(state,original,move);
+				
+	}
+	
+	public void setMovePiece(State state, Move move) {
+
+		if(move.getPromoteToPiece()!=null){
+			state.setPiece(move.getTo(), 
+					new Piece(state.getTurn(),move.getPromoteToPiece()));
+		}
+		else{
+			state.setPiece(move.getTo(), 
+					new Piece(state.getTurn(),state.getPiece(move.getFrom()).getKind()));
+		}
+		
+		state.setPiece(move.getFrom(),null);
+		
+	}
+
+	public void setEnpassantPossition(State state, State original, Move move) {
+		if(original.getPiece(move.getFrom()).getKind().equals(PieceKind.PAWN)&&
+				Math.abs(move.getFrom().getRow()-move.getTo().getRow())==2){
+			state.setEnpassantPosition(move.getTo());
+		}
+		else{
+			state.setEnpassantPosition(null);
+		}
+		
+		
+	}
+	
+	public void setGameResultCheckMate(State state ){
+		Set posMove = getPossibleMoves(state);
+		Color color = null;
+		if(state.getTurn().equals(Color.BLACK)){
+			color = Color.WHITE;
+		}
+		else{
+			color = Color.BLACK;
+		}
+		
+		if(posMove.isEmpty()){
+			state.setGameResult(new GameResult(color,GameResultReason.CHECKMATE));
+		}
+		
+		//System.out.println(posMove.toString());
+	}
+	
+	public void setGameResultStaleMate(State state ){
+		Set posMove = getPossibleMoves(state);
+		
+		if(posMove.isEmpty()){
+			state.setGameResult(new GameResult(null,GameResultReason.STALEMATE));
+		}
+		
+		//System.out.println(posMove.toString());
+	}
+	
+	public Set<Move> getPossibleMoves(State state){
+		Set posMove = new HashSet<Move>() ;
+		State tempState = state.copy();
+		Set<Position> posStart = new HashSet<Position>() ;
+		posStart = getPossiblePositions(state);
+		
+		for(Position p:posStart){
+			if(tempState.getPiece(p)!=null &&
+					tempState.getPiece(p).getColor().equals(tempState.getTurn())){
+				posMove.addAll(getPossibleMovesFromPositon(tempState,p));
+			}
+		}		
+		
+		return posMove;
+		
+	}
+	
+	public Set<Move> getPossibleMovesFromPositon(State state,Position position){
+		State tempState = state.copy();
+		Set posMove = new HashSet<Move>() ;
+		
+		for(int m = 0 ; m <= 7 ; m++){
+			for(int n = 0 ; n <= 7 ; n++){
+				Piece piece = state.getPiece(position);
+				
+				if(piece.getKind().equals(PieceKind.PAWN)&&
+						((piece.getColor().isWhite()&&position.getRow()==6)||
+								(piece.getColor().isBlack()&&position.getRow()==1))){
+					for(int o = 0 ; o <= 3 ; o++){
+						
+						switch (o){
+						case 0:{
+							Move move = new Move(position,new Position(m,n),PieceKind.BISHOP);
+							State afterMove = tempState.copy();
+							moveNow(afterMove,move);
+							if(moveLegal(tempState,move,tempState.getTurn())&&
+									!checkedAfterMove(afterMove,state.getTurn())){
+								posMove.add(move);
+						}
+							break;
+						}
+						case 1:{
+							Move move = new Move(position,new Position(m,n),PieceKind.KNIGHT);
+							State afterMove = tempState.copy();
+							moveNow(afterMove,move);
+							if(moveLegal(tempState,move,tempState.getTurn())&&
+									!checkedAfterMove(afterMove,state.getTurn())){
+								posMove.add(move);
+						}
+							break;
+						}
+						case 2:{
+							Move move = new Move(position,new Position(m,n),PieceKind.QUEEN);
+							State afterMove = tempState.copy();
+							moveNow(afterMove,move);
+							if(moveLegal(tempState,move,tempState.getTurn())&&
+									!checkedAfterMove(afterMove,state.getTurn())){
+								posMove.add(move);
+						}
+							break;
+						}
+						case 3:{
+							Move move = new Move(position,new Position(m,n),PieceKind.ROOK);
+							State afterMove = tempState.copy();
+							moveNow(afterMove,move);
+							if(moveLegal(tempState,move,tempState.getTurn())&&
+									!checkedAfterMove(afterMove,state.getTurn())){
+								posMove.add(move);
+						}
+							break;
+						}						
+					}
+				}
+									
+				}else{
+					Move move = new Move(position,new Position(m,n),null);
+					State afterMove = tempState.copy();
+					moveNow(afterMove,move);
+					if(moveLegal(tempState,move,tempState.getTurn())&&
+							!checkedAfterMove(afterMove,state.getTurn())){
+						posMove.add(move);
+				}
+				}
+			}
+		}
+		//System.out.println(posMove.toString());
+		return posMove;
+		
+	}
+	
+	public Set<Position> getPossiblePositions(State state){
+		Set posPosition = new HashSet<Position>() ;
+		State tempState = state.copy();
+		
+		for(int i = 0 ; i <= 7 ; i++){
+			for(int j = 0 ; j <= 7 ; j++){
+				if(tempState.getPiece(i, j)!=null &&
+						tempState.getPiece(i,j).getColor().equals(tempState.getTurn())){
+					if(getPossibleMovesFromPositon(state,new Position(i,j))!=null){
+						posPosition.add(new Position(i,j));
+					}
+				}
+			}
+		}
+		
+		return posPosition;
+	}
+
+	public void setNumberOfMovesWithoutCorP(State state, State original, Move move) {
+		
+			if(original.getPiece(move.getTo())!=null||
+					original.getPiece(move.getFrom()).getKind().equals(PieceKind.PAWN)){
+					state.setNumberOfMovesWithoutCaptureNorPawnMoved(0);				
+			}
+			else{
+				int temp = original.getNumberOfMovesWithoutCaptureNorPawnMoved();
+				state.setNumberOfMovesWithoutCaptureNorPawnMoved(temp+1);
+			}
+			
+			if(state.getNumberOfMovesWithoutCaptureNorPawnMoved()>=100){	
+				int temp = original.getNumberOfMovesWithoutCaptureNorPawnMoved();
+				state.setNumberOfMovesWithoutCaptureNorPawnMoved(temp+1);
+				state.setGameResult(new GameResult(null,GameResultReason.FIFTY_MOVE_RULE));			
+			}			
+			
+		
+	}
+
+	public void setTurn(State state, State original) {
+		if(original.getTurn().isBlack()){
+			state.setTurn(Color.WHITE);
+		}
+		else{
+			state.setTurn(Color.BLACK);
+		}
+		
+	}
+
+	public boolean moveCastling(State state, State original, Move move) {
+		
+		boolean Kingside = true;
+		boolean Queenside = true;
+		boolean legal = true;
+		int row = 8 ;
+		
+		if(state.getTurn().equals(Color.WHITE)){
+			row = 0;
+		}
+		else{
+			row = 7;
+		}
+		
+		for(int i = 2 ; i <= 4 ; i++){
+			if(underAttack(state,state.getTurn(),row,i)){
+				Queenside = false;
+			}
+			
+		}
+		
+		for(int i = 4 ; i <= 6 ; i++){
+			if(underAttack(state,state.getTurn(),row,i)){
+				Kingside = false;
+			}
+			
+		}
+
+		if(original.isCanCastleKingSide(original.getTurn())&&
+				original.getPiece(move.getFrom()).getKind().equals(PieceKind.KING)&&
+				move.getTo().getCol()-move.getFrom().getCol()==2){
+			if(Kingside){
+				state.setPiece(move.getFrom().getRow(), 5, new Piece(original.getTurn(),PieceKind.ROOK));
+				state.setPiece(move.getFrom().getRow(), 7, null);
+				state.setCanCastleKingSide(state.getTurn(), false);
+			}
+			else
+				legal = false;
+			
+		}
+		if(original.isCanCastleQueenSide(original.getTurn())&&
+				original.getPiece(move.getFrom()).getKind().equals(PieceKind.KING)&&
+				move.getTo().getCol()-move.getFrom().getCol()==-2){
+			if(Queenside){
+				state.setPiece(move.getFrom().getRow(), 3, new Piece(state.getTurn(),PieceKind.ROOK));
+				state.setPiece(move.getFrom().getRow(), 0, null);
+				state.setCanCastleQueenSide(state.getTurn(), false);
+			}
+			else
+				legal = false;
+			
+		}
+		return legal;		
+		
+		
+	}
+
+	public void moveEnpassant(State state, State original , Move move) {
+		if(original.getEnpassantPosition()!=null&&
+				original.getPiece(move.getFrom()).getKind().equals(PieceKind.PAWN)&&
+				move.getFrom().getRow()==original.getEnpassantPosition().getRow()&&
+				move.getTo().getCol()==original.getEnpassantPosition().getCol()){
+			state.setPiece(original.getEnpassantPosition(), null);
+			state.setEnpassantPosition(null);
+		}
+		
+	}
+
+	public boolean movePromotion(State state, State original, Move move) {
+		boolean isMoveLegal = true;
+		if(original.getPiece(move.getFrom()).getKind().compareTo(PieceKind.PAWN)!=0&&
+				move.getPromoteToPiece()!=null){
+			isMoveLegal = false;
+		}
+		if(original.getTurn().equals(Color.WHITE)&&
+				move.getTo().getRow()!=7&&
+				move.getPromoteToPiece()!=null){
+			isMoveLegal = false;
+		}
+		if(original.getTurn().equals(Color.BLACK)&&
+				move.getTo().getRow()!=0&&
+				move.getPromoteToPiece()!=null){
+			isMoveLegal = false;
+		}
+		if(move.getPromoteToPiece()!=null&&
+				move.getPromoteToPiece().equals(PieceKind.KING)){
+			isMoveLegal = false;
+		}
+		if(move.getPromoteToPiece()!=null&&
+				move.getPromoteToPiece().equals(PieceKind.PAWN)){
+			isMoveLegal = false;
+		}
+			return isMoveLegal ;
+	}
+
+	public boolean IntersectStraight(State state , Move move){
+		boolean noIntersect = true;
+
+		if (move.getFrom().getCol() ==  move.getTo().getCol()&&
+				move.getFrom().getRow() <  move.getTo().getRow()){
+			for ( int i = move.getFrom().getRow()+1 ; i <  move.getTo().getRow() ; i++){
+				if (state.getPiece(i,move.getFrom().getCol()) != null){
+					noIntersect = false;
+					//throw new IllegalMove();
+					//System.out.println("a");
+				}
+			}
+		}
+		if (move.getFrom().getCol() ==  move.getTo().getCol()&&
+				move.getFrom().getRow()> move.getTo().getRow()){
+			for ( int i =  move.getTo().getRow()+1 ; i < move.getFrom().getRow() ; i++){
+				if (state.getPiece(i,move.getFrom().getCol()) != null){
+					noIntersect = false;
+					//throw new IllegalMove();
+					//System.out.println("b");
+				}
+			}
+		}
+		if (move.getFrom().getRow() ==  move.getTo().getRow()&&
+				move.getFrom().getCol()< move.getTo().getCol()){
+			for ( int i =move.getFrom().getCol()+1 ; i <  move.getTo().getCol() ; i++){
+				if (state.getPiece(move.getFrom().getRow(),i) != null){
+					noIntersect = false;
+					//throw new IllegalMove();
+					//System.out.println("c");
+				}
+			}
+		}
+		if (move.getFrom().getRow() ==  move.getTo().getRow()&&
+				move.getFrom().getCol()> move.getTo().getCol()){
+			for ( int i = move.getTo().getCol()+1 ; i < move.getFrom().getCol() ; i++){
+				if (state.getPiece(move.getFrom().getRow(),i) != null){
+					noIntersect = false;
+					//throw new IllegalMove();
+					//System.out.println("d");
+				}
+			}
+		}
+		
+		return noIntersect;
+	}
+	
+	public boolean IntersectTilt(State state ,Move move){
+		boolean noIntersect = true;
+		
+		if (move.getFrom().getRow() <  move.getTo().getRow() && 
+				move.getFrom().getCol() <  move.getTo().getCol()){
+			for ( int i = 1 ; i <  move.getTo().getRow() - move.getFrom().getRow() ; i++){
+				if (move.getFrom().getRow()+i <= 7 && move.getFrom().getCol()+i <= 7&&
+						state.getPiece(move.getFrom().getRow()+i, move.getFrom().getCol()+i) != null){
+					noIntersect = false;
+				}
+			}
+		}
+		
+		if (move.getFrom().getRow() <  move.getTo().getRow() && 
+				move.getFrom().getCol() >  move.getTo().getCol()){
+			for ( int i = 1 ; i <  move.getTo().getRow() - move.getFrom().getRow() ; i++){
+				if (move.getFrom().getRow()+i <= 7 && move.getFrom().getCol()-i >= 0&&
+						state.getPiece(move.getFrom().getRow()+i, move.getFrom().getCol()-i) != null){
+					noIntersect = false;
+				}
+			}
+		}
+		
+		if (move.getFrom().getRow() >  move.getTo().getRow() && 
+				move.getFrom().getCol() <  move.getTo().getCol()){
+			for ( int i = 1 ; i < move.getFrom().getRow() -  move.getTo().getRow() ; i++){
+				if (move.getFrom().getRow()-i >= 0 && move.getFrom().getCol()+i <= 7&&
+						state.getPiece(move.getFrom().getRow()-i, move.getFrom().getCol()+i) != null){
+					noIntersect = false;
+				}
+			}
+		}
+		
+		if (move.getFrom().getRow() >  move.getTo().getRow() && 
+				move.getFrom().getCol() >  move.getTo().getCol()){
+			for ( int i = 1 ; i < move.getFrom().getRow() -  move.getTo().getRow() ; i++){
+				if (move.getFrom().getRow()-i >= 0 && move.getFrom().getCol()-i >= 0&&
+						state.getPiece(move.getFrom().getRow()-i, move.getFrom().getCol()-i) != null){
+					noIntersect = false;
+				}
+			}
+		}
+		
+		return noIntersect;
+	}
+	
+	public boolean moveLegal(State state , Move move , Color color ){
+		
+		boolean isPieceMoveLegal = true;
+		
+		if( move.getTo().getRow() > 7 ||  move.getTo().getCol() >7 
+				||move.getTo().getRow()<0 || move.getTo().getCol()<0){
+			isPieceMoveLegal = false;
+			//throw new IllegalMove();
+		}		
+		if(move.getFrom().getRow()==move.getTo().getRow()&&
+				move.getFrom().getCol()==move.getTo().getCol()){
+			isPieceMoveLegal = false;
+			//throw new IllegalMove();
+		}		
+		if(state.getPiece(move.getTo())!=null&&
+				state.getPiece(move.getTo()).getColor().equals(state.getTurn())){
+			isPieceMoveLegal = false;
+			//throw new IllegalMove();
+		}
+		if(!movePromotion(state,state,move)){
+			isPieceMoveLegal = false;
+		}
+		
+		
+        switch(state.getPiece(move.getFrom()).getKind()){
+		
+		case ROOK:{			
+			if (move.getFrom().getCol() !=  move.getTo().getCol() && 
+					move.getFrom().getRow() !=  move.getTo().getRow()){
+				isPieceMoveLegal = false;
+				//throw new IllegalMove();
+				
+			}											
+			if (!IntersectStraight(state, move)){
+				isPieceMoveLegal = false ;
+				//throw new IllegalMove();
+				
+			}
+			break;
+		}
+		
+		case KNIGHT:{
+			int knightMoveCount = (move.getFrom().getRow()- move.getTo().getRow())*
+					(move.getFrom().getCol()- move.getTo().getCol());
+			if (Math.abs(knightMoveCount) != 2){
+				isPieceMoveLegal = false;
+				//throw new IllegalMove();
+			}			
+			break;
+		}
+		
+		case BISHOP:{
+			if (Math.abs(move.getFrom().getRow()- move.getTo().getRow())!=
+					Math.abs(move.getFrom().getCol()- move.getTo().getCol())){
+				isPieceMoveLegal = false;
+				//throw new IllegalMove();
+			}
+			
+			if (!IntersectTilt(state, move)){
+				isPieceMoveLegal = false;
+				//throw new IllegalMove();
+			}
+			
+			break;
+		}
+		
+		case QUEEN:{
+			if (Math.abs(move.getFrom().getRow()- move.getTo().getRow())!=
+					Math.abs(move.getFrom().getCol()- move.getTo().getCol()) && 
+					move.getFrom().getCol() !=  move.getTo().getCol() && 
+					move.getFrom().getRow() !=  move.getTo().getRow()){
+				isPieceMoveLegal = false;
+				//throw new IllegalMove();
+			}
+			if (!IntersectStraight(state, move)){
+				isPieceMoveLegal = false ;
+				//throw new IllegalMove();
+			}
+			if (!IntersectTilt(state, move)){
+				isPieceMoveLegal = false;
+				//throw new IllegalMove();
+			}
+			
+			break;
+			
+		}
+		
+		case KING:{
+			
+			int row = 8 ;
+			
+			if(state.getTurn().equals(Color.WHITE)){
+				row = 0;
+			}
+			else{
+				row = 7;
+			}
+
+			boolean Kingside = true;
+			boolean Queenside = true;			
+			
+			for(int i = 2 ; i <= 4 ; i++){
+				if(underAttack(state,state.getTurn(),row,i)){
+					Queenside = false;
+				}
+				
+			}
+			
+			for(int i = 4 ; i <= 6 ; i++){
+				if(underAttack(state,state.getTurn(),row,i)){
+					Kingside = false;
+				}
+				
+			}
+			
+			if (move.getFrom().getCol()-move.getTo().getCol()==2&&
+					!Queenside){
+				isPieceMoveLegal = false;
+			}			
+			if (move.getTo().getCol()-move.getFrom().getCol()==2&&
+					!Kingside){
+				isPieceMoveLegal = false;
+			}
+			
+			if (move.getFrom().getCol()-move.getTo().getCol()==2){
+					if(state.getPiece(move.getFrom().getRow(), 1)!=null||
+							state.getPiece(move.getFrom().getRow(), 2)!=null||
+							state.getPiece(move.getFrom().getRow(), 3)!=null){
+						isPieceMoveLegal = false;						
+					}				
+			}			
+			if (move.getTo().getCol()-move.getFrom().getCol()==2){
+				if(state.getPiece(move.getFrom().getRow(), 5)!=null||
+						state.getPiece(move.getFrom().getRow(), 6)!=null){
+					isPieceMoveLegal = false;					
+				}				
+			}			
+			
+			if(!state.isCanCastleQueenSide(color)){
+				if(move.getFrom().getCol()- move.getTo().getCol() > 1){
+					isPieceMoveLegal = false;
+				}
+			}
+			
+			if(!state.isCanCastleKingSide(color)){
+				if(move.getTo().getCol()- move.getFrom().getCol() > 1){
+					isPieceMoveLegal = false;
+				}
+			}
+			
+						
+			if (state.isCanCastleKingSide(color)){
+				if( state.getPiece(move.getFrom().getRow(), 5)!=null||
+					state.getPiece(move.getFrom().getRow(), 6)!=null){
+					if ( move.getTo().getCol()-move.getFrom().getCol()>2){
+						isPieceMoveLegal = false;
+						//throw new IllegalMove();
+					}
+				}				
+			}
+			if (state.isCanCastleQueenSide(color)){
+				if(	state.getPiece(move.getFrom().getRow(), 3)!=null||
+					state.getPiece(move.getFrom().getRow(), 2)!=null||
+					state.getPiece(move.getFrom().getRow(), 1)!=null){
+					if (move.getFrom().getCol()- move.getTo().getCol()>2){
+						isPieceMoveLegal = false;
+						//throw new IllegalMove();
+					}
+				}				
+			}
+			if (Math.abs(move.getFrom().getRow()- move.getTo().getRow()) == 1
+					&&Math.abs(move.getFrom().getCol()- move.getTo().getCol()) > 1){
+				isPieceMoveLegal = false;
+				//throw new IllegalMove();
+			}
+			if (Math.abs(move.getFrom().getRow()- move.getTo().getRow()) > 1){
+				isPieceMoveLegal = false;
+				//throw new IllegalMove();
+			}
+			if (Math.abs(move.getFrom().getCol()- move.getTo().getCol()) > 2){
+				isPieceMoveLegal = false;
+				//throw new IllegalMove();
+			}
+			if (state.getPiece(move.getFrom()).getColor().isWhite() &&
+					move.getFrom().getRow()!=0 &&
+					move.getFrom().getCol()!=4 &&
+					Math.abs(move.getFrom().getCol()-move.getTo().getCol())>1){
+				isPieceMoveLegal = false;
+			}
+			if (state.getPiece(move.getFrom()).getColor().isBlack() &&
+					move.getFrom().getRow()!=7 &&
+					move.getFrom().getCol()!=4 &&
+					Math.abs(move.getFrom().getCol()-move.getTo().getCol())>1){
+				isPieceMoveLegal = false;
+			}
+			if (state.getPiece(move.getFrom()).getColor().isWhite() &&
+					move.getFrom().getCol()!=4 &&
+					Math.abs(move.getFrom().getCol()-move.getTo().getCol())>1){
+				isPieceMoveLegal = false;
+			}
+			if (state.getPiece(move.getFrom()).getColor().isBlack() &&
+					move.getFrom().getCol()!=4 &&
+					Math.abs(move.getFrom().getCol()-move.getTo().getCol())>1){
+				isPieceMoveLegal = false;
+			}
+			
+			
+			break;
+		}
+		
+		case PAWN:{
+			if(Math.abs(move.getFrom().getRow()-move.getTo().getRow())==2&&
+					Math.abs(move.getFrom().getCol()-move.getTo().getCol())==1){
+				isPieceMoveLegal = false;
+			}
+			if (Math.abs( move.getTo().getCol()-move.getFrom().getCol())>1 || 
+					Math.abs( move.getTo().getRow()-move.getFrom().getRow())>2 ||
+					Math.abs( move.getTo().getRow()-move.getFrom().getRow())==0){
+				isPieceMoveLegal = false;
+				//throw new IllegalMove();
+			}
+			if (move.getFrom().getCol() ==  move.getTo().getCol() && 
+					state.getPiece( move.getTo().getRow(),  move.getTo().getCol())!= null){
+				isPieceMoveLegal = false;
+				//throw new IllegalMove();
+			}
+			
+			if(state.getEnpassantPosition()!=null){
+				if(state.getPiece(move.getTo())==null){
+					if (state.getEnpassantPosition().getRow()!=move.getFrom().getRow() || 
+							state.getEnpassantPosition().getCol()!= move.getTo().getCol()){
+						if (move.getFrom().getCol() !=  move.getTo().getCol()){
+							isPieceMoveLegal = false;
+							//throw new IllegalMove();
+						}
+					}
+				}
+			}
+			if(state.getEnpassantPosition()==null&&
+					state.getPiece(move.getTo())==null && move.getFrom().getCol() !=  
+					move.getTo().getCol()){
+				isPieceMoveLegal = false;
+				//throw new IllegalMove();
+			}
+			if (color.isWhite()){
+				if(move.getFrom().getRow()> move.getTo().getRow()){
+					isPieceMoveLegal = false;
+					//throw new IllegalMove();
+				}
+				if(move.getFrom().getRow()!=1 &&  
+						move.getTo().getRow()-move.getFrom().getRow() != 1){
+					isPieceMoveLegal = false;
+					//throw new IllegalMove();
+				}
+				if( move.getTo().getRow() - move.getFrom().getRow() == 2 && 
+						state.getPiece(move.getFrom().getRow()+1, move.getFrom().getCol())!=null){
+					isPieceMoveLegal = false;
+					//throw new IllegalMove();
+				}
+				if(move.getTo().getRow()==7&&move.getPromoteToPiece()==null){
+					isPieceMoveLegal = false;
+				}
+			}
+			else{
+				if(move.getFrom().getRow()< move.getTo().getRow()){
+					isPieceMoveLegal = false;
+					//throw new IllegalMove();
+			    }
+				if(move.getFrom().getRow()!=6 && 
+						move.getFrom().getRow()- move.getTo().getRow() != 1){
+					isPieceMoveLegal = false;//throw new IllegalMove();
+				}
+				if(move.getFrom().getRow() -  move.getTo().getRow() == 2 && 
+						state.getPiece(move.getFrom().getRow()-1, move.getFrom().getCol())!=null){
+					isPieceMoveLegal = false;//throw new IllegalMove();
+				}
+				if(move.getTo().getRow()==0&&move.getPromoteToPiece()==null){
+					isPieceMoveLegal = false;
+				}
+			}
+			
+			
+			break;
+		}
+		
+	}
+		return isPieceMoveLegal;
+	}
+	
+	public boolean checkedAfterMove (State state , Color color ){
+		boolean checkedAfterMove = false;
+		
+		int posRow = 8;
+		int posCol = 8;			
+		
+		for(int i = 0 ; i <= 7 ; i++){
+			for(int j = 0 ; j <= 7 ; j++){
+				if(state.getPiece(i, j)!=null){
+					if(state.getPiece(i, j).getColor()==color && 
+							state.getPiece(i, j).getKind()==PieceKind.KING){
+						posRow = i;
+						posCol = j;
+					}
+				}
+				
+			}
+		}
+		
+		if(posRow != 8 && posCol != 8){
+			if(underAttack(state, color ,posRow , posCol)){
+				checkedAfterMove = true;
+				//throw new IllegalMove();
+			}
+			//throw new IllegalMove();
+		}
+				
+		return checkedAfterMove;
+		
+	}
+	
+	public boolean underAttack(State state, Color color, int posRow, int posCol) {
+		boolean checkedAfterMove = false;
+		
+		if(attackByPawn(state,color,posRow,posCol)||
+				attackByRook(state,color,posRow,posCol)||
+				attackByKnight(state,color,posRow,posCol)||
+				attackByBishop(state,color,posRow,posCol)||
+				attackByQueen(state,color,posRow,posCol)||
+				attackByKing(state,color,posRow,posCol)){
+			checkedAfterMove = true;
+		}
+		
+		return checkedAfterMove;
+	}
+
+	public boolean attackByPawn(State afterMove , Color color ,int posRow ,int posCol){
+		boolean checkedAfterMove = false;
+		//not attack by PAWN
+				if(color.isBlack()){
+					if(posRow-1>=0&&
+							posCol-1>=0&&afterMove.getPiece(posRow-1, posCol-1)!=null&&
+							afterMove.getPiece(posRow-1, posCol-1).getColor().isWhite() &&
+							afterMove.getPiece(posRow-1, posCol-1).getKind().toString()=="PAWN"){
+						checkedAfterMove = true;
+					}
+					if(posRow-1>=0&&
+							posCol+1<=7&&afterMove.getPiece(posRow-1, posCol+1)!=null&&
+							afterMove.getPiece(posRow-1, posCol+1).getColor().isWhite() &&
+							afterMove.getPiece(posRow-1, posCol+1).getKind().toString()=="PAWN"){
+						checkedAfterMove = true;
+					}
+				}
+				if(color.isWhite()){
+					if(posRow+1<=7&&
+							posCol-1>=0&&afterMove.getPiece(posRow+1, posCol-1)!=null&&
+							afterMove.getPiece(posRow+1, posCol-1).getColor().isBlack() &&
+							afterMove.getPiece(posRow+1, posCol-1).getKind().toString()=="PAWN"){
+						checkedAfterMove = true;
+					}
+					if(posRow+1<=7&&
+							posCol+1<=7&&afterMove.getPiece(posRow+1, posCol+1)!=null&&
+							afterMove.getPiece(posRow+1, posCol+1).getColor().isBlack() &&
+							afterMove.getPiece(posRow+1, posCol+1).getKind().toString()=="PAWN"){
+						checkedAfterMove = true;
+					}
+				}
+		return checkedAfterMove;
+		
+	}
+	
+	public boolean attackByKnight(State afterMove , Color color ,int posRow ,int posCol){
+		boolean checkedAfterMove = false;
+		//not attack by KNIGHT
+				if(posRow-1>=0&&posCol-2>=0&&afterMove.getPiece(posRow-1, posCol-2)!=null&&
+						afterMove.getPiece(posRow-1, posCol-2).getColor()!=color &&
+						afterMove.getPiece(posRow-1, posCol-2).getKind().equals(PieceKind.KNIGHT)){
+					checkedAfterMove = true;
+				}
+				if(posRow-1>=0&&posCol+2<=7&&afterMove.getPiece(posRow-1, posCol+2)!=null&&
+						afterMove.getPiece(posRow-1, posCol+2).getColor()!=color &&
+						afterMove.getPiece(posRow-1, posCol+2).getKind().equals(PieceKind.KNIGHT)){
+					checkedAfterMove = true;
+				}
+				if(posRow-2>=0&&posCol-1>=0&&afterMove.getPiece(posRow-2, posCol-1)!=null&&
+						afterMove.getPiece(posRow-2, posCol-1).getColor()!=color &&
+						afterMove.getPiece(posRow-2, posCol-1).getKind().equals(PieceKind.KNIGHT)){
+					checkedAfterMove = true;
+				}
+				if(posRow-2>=0&&posCol+1<=7&&afterMove.getPiece(posRow-2, posCol+1)!=null&&
+						afterMove.getPiece(posRow-2, posCol+1).getColor()!=color &&
+						afterMove.getPiece(posRow-2, posCol+1).getKind().equals(PieceKind.KNIGHT)){
+					checkedAfterMove = true;
+				}
+				if(posRow+1<=7 && posCol-2>=0&&afterMove.getPiece(posRow+1, posCol-2)!=null&&
+						afterMove.getPiece(posRow+1, posCol-2).getColor()!=color &&
+						afterMove.getPiece(posRow+1, posCol-2).getKind().equals(PieceKind.KNIGHT)){
+					checkedAfterMove = true;
+				}
+				if(posRow+1<=7&& posCol+2<=7&&afterMove.getPiece(posRow+1, posCol+2)!=null&&
+						afterMove.getPiece(posRow+1, posCol+2).getColor()!=color &&
+						afterMove.getPiece(posRow+1, posCol+2).getKind().equals(PieceKind.KNIGHT)){
+					checkedAfterMove = true;
+				}
+				if(posRow+2<=7&& posCol-1>=0&&afterMove.getPiece(posRow+2, posCol-1)!=null&&
+						afterMove.getPiece(posRow+2, posCol-1).getColor()!=color &&
+						afterMove.getPiece(posRow+2, posCol-1).getKind().equals(PieceKind.KNIGHT)){
+					checkedAfterMove = true;
+				}
+				if(posRow+2<=7&& posCol+1<=7&&afterMove.getPiece(posRow+2, posCol+1)!=null&&
+						afterMove.getPiece(posRow+2, posCol+1).getColor()!=color &&
+						afterMove.getPiece(posRow+2, posCol+1).getKind().equals(PieceKind.KNIGHT)){
+					checkedAfterMove = true;
+				}
+		return checkedAfterMove;
+	}
+	
+	public boolean attackByRook(State state , Color color ,int posRow ,int posCol){
+		boolean checkedAfterMove = false;
+		
+		for(int i = posRow+1 ; i <= 7 ; i++){
+			if(state.getPiece(i,posCol)!=null){
+				if(state.getPiece(i,posCol).getKind().equals(PieceKind.ROOK)&&
+						!state.getPiece(i, posCol).getColor().equals(color)){
+					checkedAfterMove = true;
+				}
+				break;
+			}
+		}
+		for(int i = posRow-1 ; i >= 0 ; i--){
+			if(state.getPiece(i,posCol)!=null){
+				if(state.getPiece(i,posCol).getKind().equals(PieceKind.ROOK)&&
+						!state.getPiece(i, posCol).getColor().equals(color)){
+					checkedAfterMove = true;					
+				}
+				break;
+			}
+		}
+		for(int i = posCol+1 ; i <= 7 ; i++){
+			if(state.getPiece(posRow,i)!=null){
+				if(state.getPiece(posRow,i).getKind().equals(PieceKind.ROOK)&&
+						!state.getPiece(posRow,i).getColor().equals(color)){
+					checkedAfterMove = true;
+				}
+				break;
+			}
+		}
+		for(int i = posCol-1 ; i >= 0 ; i--){
+			if(state.getPiece(posRow,i)!=null){
+				if(state.getPiece(posRow,i).getKind().equals(PieceKind.ROOK)&&
+						!state.getPiece(posRow,i).getColor().equals(color)){
+					checkedAfterMove = true;
+				}
+				break;
+			}
+		}
+		
+		return checkedAfterMove ;
+	}
+	
+	public boolean attackByBishop(State state , Color color ,int posRow ,int posCol){
+		boolean checkedAfterMove = false;
+		
+		for(int i = 1 ; i <= 7 ; i++){
+			if(posRow+i<=7 && posCol+i<=7){
+				if(state.getPiece(posRow+i,posCol+i)!=null){
+					if(!state.getPiece(posRow+i, posCol+i).getColor().equals(color)&&
+							state.getPiece(posRow+i, posCol+i).getKind().equals(PieceKind.BISHOP)){
+						checkedAfterMove = true;
+					}
+					break;
+				}
+			}
+		}
+		for(int i = 1 ; i <= 7 ; i++){
+			if(posRow-i>=0 && posCol+i<=7){
+				if(state.getPiece(posRow-i,posCol+i)!=null){
+					if(!state.getPiece(posRow-i, posCol+i).getColor().equals(color)&&
+							state.getPiece(posRow-i, posCol+i).getKind().equals(PieceKind.BISHOP)){
+						checkedAfterMove = true;
+					}
+					break;
+				}
+			}
+		}
+		for(int i = 1 ; i <= 7 ; i++){
+			if(posRow+i<=7 && posCol-i>=0){
+				if(state.getPiece(posRow+i,posCol-i)!=null){
+					if(!state.getPiece(posRow+i, posCol-i).getColor().equals(color)&&
+							state.getPiece(posRow+i, posCol-i).getKind().equals(PieceKind.BISHOP)){
+						checkedAfterMove = true;
+					}
+					break;
+				}
+			}
+		}
+		for(int i = 1 ; i <= 7 ; i++){
+			if(posRow-i>=0 && posCol-i>=0){
+				if(state.getPiece(posRow-i,posCol-i)!=null){
+					if(!state.getPiece(posRow-i, posCol-i).getColor().equals(color)&&
+							state.getPiece(posRow-i, posCol-i).getKind().equals(PieceKind.BISHOP)){
+						checkedAfterMove = true;
+					}
+					break;
+				}
+			}
+		}
+		return checkedAfterMove ;
+	}
+	
+	public boolean attackByQueen(State state , Color color ,int posRow ,int posCol){
+		boolean checkedAfterMove = false;
+		
+		for(int i = posRow+1 ; i <= 7 ; i++){
+			if(state.getPiece(i,posCol)!=null){
+				if(state.getPiece(i,posCol).getKind().equals(PieceKind.QUEEN)&&
+						!state.getPiece(i, posCol).getColor().equals(color)){
+					checkedAfterMove = true;
+				}
+				break;
+			}
+		}
+		for(int i = posRow-1 ; i >= 0 ; i--){
+			if(state.getPiece(i,posCol)!=null){
+				if(state.getPiece(i,posCol).getKind().equals(PieceKind.QUEEN)&&
+						!state.getPiece(i, posCol).getColor().equals(color)){
+					checkedAfterMove = true;
+				}
+				break;
+			}
+		}
+		for(int i = posCol+1 ; i <= 7 ; i++){
+			if(state.getPiece(posRow,i)!=null){
+				if(state.getPiece(posRow,i).getKind().equals(PieceKind.QUEEN)&&
+						!state.getPiece(posRow,i).getColor().equals(color)){
+					checkedAfterMove = true;
+				}
+				break;
+			}
+		}
+		for(int i = posCol-1 ; i >= 0 ; i--){
+			if(state.getPiece(posRow,i)!=null){
+				if(state.getPiece(posRow,i).getKind().equals(PieceKind.QUEEN)&&
+						!state.getPiece(posRow,i).getColor().equals(color)){
+					checkedAfterMove = true;
+				}
+				break;
+			}
+		}
+		
+		for(int i = 1 ; i <= 7 ; i++){
+			if(posRow+i<=7 && posCol+i<=7){
+				if(state.getPiece(posRow+i,posCol+i)!=null){
+					if(!state.getPiece(posRow+i, posCol+i).getColor().equals(color)&&
+							state.getPiece(posRow+i, posCol+i).getKind().equals(PieceKind.QUEEN)){
+						checkedAfterMove = true;
+					}
+					break;
+				}
+			}
+		}
+		for(int i = 1 ; i <= 7 ; i++){
+			if(posRow-i>=0 && posCol+i<=7){
+				if(state.getPiece(posRow-i,posCol+i)!=null){
+					if(!state.getPiece(posRow-i, posCol+i).getColor().equals(color)&&
+							state.getPiece(posRow-i, posCol+i).getKind().equals(PieceKind.QUEEN)){
+						checkedAfterMove = true;
+					}
+					break;
+				}
+			}
+		}
+		for(int i = 1 ; i <= 7 ; i++){
+			if(posRow+i<=7 && posCol-i>=0){
+				if(state.getPiece(posRow+i,posCol-i)!=null){
+					if(!state.getPiece(posRow+i, posCol-i).getColor().equals(color)&&
+							state.getPiece(posRow+i, posCol-i).getKind().equals(PieceKind.QUEEN)){
+						checkedAfterMove = true;
+					}
+					break;
+				}
+			}
+		}
+		for(int i = 1 ; i <= 7 ; i++){
+			if(posRow-i>=0 && posCol-i>=0){
+				if(state.getPiece(posRow-i,posCol-i)!=null){
+					if(!state.getPiece(posRow-i, posCol-i).getColor().equals(color)&&
+							state.getPiece(posRow-i, posCol-i).getKind().equals(PieceKind.QUEEN)){
+						checkedAfterMove = true;
+					}
+					break;
+				}
+			}
+		}		
+		return checkedAfterMove ;
+	}
+	
+	public boolean attackByKing(State afterMove , Color color ,int posRow ,int posCol){
+		boolean checkedAfterMove = false;
+		if(posRow-1>=0&&posCol-1>=0&&afterMove.getPiece(posRow-1, posCol-1)!=null&&
+				afterMove.getPiece(posRow-1, posCol-1).getColor()!=color &&
+				afterMove.getPiece(posRow-1, posCol-1).getKind().equals(PieceKind.KING)){
+			checkedAfterMove = true;
+		}
+		if(posRow-1>=0&&posCol+1<=7&&afterMove.getPiece(posRow-1, posCol+1)!=null&&
+				afterMove.getPiece(posRow-1, posCol+1).getColor()!=color &&
+				afterMove.getPiece(posRow-1, posCol+1).getKind().equals(PieceKind.KING)){
+			checkedAfterMove = true;
+		}
+		if(posRow>=0&&posCol-1>=0&&afterMove.getPiece(posRow, posCol-1)!=null&&
+				afterMove.getPiece(posRow, posCol-1).getColor()!=color &&
+				afterMove.getPiece(posRow, posCol-1).getKind().equals(PieceKind.KING)){
+			checkedAfterMove = true;
+		}
+		if(posRow>=0&&posCol+1<=7&&afterMove.getPiece(posRow, posCol+1)!=null&&
+				afterMove.getPiece(posRow, posCol+1).getColor()!=color &&
+				afterMove.getPiece(posRow, posCol+1).getKind().equals(PieceKind.KING)){
+			checkedAfterMove = true;
+		}
+		if(posRow+1<=7 && posCol-1>=0&&afterMove.getPiece(posRow+1, posCol-1)!=null&&
+				afterMove.getPiece(posRow+1, posCol-1).getColor()!=color &&
+				afterMove.getPiece(posRow+1, posCol-1).getKind().equals(PieceKind.KING)){
+			checkedAfterMove = true;
+		}
+		if(posRow+1<=7&& posCol+1<=7&&afterMove.getPiece(posRow+1, posCol+1)!=null&&
+				afterMove.getPiece(posRow+1, posCol+1).getColor()!=color &&
+				afterMove.getPiece(posRow+1, posCol+1).getKind().equals(PieceKind.KING)){
+			checkedAfterMove = true;
+		}
+		if(posRow+1<=7&& posCol>=0&&afterMove.getPiece(posRow+1, posCol)!=null&&
+				afterMove.getPiece(posRow+1, posCol).getColor()!=color &&
+				afterMove.getPiece(posRow+1, posCol).getKind().equals(PieceKind.KING)){
+			checkedAfterMove = true;
+		}
+		if(posRow-1>=0&& posCol<=7&&afterMove.getPiece(posRow-1, posCol)!=null&&
+				afterMove.getPiece(posRow-1, posCol).getColor()!=color &&
+				afterMove.getPiece(posRow-1, posCol).getKind().equals(PieceKind.KING)){
+			checkedAfterMove = true;
+		}
+		return checkedAfterMove ;
+	}
+	
+	public void setCanCastling(State state ,State original , Move move){
+
+		if(original.getPiece(move.getFrom())!=null&&
+				original.getPiece(move.getFrom()).getKind().equals(PieceKind.KING)){
+			state.setCanCastleKingSide(original.getTurn(), false);
+			state.setCanCastleQueenSide(original.getTurn(), false);
+		}
+		
+		if(state.getPiece(0, 4)==null||
+				!state.getPiece(0, 4).equals(new Piece(Color.WHITE,PieceKind.KING))){
+			state.setCanCastleKingSide(Color.WHITE, false);
+			state.setCanCastleQueenSide(Color.WHITE, false);
+		}
+		
+		if(state.getPiece(7, 4)==null||
+				!state.getPiece(7, 4).equals(new Piece(Color.BLACK,PieceKind.KING))){
+			state.setCanCastleKingSide(Color.BLACK, false);
+			state.setCanCastleQueenSide(Color.BLACK, false);
+		}
+
+		if(state.getPiece(0, 0)==null||
+				!state.getPiece(0, 0).equals(new Piece(Color.WHITE,PieceKind.ROOK))){
+			state.setCanCastleQueenSide(Color.WHITE, false);
+		}
+		if(state.getPiece(0, 7)==null||
+				!state.getPiece(0, 7).equals(new Piece(Color.WHITE,PieceKind.ROOK))){
+			state.setCanCastleKingSide(Color.WHITE, false);
+		}
+		if(state.getPiece(7, 0)==null||
+				!state.getPiece(7, 0).equals(new Piece(Color.BLACK,PieceKind.ROOK))){
+			state.setCanCastleQueenSide(Color.BLACK, false);
+		}
+		if(state.getPiece(7, 7)==null||
+				!state.getPiece(7, 7).equals(new Piece(Color.BLACK,PieceKind.ROOK))){
+			state.setCanCastleKingSide(Color.BLACK, false);
+		}
+	}
+
+}

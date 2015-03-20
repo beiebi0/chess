@@ -1,0 +1,262 @@
+package org.yuehlinchung.hw6.client;
+
+import org.shared.chess.Color;
+import org.shared.chess.Piece;
+import org.shared.chess.PieceKind;
+import org.yuehlinchung.hw6.client.Presenter.View;
+
+import com.allen_sauer.gwt.dnd.client.PickupDragController;
+import com.google.gwt.animation.client.Animation;
+import com.google.gwt.core.client.GWT;
+import com.google.gwt.event.dom.client.ClickEvent;
+import com.google.gwt.event.dom.client.ClickHandler;
+import com.google.gwt.resources.client.ImageResource;
+import com.google.gwt.uibinder.client.UiBinder;
+import com.google.gwt.uibinder.client.UiField;
+import com.google.gwt.user.client.Element;
+import com.google.gwt.user.client.ui.AbsolutePanel;
+import com.google.gwt.user.client.ui.Button;
+import com.google.gwt.user.client.ui.Composite;
+import com.google.gwt.user.client.ui.FlexTable;
+import com.google.gwt.user.client.ui.Image;
+import com.google.gwt.user.client.ui.Label;
+import com.google.gwt.user.client.ui.SimplePanel;
+import com.google.gwt.user.client.ui.Widget;
+import com.google.gwt.user.client.ui.HTMLTable.Cell;
+import com.google.gwt.user.client.History;
+
+public class Graphics extends Composite implements View {
+  private static ChessMessages messages = GWT.create(ChessMessages.class);
+  private static GameImages gameImages = GWT.create(GameImages.class);
+  private static GraphicsUiBinder uiBinder = GWT.create(GraphicsUiBinder.class);
+
+  interface GraphicsUiBinder extends UiBinder<Widget, Graphics> {
+  }
+
+  @UiField GameCss css;
+  @UiField Label gameStatus;
+  @UiField AbsolutePanel aP;
+  @UiField Label test;
+  @UiField Label promote;
+  @UiField Button queen;
+  @UiField Button knight;
+  @UiField Button rook;
+  @UiField Button bishop;
+  private Image[][] board = new Image[8][8];
+  public Presenter presenter;
+
+  private final int DURATION = 500;
+  private FlexTable flexTable = new FlexTable();
+  public static PickupDragController dragController;
+  
+  public Graphics() {
+	initWidget(uiBinder.createAndBindUi(this));
+	// Set Up Presenter
+	this.presenter = new Presenter();
+	aP.setPixelSize(480, 480);
+	// Initialize FlexTable
+	aP.add(flexTable, 0, 0);
+	flexTable.setBorderWidth(1);
+	// initialize our drag controller
+	/*dragController = new PickupDragController(aP, false);
+	dragController.setBehaviorMultipleSelection(false);
+	SetWidgetDropController dropController = new SetWidgetDropController(aP, this.presenter);
+    dragController.registerDropController(dropController);*/
+	
+    for (int row = 0; row < 8; row++) {
+        for (int col = 0; col < 8; col++) {
+        	int r = presenter.reverseR(row);
+        	Image image = new Image();
+        	board[r][col] = image;
+        	image.setWidth("100%");
+    		image.setHeight("100%");
+			if (row % 2 == 0 && col % 2 == 1 || row % 2 == 1 && col % 2 == 0) {
+				flexTable.getCellFormatter().addStyleName(row, col, "gray-square");
+			} else {
+				flexTable.getCellFormatter().addStyleName(row, col, "white-square");
+			}
+			flexTable.setWidget(r, col, image);
+        }
+    }
+    flexTable.addClickHandler(new ClickHandler() {
+    	@Override
+    	public void onClick(ClickEvent event) {
+    		Cell src = flexTable.getCellForEvent(event);
+    		int row = src.getRowIndex();
+    		int col = src.getCellIndex();
+    		presenter.clickedOn(row, col);
+    	}
+    });
+    queen.addClickHandler(new ClickHandler() {
+    	@Override
+    	public void onClick(ClickEvent event) {
+    		presenter.pawnPromoteMove(PieceKind.QUEEN);
+    	}
+    });
+    knight.addClickHandler(new ClickHandler() {
+    	@Override
+    	public void onClick(ClickEvent event) {
+    		presenter.pawnPromoteMove(PieceKind.KNIGHT);
+    	}
+    });
+    rook.addClickHandler(new ClickHandler() {
+    	@Override
+    	public void onClick(ClickEvent event) {
+    		presenter.pawnPromoteMove(PieceKind.ROOK);
+    	}
+    });
+    bishop.addClickHandler(new ClickHandler() {
+    	@Override
+    	public void onClick(ClickEvent event) {
+    		presenter.pawnPromoteMove(PieceKind.BISHOP);
+    	}
+    });
+  }
+  @Override
+  public void addHistoryToken(String token) {
+	  History.newItem(token);
+  }
+  @Override
+  public void setPiece(int row, int col, Piece piece, Color side) {
+	int r = presenter.reverseR(row);
+	ImageResource img = getImgPiece(piece);
+	// create a simple panel drop target for the current cell
+	//SimplePanel simplePanel = new SimplePanel();
+	//simplePanel.setPixelSize(50, 50);
+	//flexTable.clearCell(r, col);
+	//flexTable.setWidget(r, col, simplePanel);
+    if (img == null) {
+		board[r][col].setUrl("");
+		board[r][col].setWidth("100%");
+		board[r][col].setHeight("100%");
+	} else {
+		board[r][col].setResource(img);
+		//Image image = new Image(img);
+		//simplePanel.setWidget(image);
+		//if (piece.getColor() == side) {
+		//	dragController.makeDraggable(image);
+		//}
+	}
+  }
+  // Get Piece Image
+  private ImageResource getImgPiece(Piece piece) {
+	if (piece == null) {
+		return null;
+	} else {
+		if (piece.getColor().isBlack()) {
+			switch (piece.getKind()) {
+			case PAWN:
+				return gameImages.blackPawn();
+			case KING:
+				return gameImages.blackKing();
+			case QUEEN:
+				return gameImages.blackQueen();
+			case BISHOP:
+				return gameImages.blackBishop();
+			case ROOK:
+				return gameImages.blackRook();
+			case KNIGHT:
+				return gameImages.blackKnight();
+			}
+		} else if (piece.getColor().isWhite()) {
+			switch (piece.getKind()) {
+			case PAWN:
+				return gameImages.whitePawn();
+			case KING:
+				return gameImages.whiteKing();
+			case QUEEN:
+				return gameImages.whiteQueen();
+			case BISHOP:
+				return gameImages.whiteBishop();
+			case ROOK:
+				return gameImages.whiteRook();
+			case KNIGHT:
+				return gameImages.whiteKnight();
+			}
+		}
+		return null;
+	}
+  }
+  // Set Highlight
+  @Override
+  public void setHighlighted(int row, int col, boolean highlighted) {
+	int r = presenter.reverseR(row);
+	Element element = flexTable.getCellFormatter().getElement(r, col);
+    if (highlighted) {
+      element.addClassName(css.highlighted());
+    } else {
+      element.removeClassName(css.highlighted());
+    }
+  }
+  // Animation Class
+  private class moveAnimation extends Animation {
+	private int toRow;
+	private int toCol;
+	private int fromRow;
+	private int fromCol;
+	private Widget animate;
+	private int tRR, fRR, fC;
+	
+	public moveAnimation(int tR, int tC, int fR, int fC, Piece piece) {
+		tRR = presenter.reverseR(tR);
+		fRR = presenter.reverseR(fR);
+		this.fC = fC;
+		toRow = board[tRR][tC].getAbsoluteTop()-flexTable.getAbsoluteTop();
+		toCol = board[tRR][tC].getAbsoluteLeft()-flexTable.getAbsoluteLeft();
+		fromRow = board[fRR][fC].getAbsoluteTop()-flexTable.getAbsoluteTop();
+		fromCol = board[fRR][fC].getAbsoluteLeft()-flexTable.getAbsoluteLeft();
+		animate = new Image(getImgPiece(piece));
+		aP.add(animate);
+	}
+	@Override
+	protected void onStart() {
+		board[fRR][fC].setUrl("");
+	}
+	@Override
+	protected void onUpdate (double progress) {
+		double positionX = fromCol + (progress * (this.toCol - fromCol));
+        double positionY = fromRow + (progress * (this.toRow - fromRow));
+        aP.setWidgetPosition(animate, (int)positionX, (int)positionY);
+	}
+	@Override
+	protected void onComplete() {
+		aP.remove(animate);
+	}
+  }
+  // Animation of Piece Move
+  @Override
+  public void moveAnimation(int tR, int tC, int fR, int fC, Piece piece) {
+	  moveAnimation moveAction = new moveAnimation(tR, tC, fR, fC, piece);
+	  moveAction.run(DURATION);
+  }
+  @Override
+  public void setWhoseTurn(Color color, Color side, String self, String opponent) {
+	String text = "";
+	text += (color == side) ? messages.setTurn(self) : messages.setTurn(opponent);
+	gameStatus.setText(text);
+  }
+  @Override
+  public void setGameResult(String str) {
+	  gameStatus.setText(str);
+  }
+  @Override
+  public void displayPromoteOption() {
+	  promote.setVisible(true);
+	  queen.setVisible(true);
+	  knight.setVisible(true);
+	  rook.setVisible(true);
+	  bishop.setVisible(true);
+  }
+  @Override
+  public void hidePromoteOption() {
+	  promote.setVisible(false);
+	  queen.setVisible(false);
+	  knight.setVisible(false);
+	  rook.setVisible(false);
+	  bishop.setVisible(false);
+  }
+  @Override
+  public void setTest(String str) {
+	  test.setText(str);
+  }
+}

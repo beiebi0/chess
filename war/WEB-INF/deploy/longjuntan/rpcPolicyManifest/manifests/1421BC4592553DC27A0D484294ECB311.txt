@@ -1,0 +1,2 @@
+serviceClass: org.longjuntan.hw6.client.GameService
+path: B60BC08455620AB65F6309918C93C847.gwt.rpc

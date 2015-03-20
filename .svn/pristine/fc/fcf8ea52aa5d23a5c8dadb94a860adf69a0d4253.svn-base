@@ -1,0 +1,512 @@
+package org.haoxiangzuo.hw3;
+
+import java.util.Set;
+
+import org.haoxiangzuo.hw2.StateChangerImpl;
+import org.haoxiangzuo.hw2_5.StateExplorerImpl;
+import org.haoxiangzuo.hw6.client.ChessService;
+import org.haoxiangzuo.hw6.client.ChessServiceAsync;
+import org.haoxiangzuo.hw6.client.UserInfos;
+import org.haoxiangzuo.hw9.AlphaBetaPruning;
+import org.haoxiangzuo.hw9.Heuristic;
+
+import org.shared.chess.Color;
+import org.shared.chess.GameResult;
+import org.shared.chess.GameResultReason;
+import org.shared.chess.Move;
+import org.shared.chess.Piece;
+import org.shared.chess.PieceKind;
+import org.shared.chess.Position;
+import org.shared.chess.State;
+
+import com.google.gwt.core.client.GWT;
+import com.google.gwt.storage.client.Storage;
+import com.google.gwt.user.client.Timer;
+import com.google.gwt.user.client.rpc.AsyncCallback;
+import com.google.gwt.user.client.rpc.ServiceDefTarget;
+import com.googlecode.gwtphonegap.client.util.PhonegapUtil;
+
+public class Presenter {
+	public interface View {
+		/**
+		 * Renders the piece at this position. If piece is null then the
+		 * position is empty.
+		 */
+		void setPiece(int row, int col, Piece piece);
+
+		/**
+		 * Turns the highlighting on or off at this cell. Cells that can be
+		 * clicked should be highlighted.
+		 */
+		void setHighlighted(int row, int col, boolean highlighted);
+
+		/**
+		 * Indicate whose turn it is.
+		 */
+		void setWhoseTurn(Color color);
+
+		/**
+		 * Indicate whether the game is in progress or over.
+		 */
+		void setGameResult(GameResult gameResult);
+
+		void movePiece(int row, int col);
+
+		void reDraw();
+
+		void setPromotion(boolean t);
+
+		void setPromotion2(boolean b);
+
+		void Draw();
+		
+		void callHistoryChanger(String x);
+		
+		void showPosPos();
+
+		void setPosHighlighted(int row, int col, boolean highlighted);
+		
+		void setLogs(String log);
+		
+		void otherMoves(String[] moves);
+		
+		void setAiWaiting();
+		
+		void saveInStorage(String key, String data);
+		
+		void deleteStorage(String key);
+		
+		Storage getStorage();
+		
+		String getUserEmail();
+
+		void delayMove(String log);
+		
+		Timer getTimer();
+
+	}
+
+	private View view;
+	private StateExplorerImpl stateExplorerImpl;
+	private StateChangerImpl stateChangerImpl = new StateChangerImpl();;
+	private Position lastPos;
+	private Position promotionPos;
+	private State state;
+	private ChessServiceAsync chessService = GWT.create(ChessService.class);
+	private Long id;
+	private Color myColor;
+	private boolean ai = false;
+	private int pieceCount = 36;
+	Heuristic thisH = new Heuristic();
+	AlphaBetaPruning thisA = new AlphaBetaPruning(thisH);
+
+	public void setAi(boolean flag)
+	{
+		ai = flag;
+	}
+	public Long getId()
+	{
+		return id;
+	}
+	public void setId(Long id)
+	{
+		this.id = id;
+	}
+	public Position getProPos()
+	{
+		if (promotionPos!=null)
+			return promotionPos;
+		else
+			return null;
+	}
+	public void setProPos(Position p)
+	{
+		promotionPos = p;
+	}
+	public Position getLastPos()
+	{
+		if (lastPos!=null)
+			return lastPos;
+		else
+			return null;
+	}
+	public void setLastPos(Position p)
+	{
+		this.lastPos = p;
+	}
+	public void setLastPos() {
+		lastPos = null;
+	}
+
+	public void setView(View view) {
+		this.view = view;
+	}
+
+	public void setState(State state) {
+		view.setWhoseTurn(state.getTurn());
+		view.setGameResult(state.getGameResult());
+		for (int r = 0; r < 8; r++) {
+			for (int c = 0; c < 8; c++) {
+				view.setPiece(r, c, state.getPiece(7 - r, c));
+			}
+		}
+	}
+
+	public void setStates() {
+		view.reDraw();
+		
+		this.setState(state);
+	}
+
+	public void setHistory() {
+		view.Draw();
+		this.setState(state);
+	}
+
+	public void setNewState(State state) {
+		this.state = state;
+	}
+
+	public State getState() {
+		return this.state;
+	}
+
+	public void selected(int rr, int col, Piece piece) {
+		// TODO Auto-generated method stub
+		int row = 7 - rr;
+		view.setPromotion(false);
+		view.setPromotion2(false);
+		stateExplorerImpl = new StateExplorerImpl();
+		lastPos = new Position(row, col);
+		Set<Move> moves = stateExplorerImpl.getPossibleMovesFromPosition(state,
+				new Position(row, col));
+		for (int r = 0; r < 8; r++) {
+			for (int c = 0; c < 8; c++) {
+				view.setHighlighted(r, c, false);
+				view.setPosHighlighted(r, c, false);
+			}
+		}
+		for (Move m : moves) {
+			view.setHighlighted(7 - m.getTo().getRow(), m.getTo().getCol(),
+					true);
+		}
+	}
+
+	public void movePiece(int r, int col) {
+		int row = 7 - r;
+		view.setPromotion(false);
+		view.setPromotion2(false);
+		
+		Move move;
+		if (state.getPiece(lastPos).getKind() == PieceKind.PAWN
+				&& (row == 7 || row == 0)) {
+			if (row == 0)
+				view.setPromotion2(true);
+			else
+				view.setPromotion(true);
+			promotionPos = new Position(row, col);
+		} else {
+			move = new Move(lastPos, new Position(row, col), null);
+			boolean capture = state.getPiece(move.getTo()) == null ? true : false;
+			Color thisTurn = state.getTurn();
+			
+			stateChangerImpl.makeMove(state, move);
+			if (!ai)
+				view.saveInStorage(id+"", stateToString(state));
+			if (!ai&&myColor!=null&&thisTurn.equals(myColor))
+			{
+				final String moveString = lastPos.getRow()+","+lastPos.getCol()+","+row+","+col+","+5+","+id;
+				view.saveInStorage("m"+id, moveString);
+				chessService.makeMove(lastPos.getRow()+","+lastPos.getCol()+","+row+","+col+","+5+","+id, new AsyncCallback<Void>(){
+				
+				@Override
+				public void onFailure(Throwable caught) {
+					// TODO Auto-generated method stub
+					view.delayMove(moveString);
+				}
+
+				@Override
+				public void onSuccess(Void result) {
+					// TODO Auto-generated method stub
+					view.deleteStorage("m"+id);
+				}});
+			}
+			this.setStates();
+			setLastPos();
+			if (ai&&thisTurn.equals(myColor))
+			{
+				
+				if (capture)
+					pieceCount--;
+				callAi();
+			}
+		}
+	}
+	
+	public void promotion(int col) {
+		Move move;
+		switch (col) {
+		case 0:
+			move = new Move(lastPos, promotionPos, PieceKind.QUEEN);
+			break;
+		case 1:
+			move = new Move(lastPos, promotionPos, PieceKind.KNIGHT);
+			break;
+		case 2:
+			move = new Move(lastPos, promotionPos, PieceKind.ROOK);
+			break;
+		default:
+			move = new Move(lastPos, promotionPos, PieceKind.BISHOP);
+			break;
+		}
+		Color thisTurn = state.getTurn();
+		boolean capture = state.getPiece(move.getTo()) == null ? true : false;
+		stateChangerImpl.makeMove(state, move);
+		if (!ai)
+			view.saveInStorage(id+"", stateToString(state));
+		if (!ai&&myColor!=null&&thisTurn.equals(myColor))
+		{
+			final String moveString = lastPos.getRow()+","+lastPos.getCol()+","+promotionPos.getRow()+","+promotionPos.getCol()+","+col+","+id;
+			view.saveInStorage("m"+id, moveString);
+			chessService.makeMove(lastPos.getRow()+","+lastPos.getCol()+","+promotionPos.getRow()+","+promotionPos.getCol()+","+col+","+id, new AsyncCallback<Void>(){
+
+			@Override
+			public void onFailure(Throwable caught) {
+				// TODO Auto-generated method stub
+				view.delayMove(moveString);
+			}
+
+			@Override
+			public void onSuccess(Void result) {
+				// TODO Auto-generated method stub
+				view.deleteStorage("m"+id);
+			}});
+		}
+		
+		this.setStates();
+		setLastPos();
+
+		view.setPromotion(false);
+		view.setPromotion2(false);
+		if (ai&&thisTurn.equals(myColor))
+		{	
+			
+			if (capture)
+			pieceCount--;
+			callAi();
+		}
+	}
+	public void callAi()
+	{
+		if (state.getGameResult()==null)
+		{
+		view.setAiWaiting();
+		int depth = 0;
+		if (pieceCount>30)
+			depth = 3;
+		else if (pieceCount>20)
+			depth = 4;
+		else if (pieceCount>10)
+			depth = 5;
+		else
+			depth = 6;
+		State start =state.copy();
+		org.haoxiangzuo.hw9.Timer t = new org.haoxiangzuo.hw9.Timer(5000);
+		Move aiMove = thisA.findBestMove(start, depth, t);
+		int col = 5;
+		if (aiMove.getPromoteToPiece()!=null)
+		{
+			PieceKind p = aiMove.getPromoteToPiece();
+			switch(p)
+			{
+			case QUEEN:
+				col = 0;
+				break;
+			case KNIGHT:
+				col = 1;
+				break;
+			case ROOK:
+				col = 2;
+				break;
+			default:
+				col = 3;
+				break;
+			}
+		}
+		String[] infos = {aiMove.getFrom().getRow()+"",aiMove.getFrom().getCol()+"",aiMove.getTo().getRow()+"",aiMove.getTo().getCol()+"",col+""};
+		view.otherMoves(infos);
+		}
+		else
+		{
+			ai = false;
+		}
+	}
+	public void resetGame() {
+		// TODO Auto-generated method stub
+		view.reDraw();
+		State state = new State();
+		this.state = state;
+		this.setState(state);
+	}
+
+	public String stateToString(State state) {
+		String result = "";
+		result += state.getTurn() + ",";
+		for (int row = 0; row < 8; row++)
+			for (int col = 0; col < 8; col++) {
+				result += state.getPiece(row, col) + ",";
+			}
+		result += state.isCanCastleKingSide(Color.WHITE) + ","
+				+ state.isCanCastleKingSide(Color.BLACK) + ","
+				+ state.isCanCastleQueenSide(Color.WHITE) + ","
+				+ state.isCanCastleQueenSide(Color.BLACK) + ",";
+		result += (state.getEnpassantPosition() == null ? "null" : state
+				.getEnpassantPosition().getRow()
+				+ " "
+				+ state.getEnpassantPosition().getCol()) + ",";
+		result += (state.getGameResult() == null ? "null," : state
+				.getGameResult().getWinner()
+				+ " "
+				+ state.getGameResult().getGameResultReason() + ",");
+		result += (state.getNumberOfMovesWithoutCaptureNorPawnMoved());
+		return result;
+	}
+
+	public State stringToState(String x) {
+		State state = new State();
+		int counter = 0;
+		String[] sets = x.split(",");
+		if (sets[counter].charAt(0) == 'W')
+			state.setTurn(Color.WHITE);
+		else
+			state.setTurn(Color.BLACK);
+		counter++;
+		for (int row = 0; row < 8; row++) {
+			for (int col = 0; col < 8; col++) {
+				String sub = sets[counter];
+				if (sub.equals("null"))
+					state.setPiece(row, col, null);
+				else {
+					if (sub.charAt(1) == 'W') {
+						String piece = sub.substring(3, 5);
+						if (piece.equals("RO"))
+							state.setPiece(row, col, new Piece(Color.WHITE,
+									PieceKind.ROOK));
+						else if (piece.equals("KI"))
+							state.setPiece(row, col, new Piece(Color.WHITE,
+									PieceKind.KING));
+						else if (piece.equals("KN"))
+							state.setPiece(row, col, new Piece(Color.WHITE,
+									PieceKind.KNIGHT));
+						else if (piece.equals("QU"))
+							state.setPiece(row, col, new Piece(Color.WHITE,
+									PieceKind.QUEEN));
+						else if (piece.equals("BI"))
+							state.setPiece(row, col, new Piece(Color.WHITE,
+									PieceKind.BISHOP));
+						else if (piece.equals("PA"))
+							state.setPiece(row, col, new Piece(Color.WHITE,
+									PieceKind.PAWN));
+					} else if (sub.charAt(1) == 'B') {
+						String piece = sub.substring(3, 5);
+						if (piece.equals("RO"))
+							state.setPiece(row, col, new Piece(Color.BLACK,
+									PieceKind.ROOK));
+						else if (piece.equals("KI"))
+							state.setPiece(row, col, new Piece(Color.BLACK,
+									PieceKind.KING));
+						else if (piece.equals("KN"))
+							state.setPiece(row, col, new Piece(Color.BLACK,
+									PieceKind.KNIGHT));
+						else if (piece.equals("QU"))
+							state.setPiece(row, col, new Piece(Color.BLACK,
+									PieceKind.QUEEN));
+						else if (piece.equals("BI"))
+							state.setPiece(row, col, new Piece(Color.BLACK,
+									PieceKind.BISHOP));
+						else if (piece.equals("PA"))
+							state.setPiece(row, col, new Piece(Color.BLACK,
+									PieceKind.PAWN));
+					}
+				}
+				counter++;
+				if (counter > 64)
+					break;
+			}
+		}
+		if (sets[counter].charAt(0) == 't')
+			state.setCanCastleKingSide(Color.WHITE, true);
+		else
+			state.setCanCastleKingSide(Color.WHITE, false);
+		counter++;
+		if (sets[counter].charAt(0) == 't')
+			state.setCanCastleKingSide(Color.BLACK, true);
+		else
+			state.setCanCastleKingSide(Color.BLACK, false);
+		counter++;
+		if (sets[counter].charAt(0) == 't')
+			state.setCanCastleQueenSide(Color.WHITE, true);
+		else
+			state.setCanCastleQueenSide(Color.WHITE, false);
+		counter++;
+		if (sets[counter].charAt(0) == 't')
+			state.setCanCastleQueenSide(Color.BLACK, true);
+		else
+			state.setCanCastleQueenSide(Color.BLACK, false);
+		counter++;
+		if (!sets[counter].equals("null"))
+			state.setEnpassantPosition(new Position(Integer
+					.valueOf(sets[counter].substring(0, 1)), Integer
+					.valueOf(sets[counter].substring(2, 3))));
+		counter++;
+		Color color = null;
+		if (sets[counter].charAt(0) == 'W')
+			color = Color.WHITE;
+		else if (sets[counter].charAt(0) == 'B')
+			color = Color.BLACK;
+		else
+			color = null;
+		if (sets[counter].length() > 5) {
+			if (sets[counter].charAt(5) == 'F')
+				state.setGameResult(new GameResult(color,
+						GameResultReason.FIFTY_MOVE_RULE));
+			else if (sets[counter].charAt(5) == 'S')
+				state.setGameResult(new GameResult(color,
+						GameResultReason.STALEMATE));
+			else if (sets[counter].charAt(5) == 'C')
+				state.setGameResult(new GameResult(color,
+						GameResultReason.CHECKMATE));
+		}
+		counter++;
+		state.setNumberOfMovesWithoutCaptureNorPawnMoved(Integer
+				.valueOf(sets[counter]));
+		return state;
+	}
+
+	public void getPosPos() {
+		// TODO Auto-generated method stub
+		stateExplorerImpl = new StateExplorerImpl();
+		Set<Position> poses = stateExplorerImpl.getPossibleStartPositions(state);
+		for (int r = 0; r < 8; r++) {
+			for (int c = 0; c < 8; c++) {
+				view.setHighlighted(r, c, false);
+				view.setPosHighlighted(r, c, false);
+			}
+		}
+		if(state.getTurn().equals(myColor))
+		{
+		for (Position p: poses)
+		{
+			view.setPosHighlighted(7-p.getRow(), p.getCol(), true);
+		}
+		}
+	}
+	public void setColor(Color myColor) {
+		// TODO Auto-generated method stub
+		this.myColor = myColor;
+	}
+	public void setPhoneGap() {
+		// TODO Auto-generated method stub
+		 PhonegapUtil.prepareService((ServiceDefTarget) chessService, "http://haoxianghw11.appspot.com/haoxiangzuo/", "service");
+	}
+}

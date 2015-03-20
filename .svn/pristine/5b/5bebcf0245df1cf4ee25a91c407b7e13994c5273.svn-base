@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?><web-app xmlns="http://java.sun.com/xml/ns/javaee" version="2.5">
+  <!--
+  <servlet>
+    <servlet-name>yoavzibinServlet</servlet-name>
+    <servlet-class>org.yoavzibin.hw6.server.BlaServiceImpl</servlet-class>
+  </servlet>
+  <servlet-mapping>
+    <servlet-name>yoavzibinServlet</servlet-name>
+    <url-pattern>/yoavzibin</url-pattern>
+  </servlet-mapping>
+  -->
+  
+   
+  <servlet>
+    <servlet-name>ChessServicesImpl</servlet-name>
+    <servlet-class>org.yuanjia.hw6.server.ChessServicesImpl</servlet-class>
+  </servlet>
+  <servlet-mapping>
+    <servlet-name>ChessServicesImpl</servlet-name>
+    <url-pattern>/yuanjia/service</url-pattern>
+  </servlet-mapping>
+        
+  <servlet>
+    <servlet-name>SystemServiceServlet</servlet-name>
+    <servlet-class>com.google.api.server.spi.SystemServiceServlet</servlet-class>
+    <init-param>
+      <param-name>services</param-name>
+      <param-value/>
+    </init-param>
+  </servlet>
+
+  <servlet-mapping>
+    <servlet-name>SystemServiceServlet</servlet-name>
+    <url-pattern>/_ah/spi/*</url-pattern>
+  </servlet-mapping>
+
+</web-app>

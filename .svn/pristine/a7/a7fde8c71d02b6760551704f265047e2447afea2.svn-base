@@ -1,0 +1,21 @@
+package org.jiangfengchen.hw6.client;
+
+import java.util.LinkedList;
+
+import org.jiangfengchen.hw7.Match;
+
+import com.google.gwt.user.client.rpc.RemoteService;
+import com.google.gwt.user.client.rpc.RemoteServiceRelativePath;
+
+@RemoteServiceRelativePath("login")
+public interface LoginService extends RemoteService {
+  public LoginInfo login(String requestUri);
+  public LinkedList<Match> LoadGame(String userId);
+  public Match LoadById(long id);
+  public Match SearchGame(String userId);
+  public Match GameWith(String userId,String opponent);
+  public Match MakeMove(String state,String userId,long gameId,String result);
+  public String Delete(String userId,long gameId);
+  public void SaveContact(long id,String emails);
+  public String LoadContact(long id);
+}

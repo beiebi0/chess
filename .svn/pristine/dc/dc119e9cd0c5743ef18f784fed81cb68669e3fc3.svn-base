@@ -1,0 +1,622 @@
+package org.karthikmahadevan.hw3;
+
+import java.util.List;
+import java.util.ArrayList;
+
+import org.shared.chess.Color;
+import org.shared.chess.GameResult;
+import org.shared.chess.Piece;
+import org.shared.chess.State;
+
+import org.karthikmahadevan.hw3.Presenter.View;
+
+import com.allen_sauer.gwt.dnd.client.DragContext;
+import com.allen_sauer.gwt.dnd.client.PickupDragController;
+import com.allen_sauer.gwt.dnd.client.drop.DropController;
+import com.allen_sauer.gwt.dnd.client.drop.SimpleDropController;
+import com.google.gwt.dom.client.AudioElement;
+import com.google.gwt.dom.client.MediaElement;
+import com.google.gwt.event.dom.client.ChangeEvent;
+import com.google.gwt.event.dom.client.ChangeHandler;
+import com.google.gwt.event.dom.client.ClickHandler;
+import com.google.gwt.event.dom.client.ClickEvent;
+import com.google.gwt.event.dom.client.DragStartEvent;
+import com.google.gwt.event.dom.client.DragStartHandler;
+import com.google.gwt.event.dom.client.MouseDownEvent;
+import com.google.gwt.event.dom.client.MouseDownHandler;
+import com.google.gwt.event.dom.client.TouchStartEvent;
+import com.google.gwt.event.dom.client.TouchStartHandler;
+import com.google.gwt.event.logical.shared.ValueChangeEvent;
+import com.google.gwt.event.logical.shared.ValueChangeHandler;
+import com.google.gwt.core.client.GWT;
+import com.google.gwt.media.client.Audio;
+import com.google.gwt.resources.client.ImageResource;
+import com.google.gwt.storage.client.Storage;
+import com.google.gwt.uibinder.client.UiBinder;
+import com.google.gwt.uibinder.client.UiField;
+import com.google.gwt.user.client.Element;
+import com.google.gwt.user.client.History;
+import com.google.gwt.user.client.Window;
+import com.google.gwt.user.client.ui.AbsolutePanel;
+import com.google.gwt.user.client.ui.Anchor;
+import com.google.gwt.user.client.ui.Button;
+import com.google.gwt.user.client.ui.Composite;
+import com.google.gwt.user.client.ui.Grid;
+import com.google.gwt.user.client.ui.Image;
+import com.google.gwt.user.client.ui.Label;
+import com.google.gwt.user.client.ui.ListBox;
+import com.google.gwt.user.client.ui.TextBox;
+import com.google.gwt.user.client.ui.VerticalPanel;
+import com.google.gwt.user.client.ui.Widget;
+import com.google.gwt.user.client.ui.SimplePanel;
+
+import org.karthikmahadevan.hw6.client.LoginInfo;
+import org.karthikmahadevan.hw8.GameTranslationConstants;
+
+
+public class Graphics extends Composite implements View {
+	private static GameImages gameImages = GWT.create(GameImages.class);
+	private static GraphicsUiBinder uiBinder = GWT
+			.create(GraphicsUiBinder.class);
+	private GameTranslationConstants translationConstants = GWT.create(GameTranslationConstants.class);
+
+	interface GraphicsUiBinder extends UiBinder<Widget, Graphics> {
+	}
+
+	@UiField
+	GameCss css;
+	@UiField
+	Button saveGame;
+	@UiField
+	Button loadGame;
+	@UiField
+	Button restartGame;
+	@UiField
+	Label gameStatus;
+	@UiField
+	Label turn;
+	@UiField
+	Grid gameGrid;
+	@UiField
+	Grid promotionOptions;
+	@UiField
+	Anchor signIn;
+	@UiField
+	Anchor signOut;
+	@UiField
+	Label signInText;
+	@UiField
+	VerticalPanel pnlLogin;
+	@UiField
+	VerticalPanel pnlChessGame;
+	@UiField
+	VerticalPanel pnlBoard;
+	@UiField
+	Label yourColor;
+	@UiField
+	Button autoMatch;
+	@UiField
+	ListBox matches;
+	@UiField
+	Button deleteGame;
+	@UiField
+	Label opponent;
+	@UiField
+	Label loggedInAs;
+	@UiField
+	TextBox txtPlayWith;
+	@UiField
+	Button btnPlayWith;
+	@UiField
+	Button loadMatch;
+	@UiField
+	Label startDate;
+	@UiField
+	Label loggedInAsText;
+	@UiField
+	Label opponentText;
+	@UiField
+	Label yourColorText;
+	@UiField
+	Label turnText;
+	@UiField 
+	Label startDateText;
+	@UiField
+	Label rating;
+	@UiField
+	Button ai;
+	@UiField
+	AbsolutePanel absPnlGameGrid;
+	private Storage storage;
+	private Image[][] board = new Image[8][8];
+	private Presenter presenter;
+	private Audio audio = createAudio();
+	private LoginInfo loginInfo = null;
+	private PickupDragController dragController;
+	private List<DropController> dropControllers = new ArrayList<DropController>();
+	private boolean mouseDownFired = false;
+
+	public Graphics(LoginInfo loginInfo) {
+		this.loginInfo = loginInfo;
+		initWidget(uiBinder.createAndBindUi(this));
+	}
+
+	public void loadChessGame() {
+		bindText();
+		pnlChessGame.removeStyleName(css.hide());
+		pnlLogin.setStyleName(css.hide());
+		loadGame.setStyleName(css.hide());
+		saveGame.setStyleName(css.hide());
+		restartGame.setStyleName(css.hide());
+		signOut.setHref(loginInfo.getLogoutUrl());
+		gameGrid.resize(8, 8);
+		gameGrid.setCellPadding(0);
+		gameGrid.setCellSpacing(0);
+		gameGrid.setBorderWidth(0);
+		absPnlGameGrid.setWidth("400px");
+		absPnlGameGrid.setHeight("400px");
+		dragController = new PickupDragController(absPnlGameGrid, false);
+		dragController.setBehaviorDragStartSensitivity(1);
+		for (int row = 0; row < 8; row++) {
+			for (int col = 0; col < 8; col++) {
+				final int rowID = row;
+				final int colID = col;
+				
+				final Image image = new Image();
+				board[row][col] = image;
+				image.setResource(gameImages.blank());
+				image.setWidth("50px");
+				image.setHeight("50px");
+				
+				dragController.makeDraggable(image);
+				
+				image.getElement().setDraggable(Element.DRAGGABLE_TRUE);
+				image.addDragStartHandler(new DragStartHandler() {
+
+					@Override
+					public void onDragStart(DragStartEvent event) {
+						presenter.clickedOn(rowID, colID);
+						event.getDataTransfer().setDragImage(
+								image.getElement(), 10, 10);
+					}
+				});
+				
+				image.addMouseDownHandler(new MouseDownHandler() {
+					
+					@Override
+					public void onMouseDown(MouseDownEvent event) {
+						// TODO Auto-generated method stub
+						mouseDownFired = true;
+						presenter.clickedOn(rowID, colID);
+						
+					}
+				});
+				
+				/*
+				image.addClickHandler(new ClickHandler() {
+					@Override
+					public void onClick(ClickEvent event) {
+						if (!mouseDownFired) {
+							presenter.clickedOn(rowID, colID);
+						}
+					}
+				});*/
+				
+				image.addTouchStartHandler(new TouchStartHandler() {
+					
+					@Override
+					public void onTouchStart(TouchStartEvent event) {
+						// TODO Auto-generated method stub
+						presenter.clickedOn(rowID, colID);
+					}
+				});
+				
+				
+
+				SimplePanel panel = new SimplePanel();
+				panel.setWidth("50px");
+				panel.setHeight("50px");
+				if (row % 2 == 0 && col % 2 == 1 || row % 2 == 1
+						&& col % 2 == 0) {
+					panel.setStyleName(css.blackBackground());
+				} else {
+					panel.setStyleName(css.whiteBackground());
+				}
+				panel.setWidget(image);
+
+				gameGrid.setWidget(row, col, panel);
+			}
+		}
+		presenter = new Presenter(this);
+		createPromotionOptionsGrids();
+		createAudio();
+		History.addValueChangeHandler(new ValueChangeHandler<String>() {
+
+			@Override
+			public void onValueChange(ValueChangeEvent<String> event) {
+				String token = event.getValue();
+				presenter.restoreState(token);
+			}
+		});
+
+		storage = Storage.getLocalStorageIfSupported();
+		if (storage == null) {
+			saveGame.setStyleName(css.hide());
+			loadGame.setStyleName(css.hide());
+		} else {
+			saveGame.addClickHandler(new ClickHandler() {
+				@Override
+				public void onClick(ClickEvent event) {
+					storage.setItem("saved_state", History.getToken());
+				}
+			});
+
+			loadGame.addClickHandler(new ClickHandler() {
+				@Override
+				public void onClick(ClickEvent event) {
+					String savedState = storage.getItem("saved_state");
+					History.newItem(savedState);
+				}
+			});
+
+			restartGame.addClickHandler(new ClickHandler() {
+				@Override
+				public void onClick(ClickEvent event) {
+					State newState = new State();
+					History.newItem(newState.toString());
+					gameStatus.setText(translationConstants.inProgress());
+				}
+			});
+
+			autoMatch.addClickHandler(new ClickHandler() {
+				@Override
+				public void onClick(ClickEvent event) {
+					presenter.autoMatchWithOpponent();
+				}
+			});
+
+			matches.addChangeHandler(new ChangeHandler() {
+
+				@Override
+				public void onChange(ChangeEvent event) {
+					int index = matches.getSelectedIndex();
+					presenter.onMatchChange(matches.getItemText(index));
+				}
+			});
+
+			deleteGame.addClickHandler(new ClickHandler() {
+
+				@Override
+				public void onClick(ClickEvent event) {
+					int index = matches.getSelectedIndex();
+					presenter.deleteMatch(matches.getItemText(index));
+
+				}
+			});
+
+			btnPlayWith.addClickHandler(new ClickHandler() {
+
+				@Override
+				public void onClick(ClickEvent event) {
+					if (txtPlayWith.getText().trim().equals("")) {
+						return;
+					}
+					presenter.playWith(txtPlayWith.getText());
+				}
+			});
+
+			loadMatch.addClickHandler(new ClickHandler() {
+
+				@Override
+				public void onClick(ClickEvent event) {
+					presenter.loadSelectedMatch();
+				}
+			});
+			
+				ai.addClickHandler(new ClickHandler() {
+				
+				@Override
+				public void onClick(ClickEvent event) {
+					presenter.addMatchWithAI();
+				}
+			});
+		}
+	}
+
+	private void bindText() {
+		loggedInAsText.setText(translationConstants.loggedInAs());
+		startDateText.setText(translationConstants.startDate());
+		opponentText.setText(translationConstants.opponent());
+		yourColorText.setText(translationConstants.yourColor());
+		turnText.setText(translationConstants.turn());
+		autoMatch.setText(translationConstants.autoMatch());
+		loadMatch.setText(translationConstants.loadMatch());
+		btnPlayWith.setText(translationConstants.playWith());
+		deleteGame.setText(translationConstants.deleteMatch());
+		ai.setText(translationConstants.playWithComputer());
+	}
+
+	@Override
+	public void loadMatches(List<Long> matches) {
+		this.matches.clear();
+		for (int i = 0; i < matches.size(); ++i) {
+			this.matches.insertItem(String.valueOf(matches.get(i)), i);
+		}
+		if (matches.size() == 1) {
+			this.matches.setItemSelected(0, true);
+		}
+	}
+
+	public void loadLogin() {
+		signInText.setText(translationConstants.pleaseSignIn());
+		pnlLogin.removeStyleName(css.hide());
+		pnlChessGame.setStyleName(css.hide());
+		signIn.setHref(loginInfo.getLoginUrl());
+	}
+
+	public void createPromotionOptionsGrids() {
+		promotionOptions.resize(1, 4);
+		ImageResource[] resources = { gameImages.YellowQueen(),
+				gameImages.YellowRook(), gameImages.YellowBishop(),
+				gameImages.YellowKnight() };
+		Image image;
+		for (int i = 0; i < 4; ++i) {
+			final int colID = i;
+			image = new Image();
+			image.setResource(resources[i]);
+			image.addClickHandler(new ClickHandler() {
+				@Override
+				public void onClick(ClickEvent event) {
+					presenter.promoteToPiece(colID);
+				}
+			});
+			promotionOptions.setWidget(0, i, image);
+		}
+	}
+
+	@Override
+	public void setPiece(int row, int col, Piece piece) {
+		ImageResource imgRes = getImageResource(row, col, piece);
+		board[row][col].setResource(imgRes);
+		board[row][col].setWidth("50px");
+		board[row][col].setHeight("50px");
+	}
+
+	@Override
+	public ImageResource getImageResource(int row, int col, Piece piece) {
+		ImageResource imgRes;
+		if (piece != null) {
+			Color pieceColor = piece.getColor();
+			switch (piece.getKind()) {
+			case PAWN:
+				imgRes = (pieceColor == Color.WHITE ? gameImages.whitePawn()
+						: gameImages.BlackPawn());
+				break;
+			case BISHOP:
+				imgRes = (pieceColor == Color.WHITE ? gameImages.whiteBishop()
+						: gameImages.BlackBishop());
+				break;
+			case QUEEN:
+				imgRes = (pieceColor == Color.WHITE ? gameImages.whiteQueen()
+						: gameImages.BlackQueen());
+				break;
+			case ROOK:
+				imgRes = (pieceColor == Color.WHITE ? gameImages.whiteRook()
+						: gameImages.BlackRook());
+				break;
+			case KNIGHT:
+				imgRes = (pieceColor == Color.WHITE ? gameImages.whiteKnight()
+						: gameImages.BlackKnight());
+				break;
+			case KING:
+				imgRes = (pieceColor == Color.WHITE ? gameImages.whiteKing()
+						: gameImages.BlackKing());
+				break;
+			default:
+				imgRes = gameImages.blank();
+			}
+		} else {
+			imgRes = gameImages.blank();
+		}
+		return imgRes;
+	}
+
+	@Override
+	public void setHighlighted(int row, int col, boolean highlighted) {
+		final int rowID = row;
+		final int colID = col;
+		Element element = board[row][col].getElement();
+		if (highlighted) {
+			element.setClassName(css.highlighted());
+			
+			DropController dropController = (new SimpleDropController(board[row][col]) {
+				@Override
+				  public void onDrop(DragContext context) {
+					audio = createAudio();
+					if (audio != null) {
+						audio.load();
+						audio.play();
+					}
+					presenter.clickedOn(rowID, colID);
+				    super.onDrop(context);
+				  }
+
+				  @Override
+				  public void onEnter(DragContext context) {
+				    super.onEnter(context);
+				    //board[rowID][colID].setStyleName(css.draggedOver());
+				  }
+
+				  @Override
+				  public void onLeave(DragContext context) {
+					//board[rowID][colID].setStyleName(css.highlighted());
+				    super.onLeave(context);
+				  }
+
+			});
+			dragController.registerDropController(dropController);
+			dropControllers.add(dropController);
+		} else {
+			element.removeClassName(css.highlighted());
+			//element.removeClassName(css.draggedOver());
+		}
+	}
+
+	@Override
+	public void clearDragHandlers() {
+		//dragController.unregisterDropControllers();
+		for (int i = 0; i < dropControllers.size(); ++i) {
+			dragController.unregisterDropController(dropControllers.get(i));
+		}
+		dropControllers.clear();
+	}
+
+	@Override
+	public void setWhoseTurn(Color color) {
+		if (color == Color.WHITE) {
+			turn.setText("White");
+		} else if (color == Color.BLACK) {
+			turn.setText("Black");
+		} else {
+			turn.setText("");
+		}
+	}
+
+	@Override
+	public void clearGameStatus() {
+		gameStatus.setText("");
+	}
+
+	@Override
+	public void setGameResult(GameResult gameResult) {
+		if (gameResult == null) {
+			gameStatus.setText(translationConstants.inProgress());
+			return;
+		}
+		StringBuilder text = new StringBuilder(translationConstants.matchResult());
+		switch (gameResult.getGameResultReason()) {
+		case CHECKMATE:
+			text.append(gameResult.getWinner() + " won! " + translationConstants.reason() + " Check Mate.");
+			break;
+		case STALEMATE:
+			text.append("Draw! " + translationConstants.reason() + "  Stale Mate.");
+			break;
+		case FIFTY_MOVE_RULE:
+			text.append("Draw! " + translationConstants.reason() + "  Fifty Move Rule.");
+			break;
+		case THREEFOLD_REPETITION_RULE:
+			text.append("Draw! " + translationConstants.reason() + "  Threefold Repetition Rule.");
+			break;
+		}
+		gameStatus.setText(text.toString());
+	}
+
+	@Override
+	public void makePromotionOptionsAvailable(boolean available) {
+		if (available) {
+			promotionOptions.setVisible(true);
+		} else {
+			promotionOptions.setVisible(false);
+		}
+	}
+
+	@Override
+	public Presenter getPresenter() {
+		return this.presenter;
+	}
+
+	@Override
+	public void addToHistory(String state) {
+		History.newItem(state);
+	}
+
+	public Audio createAudio() {
+		Audio audio = Audio.createIfSupported();
+		if (audio == null) {
+			return null;
+		}
+		if (MediaElement.CAN_PLAY_PROBABLY.equals(audio
+				.canPlayType(AudioElement.TYPE_MP3))) {
+			audio.addSource("karthikmahadevan_audio/move.mp3",
+					AudioElement.TYPE_MP3);
+		} else if (MediaElement.CAN_PLAY_PROBABLY.equals(audio
+				.canPlayType(AudioElement.TYPE_WAV))) {
+			audio.addSource("karthikmahadevan_audio/move.wav",
+					AudioElement.TYPE_WAV);
+		} else if (MediaElement.CAN_PLAY_PROBABLY.equals(audio
+				.canPlayType(AudioElement.TYPE_OGG))) {
+			audio.addSource("karthikmahadevan_audio/move.ogg",
+					AudioElement.TYPE_OGG);
+		} else if (MediaElement.CAN_PLAY_MAYBE.equals(audio
+				.canPlayType(AudioElement.TYPE_MP3))) {
+			audio.addSource("karthikmahadevan_audio/move.mp3",
+					AudioElement.TYPE_MP3);
+		} else if (MediaElement.CAN_PLAY_MAYBE.equals(audio
+				.canPlayType(AudioElement.TYPE_WAV))) {
+			audio.addSource("karthikmahadevan_audio/move.wav",
+					AudioElement.TYPE_WAV);
+		} else if (MediaElement.CAN_PLAY_MAYBE.equals(audio
+				.canPlayType(AudioElement.TYPE_OGG))) {
+			audio.addSource("karthikmahadevan_audio/move.ogg",
+					AudioElement.TYPE_OGG);
+		}
+		audio.load();
+		return audio;
+	}
+
+	public Image[][] getBoard() {
+		return board;
+	}
+
+	@Override
+	public void setYourColor(Color color) {
+		if (matches.getItemCount() == 0 || matches.getSelectedIndex() == -1)
+			yourColor.setText("");
+		else {
+			if (color == Color.WHITE) {
+				yourColor.setText("White");
+			} else if (color == Color.BLACK) {
+				yourColor.setText("Black");
+			} else {
+				yourColor.setText("");
+			}
+		}
+	}
+
+	@Override
+	public String getSelectedMatch() {
+		int selectedIndex = matches.getSelectedIndex();
+		if (selectedIndex == -1) {
+			return "";
+		} else {
+			return matches.getItemText(selectedIndex);
+		}
+	}
+
+	@Override
+	public void setOpponent(String opponent) {
+		if (matches.getItemCount() == 0 || matches.getSelectedIndex() == -1) {
+			this.opponent.setText("");
+		} else {
+			this.opponent.setText(opponent);
+		}
+	}
+
+	@Override
+	public void setLoggedInAs(String user) {
+		loggedInAs.setText(user);
+		loggedInAs.setStyleName(css.bigtext());
+	}
+
+	@Override
+	public void setStartDate(String date) {
+		startDate.setText(date);
+		
+	}
+	
+	@Override
+	public void setRating(String rating) {
+		this.rating.setText(rating);
+	}
+
+}

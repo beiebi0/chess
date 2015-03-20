@@ -1,0 +1,389 @@
+package org.yuanjia.hw1;
+
+import static org.junit.Assert.*;
+import org.shared.chess.*;
+import org.junit.Test;
+
+public abstract class AbstractStateChangerCastlingTest extends
+		AbstractStateChangerTest {
+	@Test
+	public void testBlackCanCastleKingSide() {
+		Move move = new Move(new Position(7, 4), new Position(7, 6), null);
+		Piece[][] b_board = new Piece[8][8];
+		b_board[7][4] = new Piece(Color.BLACK, PieceKind.KING);
+		b_board[7][7] = new Piece(Color.BLACK, PieceKind.ROOK);
+		b_board[0][4] = new Piece(Color.WHITE, PieceKind.KING);
+		boolean[] b_canCastleKingSide = { true, true };
+		boolean[] b_canCastleQueenSide = { true, true };
+		State b_state = new State(Color.BLACK, b_board, b_canCastleKingSide,
+				b_canCastleQueenSide, null, 0, null);
+		State a_state = b_state.copy();
+		a_state.setCanCastleKingSide(Color.BLACK, false);
+		a_state.setTurn(Color.WHITE);
+		a_state.setPiece(7, 4, null);
+		a_state.setPiece(7, 7, null);
+		a_state.setPiece(7, 6, new Piece(Color.BLACK, PieceKind.KING));
+		a_state.setPiece(7, 5, new Piece(Color.BLACK, PieceKind.ROOK));
+		a_state.setNumberOfMovesWithoutCaptureNorPawnMoved(1);
+		stateChanger.makeMove(b_state, move);
+		assertEquals(b_state, a_state);
+	}
+
+	@Test
+	public void testBlackCanCastleKingSide2() {
+		Move move = new Move(new Position(7, 4), new Position(7, 6), null);
+		Piece[][] b_board = new Piece[8][8];
+		b_board[7][4] = new Piece(Color.BLACK, PieceKind.KING);
+		b_board[7][7] = new Piece(Color.BLACK, PieceKind.ROOK);
+		b_board[0][4] = new Piece(Color.WHITE, PieceKind.KING);
+		boolean[] b_canCastleKingSide = { false, true };
+		boolean[] b_canCastleQueenSide = { false, false };
+		State b_state = new State(Color.BLACK, b_board, b_canCastleKingSide,
+				b_canCastleQueenSide, null, 0, null);
+		State a_state = b_state.copy();
+		a_state.setCanCastleKingSide(Color.BLACK, false);
+		a_state.setTurn(Color.WHITE);
+		a_state.setPiece(7, 4, null);
+		a_state.setPiece(7, 7, null);
+		a_state.setPiece(7, 6, new Piece(Color.BLACK, PieceKind.KING));
+		a_state.setPiece(7, 5, new Piece(Color.BLACK, PieceKind.ROOK));
+		a_state.setNumberOfMovesWithoutCaptureNorPawnMoved(1);
+		stateChanger.makeMove(b_state, move);
+		assertEquals(b_state, a_state);
+	}
+
+	@Test
+	public void testBlackCanCastleQueenSide() {
+		Move move = new Move(new Position(7, 4), new Position(7, 2), null);
+		Piece[][] b_board = new Piece[8][8];
+		b_board[7][4] = new Piece(Color.BLACK, PieceKind.KING);
+		b_board[7][0] = new Piece(Color.BLACK, PieceKind.ROOK);
+		b_board[0][4] = new Piece(Color.WHITE, PieceKind.KING);
+		boolean[] b_canCastleKingSide = { true, true };
+		boolean[] b_canCastleQueenSide = { true, true };
+		State b_state = new State(Color.BLACK, b_board, b_canCastleKingSide,
+				b_canCastleQueenSide, null, 0, null);
+		State a_state = b_state.copy();
+		a_state.setCanCastleQueenSide(Color.BLACK, false);
+		a_state.setTurn(Color.WHITE);
+		a_state.setPiece(7, 4, null);
+		a_state.setPiece(7, 0, null);
+		a_state.setPiece(7, 2, new Piece(Color.BLACK, PieceKind.KING));
+		a_state.setPiece(7, 3, new Piece(Color.BLACK, PieceKind.ROOK));
+		a_state.setNumberOfMovesWithoutCaptureNorPawnMoved(1);
+		stateChanger.makeMove(b_state, move);
+		assertEquals(b_state, a_state);
+	}
+
+	@Test
+	public void testBlackCanCastleQueenSide2() {
+		Move move = new Move(new Position(7, 4), new Position(7, 2), null);
+		Piece[][] b_board = new Piece[8][8];
+		b_board[7][4] = new Piece(Color.BLACK, PieceKind.KING);
+		b_board[7][0] = new Piece(Color.BLACK, PieceKind.ROOK);
+		b_board[0][4] = new Piece(Color.WHITE, PieceKind.KING);
+		boolean[] b_canCastleKingSide = { false, false };
+		boolean[] b_canCastleQueenSide = { false, true };
+		State b_state = new State(Color.BLACK, b_board, b_canCastleKingSide,
+				b_canCastleQueenSide, null, 0, null);
+		State a_state = b_state.copy();
+		a_state.setCanCastleQueenSide(Color.BLACK, false);
+		a_state.setTurn(Color.WHITE);
+		a_state.setPiece(7, 4, null);
+		a_state.setPiece(7, 0, null);
+		a_state.setPiece(7, 2, new Piece(Color.BLACK, PieceKind.KING));
+		a_state.setPiece(7, 3, new Piece(Color.BLACK, PieceKind.ROOK));
+		a_state.setNumberOfMovesWithoutCaptureNorPawnMoved(1);
+		stateChanger.makeMove(b_state, move);
+		assertEquals(b_state, a_state);
+	}
+
+	@Test
+	public void testBlackCanCastleRookUnderAttack() {
+		Move move = new Move(new Position(7, 4), new Position(7, 6), null);
+		Piece[][] b_board = new Piece[8][8];
+		b_board[7][4] = new Piece(Color.BLACK, PieceKind.KING);
+		b_board[7][7] = new Piece(Color.BLACK, PieceKind.ROOK);
+		b_board[1][7] = new Piece(Color.WHITE, PieceKind.ROOK);
+		b_board[0][4] = new Piece(Color.WHITE, PieceKind.KING);
+		boolean[] b_canCastleKingSide = { false, true };
+		boolean[] b_canCastleQueenSide = { false, false };
+		State b_state = new State(Color.BLACK, b_board, b_canCastleKingSide,
+				b_canCastleQueenSide, null, 0, null);
+		State a_state = b_state.copy();
+		a_state.setCanCastleKingSide(Color.BLACK, false);
+		a_state.setTurn(Color.WHITE);
+		a_state.setPiece(7, 4, null);
+		a_state.setPiece(7, 7, null);
+		a_state.setPiece(7, 6, new Piece(Color.BLACK, PieceKind.KING));
+		a_state.setPiece(7, 5, new Piece(Color.BLACK, PieceKind.ROOK));
+		a_state.setNumberOfMovesWithoutCaptureNorPawnMoved(1);
+		stateChanger.makeMove(b_state, move);
+		assertEquals(b_state, a_state);
+	}
+
+	@Test
+	public void testBlackCanCastleNextRookUnderAttackQueenSide() {
+		Move move = new Move(new Position(7, 4), new Position(7, 2), null);
+		Piece[][] b_board = new Piece[8][8];
+		b_board[7][4] = new Piece(Color.BLACK, PieceKind.KING);
+		b_board[7][0] = new Piece(Color.BLACK, PieceKind.ROOK);
+		b_board[1][1] = new Piece(Color.WHITE, PieceKind.ROOK);
+		b_board[0][4] = new Piece(Color.WHITE, PieceKind.KING);
+		boolean[] b_canCastleKingSide = { false, true };
+		boolean[] b_canCastleQueenSide = { false, true };
+		State b_state = new State(Color.BLACK, b_board, b_canCastleKingSide,
+				b_canCastleQueenSide, null, 0, null);
+		State a_state = b_state.copy();
+		a_state.setCanCastleQueenSide(Color.BLACK, false);
+		a_state.setTurn(Color.WHITE);
+		a_state.setPiece(7, 4, null);
+		a_state.setPiece(7, 0, null);
+		a_state.setPiece(7, 2, new Piece(Color.BLACK, PieceKind.KING));
+		a_state.setPiece(7, 3, new Piece(Color.BLACK, PieceKind.ROOK));
+		a_state.setNumberOfMovesWithoutCaptureNorPawnMoved(1);
+		stateChanger.makeMove(b_state, move);
+		assertEquals(b_state, a_state);
+	}
+
+	@Test(expected = IllegalMove.class)
+	public void testBlackCanNotCastleOverPiecesKingSide1() {
+		Move move = new Move(new Position(7, 4), new Position(7, 6), null);
+		Piece[][] b_board = new Piece[8][8];
+		b_board[7][4] = new Piece(Color.BLACK, PieceKind.KING);
+		b_board[7][7] = new Piece(Color.BLACK, PieceKind.ROOK);
+		b_board[7][5] = new Piece(Color.BLACK, PieceKind.BISHOP);
+		b_board[0][4] = new Piece(Color.WHITE, PieceKind.KING);
+		boolean[] b_canCastleKingSide = { true, true };
+		boolean[] b_canCastleQueenSide = { true, true };
+		State b_state = new State(Color.BLACK, b_board, b_canCastleKingSide,
+				b_canCastleQueenSide, null, 0, null);
+		stateChanger.makeMove(b_state, move);
+	}
+
+	@Test(expected = IllegalMove.class)
+	public void testBlackCanNotCastleOverPiecesKingSide2() {
+		Move move = new Move(new Position(7, 4), new Position(7, 6), null);
+		Piece[][] b_board = new Piece[8][8];
+		b_board[7][4] = new Piece(Color.BLACK, PieceKind.KING);
+		b_board[7][7] = new Piece(Color.BLACK, PieceKind.ROOK);
+		b_board[7][6] = new Piece(Color.BLACK, PieceKind.KNIGHT);
+		b_board[7][5] = new Piece(Color.BLACK, PieceKind.BISHOP);
+		b_board[0][4] = new Piece(Color.WHITE, PieceKind.KING);
+		boolean[] b_canCastleKingSide = { true, true };
+		boolean[] b_canCastleQueenSide = { true, true };
+		State b_state = new State(Color.BLACK, b_board, b_canCastleKingSide,
+				b_canCastleQueenSide, null, 0, null);
+		stateChanger.makeMove(b_state, move);
+	}
+
+	@Test(expected = IllegalMove.class)
+	public void testBlackCanNotCastleOverPiecesQueenSide1() {
+		Move move = new Move(new Position(7, 4), new Position(7, 2), null);
+		Piece[][] b_board = new Piece[8][8];
+		b_board[7][4] = new Piece(Color.BLACK, PieceKind.KING);
+		b_board[7][0] = new Piece(Color.BLACK, PieceKind.ROOK);
+		b_board[7][2] = new Piece(Color.BLACK, PieceKind.BISHOP);
+		b_board[0][4] = new Piece(Color.WHITE, PieceKind.KING);
+		boolean[] b_canCastleKingSide = { true, true };
+		boolean[] b_canCastleQueenSide = { true, true };
+		State b_state = new State(Color.BLACK, b_board, b_canCastleKingSide,
+				b_canCastleQueenSide, null, 0, null);
+		stateChanger.makeMove(b_state, move);
+	}
+
+	@Test(expected = IllegalMove.class)
+	public void testBlackCanNotCastleOverPiecesQueenSide2() {
+		Move move = new Move(new Position(7, 4), new Position(7, 2), null);
+		Piece[][] b_board = new Piece[8][8];
+		b_board[7][4] = new Piece(Color.BLACK, PieceKind.KING);
+		b_board[7][0] = new Piece(Color.BLACK, PieceKind.ROOK);
+		b_board[7][3] = new Piece(Color.BLACK, PieceKind.QUEEN);
+		b_board[7][2] = new Piece(Color.BLACK, PieceKind.BISHOP);
+		b_board[0][4] = new Piece(Color.WHITE, PieceKind.KING);
+		boolean[] b_canCastleKingSide = { true, true };
+		boolean[] b_canCastleQueenSide = { true, true };
+		State b_state = new State(Color.BLACK, b_board, b_canCastleKingSide,
+				b_canCastleQueenSide, null, 0, null);
+		stateChanger.makeMove(b_state, move);
+	}
+
+	@Test(expected = IllegalMove.class)
+	public void testBlackCanNotCastleAfterMovedKingSide() {
+		Move move = new Move(new Position(7, 4), new Position(7, 6), null);
+		Piece[][] b_board = new Piece[8][8];
+		b_board[7][4] = new Piece(Color.BLACK, PieceKind.KING);
+		b_board[7][7] = new Piece(Color.BLACK, PieceKind.ROOK);
+		b_board[0][4] = new Piece(Color.WHITE, PieceKind.KING);
+		boolean[] b_canCastleKingSide = { true, false };
+		boolean[] b_canCastleQueenSide = { true, true };
+		State b_state = new State(Color.BLACK, b_board, b_canCastleKingSide,
+				b_canCastleQueenSide, null, 0, null);
+		stateChanger.makeMove(b_state, move);
+	}
+
+	@Test(expected = IllegalMove.class)
+	public void testBlackCanNotCastleAfterMovedQueenSide() {
+		Move move = new Move(new Position(7, 4), new Position(7, 2), null);
+		Piece[][] b_board = new Piece[8][8];
+		b_board[7][4] = new Piece(Color.BLACK, PieceKind.KING);
+		b_board[7][0] = new Piece(Color.BLACK, PieceKind.ROOK);
+		b_board[0][4] = new Piece(Color.WHITE, PieceKind.KING);
+		boolean[] b_canCastleKingSide = { true, true };
+		boolean[] b_canCastleQueenSide = { true, false };
+		State b_state = new State(Color.BLACK, b_board, b_canCastleKingSide,
+				b_canCastleQueenSide, null, 0, null);
+		stateChanger.makeMove(b_state, move);
+	}
+
+	@Test(expected = IllegalMove.class)
+	public void testBlackCanNotCastleWhenCheckedKingSide() {
+		Move move = new Move(new Position(7, 4), new Position(7, 6), null);
+		Piece[][] b_board = new Piece[8][8];
+		b_board[7][4] = new Piece(Color.BLACK, PieceKind.KING);
+		b_board[7][0] = new Piece(Color.BLACK, PieceKind.ROOK);
+		b_board[1][4] = new Piece(Color.WHITE, PieceKind.ROOK);
+		b_board[0][4] = new Piece(Color.WHITE, PieceKind.KING);
+		boolean[] b_canCastleKingSide = { false, true };
+		boolean[] b_canCastleQueenSide = { false, true };
+		State b_state = new State(Color.BLACK, b_board, b_canCastleKingSide,
+				b_canCastleQueenSide, null, 0, null);
+		stateChanger.makeMove(b_state, move);
+	}
+
+	@Test(expected = IllegalMove.class)
+	public void testBlackCanNotCastleWhenCheckedQueenSide() {
+		Move move = new Move(new Position(7, 4), new Position(7, 2), null);
+		Piece[][] b_board = new Piece[8][8];
+		b_board[7][4] = new Piece(Color.BLACK, PieceKind.KING);
+		b_board[7][0] = new Piece(Color.BLACK, PieceKind.ROOK);
+		b_board[1][4] = new Piece(Color.WHITE, PieceKind.ROOK);
+		b_board[0][4] = new Piece(Color.WHITE, PieceKind.KING);
+		boolean[] b_canCastleKingSide = { false, true };
+		boolean[] b_canCastleQueenSide = { false, true };
+		State b_state = new State(Color.BLACK, b_board, b_canCastleKingSide,
+				b_canCastleQueenSide, null, 0, null);
+		stateChanger.makeMove(b_state, move);
+	}
+
+	@Test(expected = IllegalMove.class)
+	public void testBlackCanNotCastleOverAttackedKingSide() {
+		Move move = new Move(new Position(7, 4), new Position(7, 6), null);
+		Piece[][] b_board = new Piece[8][8];
+		b_board[7][4] = new Piece(Color.BLACK, PieceKind.KING);
+		b_board[7][7] = new Piece(Color.BLACK, PieceKind.ROOK);
+		b_board[1][5] = new Piece(Color.WHITE, PieceKind.ROOK);
+		b_board[0][4] = new Piece(Color.WHITE, PieceKind.KING);
+		boolean[] b_canCastleKingSide = { false, true };
+		boolean[] b_canCastleQueenSide = { false, true };
+		State b_state = new State(Color.BLACK, b_board, b_canCastleKingSide,
+				b_canCastleQueenSide, null, 0, null);
+		stateChanger.makeMove(b_state, move);
+	}
+
+	@Test(expected = IllegalMove.class)
+	public void testBlackCanNotCastleOverAttackedQueenSide() {
+		Move move = new Move(new Position(7, 4), new Position(7, 2), null);
+		Piece[][] b_board = new Piece[8][8];
+		b_board[7][4] = new Piece(Color.BLACK, PieceKind.KING);
+		b_board[7][0] = new Piece(Color.BLACK, PieceKind.ROOK);
+		b_board[1][3] = new Piece(Color.WHITE, PieceKind.ROOK);
+		b_board[0][4] = new Piece(Color.WHITE, PieceKind.KING);
+		boolean[] b_canCastleKingSide = { false, true };
+		boolean[] b_canCastleQueenSide = { false, true };
+		State b_state = new State(Color.BLACK, b_board, b_canCastleKingSide,
+				b_canCastleQueenSide, null, 0, null);
+		stateChanger.makeMove(b_state, move);
+	}
+
+	@Test(expected = IllegalMove.class)
+	public void testBlackCanNotCastleToCheckedKingSide() {
+		Move move = new Move(new Position(7, 4), new Position(7, 6), null);
+		Piece[][] b_board = new Piece[8][8];
+		b_board[7][4] = new Piece(Color.BLACK, PieceKind.KING);
+		b_board[7][0] = new Piece(Color.BLACK, PieceKind.ROOK);
+		b_board[1][6] = new Piece(Color.WHITE, PieceKind.ROOK);
+		b_board[0][4] = new Piece(Color.WHITE, PieceKind.KING);
+		boolean[] b_canCastleKingSide = { false, true };
+		boolean[] b_canCastleQueenSide = { false, true };
+		State b_state = new State(Color.BLACK, b_board, b_canCastleKingSide,
+				b_canCastleQueenSide, null, 0, null);
+		stateChanger.makeMove(b_state, move);
+	}
+
+	@Test(expected = IllegalMove.class)
+	public void testBlackCanNotCastleToCheckedQueenSide() {
+		Move move = new Move(new Position(7, 4), new Position(7, 2), null);
+		Piece[][] b_board = new Piece[8][8];
+		b_board[7][4] = new Piece(Color.BLACK, PieceKind.KING);
+		b_board[7][0] = new Piece(Color.BLACK, PieceKind.ROOK);
+		b_board[1][2] = new Piece(Color.WHITE, PieceKind.ROOK);
+		b_board[0][4] = new Piece(Color.WHITE, PieceKind.KING);
+		boolean[] b_canCastleKingSide = { false, true };
+		boolean[] b_canCastleQueenSide = { false, true };
+		State b_state = new State(Color.BLACK, b_board, b_canCastleKingSide,
+				b_canCastleQueenSide, null, 0, null);
+		stateChanger.makeMove(b_state, move);
+	}
+
+	@Test(expected = IllegalMove.class)
+	public void testBlackCanNotCastleToBlackKingSide() {
+		Move move = new Move(new Position(7, 4), new Position(7, 6), null);
+		Piece[][] b_board = new Piece[8][8];
+		b_board[7][4] = new Piece(Color.BLACK, PieceKind.KING);
+		b_board[7][7] = new Piece(Color.BLACK, PieceKind.ROOK);
+		b_board[7][6] = new Piece(Color.BLACK, PieceKind.KNIGHT);
+		b_board[0][4] = new Piece(Color.WHITE, PieceKind.KING);
+		boolean[] b_canCastleKingSide = { false, true };
+		boolean[] b_canCastleQueenSide = { false, true };
+		State b_state = new State(Color.BLACK, b_board, b_canCastleKingSide,
+				b_canCastleQueenSide, null, 0, null);
+		stateChanger.makeMove(b_state, move);
+	}
+
+	@Test(expected = IllegalMove.class)
+	public void testBlackCanNotCastleToBlackQueenSide() {
+		Move move = new Move(new Position(7, 4), new Position(7, 2), null);
+		Piece[][] b_board = new Piece[8][8];
+		b_board[7][4] = new Piece(Color.BLACK, PieceKind.KING);
+		b_board[7][0] = new Piece(Color.BLACK, PieceKind.ROOK);
+		b_board[7][2] = new Piece(Color.BLACK, PieceKind.BISHOP);
+		b_board[0][4] = new Piece(Color.WHITE, PieceKind.KING);
+		boolean[] b_canCastleKingSide = { false, true };
+		boolean[] b_canCastleQueenSide = { false, true };
+		State b_state = new State(Color.BLACK, b_board, b_canCastleKingSide,
+				b_canCastleQueenSide, null, 0, null);
+		stateChanger.makeMove(b_state, move);
+	}
+
+	@Test(expected = IllegalMove.class)
+	public void testBlackCanNotCastleToWhiteKingSide() {
+		Move move = new Move(new Position(7, 4), new Position(7, 6), null);
+		Piece[][] b_board = new Piece[8][8];
+		b_board[7][4] = new Piece(Color.BLACK, PieceKind.KING);
+		b_board[7][7] = new Piece(Color.BLACK, PieceKind.ROOK);
+		b_board[7][6] = new Piece(Color.WHITE, PieceKind.KNIGHT);
+		b_board[0][4] = new Piece(Color.WHITE, PieceKind.KING);
+		boolean[] b_canCastleKingSide = { false, true };
+		boolean[] b_canCastleQueenSide = { false, true };
+		State b_state = new State(Color.BLACK, b_board, b_canCastleKingSide,
+				b_canCastleQueenSide, null, 0, null);
+		stateChanger.makeMove(b_state, move);
+	}
+
+	@Test(expected = IllegalMove.class)
+	public void testBlackCanNotCastleToWhiteQueenSide() {
+		Move move = new Move(new Position(7, 4), new Position(7, 2), null);
+		Piece[][] b_board = new Piece[8][8];
+		b_board[7][4] = new Piece(Color.BLACK, PieceKind.KING);
+		b_board[7][0] = new Piece(Color.BLACK, PieceKind.ROOK);
+		b_board[7][2] = new Piece(Color.WHITE, PieceKind.BISHOP);
+		b_board[0][4] = new Piece(Color.WHITE, PieceKind.KING);
+		boolean[] b_canCastleKingSide = { false, true };
+		boolean[] b_canCastleQueenSide = { false, true };
+		State b_state = new State(Color.BLACK, b_board, b_canCastleKingSide,
+				b_canCastleQueenSide, null, 0, null);
+		stateChanger.makeMove(b_state, move);
+	}
+
+}

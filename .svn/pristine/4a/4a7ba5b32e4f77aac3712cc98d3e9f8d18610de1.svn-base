@@ -1,0 +1,5 @@
+package org.yuehlinchung.hw6.client;
+
+public interface Timer {
+	boolean didTimeout();
+}

@@ -1,0 +1,20 @@
+package org.shihweihuang.hw6.client;
+
+import java.util.List;
+import java.util.Set;
+
+import org.shihweihuang.hw7.Match;
+
+import com.google.gwt.user.client.rpc.AsyncCallback;
+
+public interface ChessPlatformServiceAsync {
+	void getToken(LoginInfo loginInfo, AsyncCallback<String> callback);
+	void matchPlayer(LoginInfo loginInfo, String matchPlayer, AsyncCallback<Void> callback);
+	void publishMove(String matchID, String moveString,
+			AsyncCallback<Void> callback);
+	void getMatch(String matchID, AsyncCallback<Match> callback);
+	void getMatchList(LoginInfo loginInfo, AsyncCallback<Set<String>> callback);
+	void removeMatch(LoginInfo loginInfo, String matchID, AsyncCallback<Void> callback);
+	void removeFromWaitList(LoginInfo loginInfo, AsyncCallback<Void> callback);
+	void getPlayerRanking(LoginInfo loginInfo, AsyncCallback<Double> callback);
+}

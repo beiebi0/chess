@@ -1,0 +1,71 @@
+package org.yuehlinchung.hw6.client;
+
+import org.shared.chess.Color;
+import org.shared.chess.GameResultReason;
+import org.shared.chess.Move;
+import org.shared.chess.PieceKind;
+import org.shared.chess.State;
+import org.yuehlinchung.hw2_5.StateExplorerImpl;
+
+public class Heuristic {
+
+  private StateExplorerImpl explorer = new StateExplorerImpl();
+	
+  public int getStateValue(State state) {
+	  int wQ = 0, bQ = 0, wR = 0, bR = 0, wB = 0, bB = 0, wN = 0, bN = 0, wP = 0, bP = 0, wM = 0, bM = 0;
+	  double score = 0;
+	  
+	  if (state.getGameResult() != null) {
+		  if (state.getGameResult().getGameResultReason() == GameResultReason.CHECKMATE) {
+			  if (state.getGameResult().getWinner() == Color.WHITE) {
+				  score += 200;
+			  } else {
+				  score += -200;
+			  }
+		  } 
+	  }
+	  
+	  for (int i = 0; i < 8; i++) {
+		  for (int j = 0; j < 8; j++) {
+			  if (state.getPiece(i, j) != null) {
+				  if (state.getPiece(i, j).getColor() == Color.WHITE) {
+					  if (state.getPiece(i, j).getKind() == PieceKind.QUEEN) {
+						  wQ++;
+					  } else if (state.getPiece(i, j).getKind() == PieceKind.ROOK) {
+						  wR++;
+					  } else if (state.getPiece(i, j).getKind() == PieceKind.KNIGHT) {
+						  wN++;
+					  } else if (state.getPiece(i, j).getKind() == PieceKind.BISHOP){
+						  wB++;
+					  } else if (state.getPiece(i, j).getKind() == PieceKind.PAWN) {
+						  wP++;
+					  }
+				  } else if (state.getPiece(i, j).getColor() == Color.BLACK) {
+					  if (state.getPiece(i, j).getKind() == PieceKind.QUEEN) {
+						  bQ++;
+					  } else if (state.getPiece(i, j).getKind() == PieceKind.ROOK) {
+						  bR++;
+					  } else if (state.getPiece(i, j).getKind() == PieceKind.KNIGHT) {
+						  bN++;
+					  } else if (state.getPiece(i, j).getKind() == PieceKind.BISHOP){
+						  bB++;
+					  }else if (state.getPiece(i, j).getKind() == PieceKind.PAWN) {
+						  bP++;
+					  }
+				  }
+			  }
+		  }
+	  }
+	  state.setTurn(Color.WHITE);
+	  wM = explorer.getPossibleMoves(state).size();
+	  state.setTurn(Color.BLACK);
+	  bM = explorer.getPossibleMoves(state).size();
+	  
+	  score = 9*(wQ-bQ) + 5*(wR-bR) + 3*(wB-bB + wN-bN) + (wP-bP) + 0.1*(wM-bM);
+	  return (int) score;
+  }
+
+  public Iterable<Move> getOrderedMoves(State state) {
+	  return explorer.getPossibleMoves(state);
+  }
+}

@@ -1,0 +1,54 @@
+package org.zhihanli.hw3;
+
+import org.shared.chess.Position;
+
+import com.allen_sauer.gwt.dnd.client.DragContext;
+import com.allen_sauer.gwt.dnd.client.VetoDragException;
+import com.allen_sauer.gwt.dnd.client.drop.SimpleDropController;
+import com.google.gwt.user.client.ui.AbsolutePanel;
+import com.google.gwt.user.client.ui.Image;
+
+public class DropController extends SimpleDropController {
+
+	private Presenter presenter;
+	private final AbsolutePanel dropTarget;
+
+	public DropController(AbsolutePanel dropTarget) {
+		super(dropTarget);
+		this.dropTarget = dropTarget;
+	}
+
+	public void setPresenter(Presenter presenter) {
+		this.presenter = presenter;
+	}
+
+	@Override
+	public void onDrop(DragContext context) {
+		super.onDrop(context);
+
+		// Window.alert("onDrop" + pos.toString() + " " + context.mouseX + " "
+		// + context.mouseY + " " + dropTarget.getAbsoluteLeft() + " "
+		// + dropTarget.getAbsoluteTop() + " " + target.toString());
+	}
+
+	@Override
+	public void onPreviewDrop(DragContext context) throws VetoDragException {
+		Image image = (Image) context.draggable;
+
+		Position pos = presenter.getImagePostion(image);
+		Position target = getPositionFromMouse(context.mouseX, context.mouseY);
+
+		presenter.drop(pos, target);
+		super.onPreviewDrop(context);
+		throw new VetoDragException();
+
+		
+	}
+
+	private Position getPositionFromMouse(int x, int y) {
+		int row = 7 - (y - dropTarget.getAbsoluteTop()) / 50;
+		int col = (x - dropTarget.getAbsoluteLeft()) / 50;
+		return new Position(row, col);
+
+	}
+}

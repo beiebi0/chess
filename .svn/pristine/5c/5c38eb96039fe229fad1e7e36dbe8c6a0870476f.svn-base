@@ -1,0 +1,17 @@
+package org.alishah.hw6.client;
+
+import com.google.gwt.user.client.rpc.AsyncCallback;
+
+public interface ChessGameServiceAsync {
+	
+	public void userConnect(AsyncCallback<String> callback);
+	public void beginMatchWithId(Long match, AsyncCallback<String> callback);
+	public void getCurrentLoginStatus(String user, AsyncCallback<String> callback);
+	public void findMatchByEmail(String email, AsyncCallback<Boolean> callback);
+	public void removeMatch(Long match, AsyncCallback<Void> callback);
+	public void getMatchNames(AsyncCallback<String[]> callback);
+	public void matchmakeAuto(AsyncCallback<Void> callback);
+	public void cancelMatchmaking(AsyncCallback<Void> callback);
+	
+	public void makeMoveInMatch(Long match, String move, AsyncCallback<String> callback);
+}

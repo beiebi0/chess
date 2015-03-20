@@ -1,0 +1,106 @@
+<!DOCTYPE ui:UiBinder SYSTEM "http://dl.google.com/gwt/DTD/xhtml.ent">
+<ui:UiBinder xmlns:ui="urn:ui:com.google.gwt.uibinder"
+  xmlns:g="urn:import:com.google.gwt.user.client.ui">
+  <ui:style field="css" type="org.bohouli.hw3.GameCss">
+    .highlighted {
+      outline: dotted red 3px;
+    }
+    
+    td img {
+      display: block
+    }
+    
+    .selected {
+      outline: solid yellow 2px;
+    }
+    
+    .status {
+      margin-left: 400px;
+      font-size: 30px;
+    }
+    
+    .grid {
+      margin-top: 50px;
+      boarder: 5px solid grey;
+      outline: black solid thick;
+    }
+    
+    .mid {
+      margin-left: 50px;
+    }
+    
+    .gridtop {
+      margin-bottom: auto;
+      margin-left: 520px;
+    }
+    
+    .gridbot {
+      margin-top: auto;
+      margin-left: 520px;
+    }
+    
+    .button {
+      margin-left: 480px;
+      font-size: 30px;
+    }
+    
+    .sbutton {
+      margin-left: auto;
+      font-size: 30px;
+    }
+    
+    .lbutton {
+      margin-left: auto;
+      font-size: 30px;
+    }
+    
+    .textbox {
+      margin-left: 100px;
+      font-size: 30px;
+    }
+    
+    .listbox {
+      margin-right: 100px;
+      font-size: 30px;
+    }
+  </ui:style>
+  <g:HTMLPanel>
+    <div align="left">
+      <g:HorizontalPanel>
+        <g:VerticalPanel>
+          <g:HorizontalPanel>
+            <g:Label ui:field="signInName" text="" />
+            <g:Anchor ui:field="signOut" text="" />
+          </g:HorizontalPanel>
+          <g:Label ui:field="userRank" />
+          <g:Label ui:field="signInEmail" text="" />
+          <g:Label ui:field="opponent" text="" />
+          <g:HorizontalPanel>
+            <g:Button ui:field="autoMatch" text="Auto Match" />
+            <g:Button ui:field="aiMatch" text="AI Match" />
+          </g:HorizontalPanel>
+          <g:HorizontalPanel>
+            <g:Button ui:field="selectMatch" text="Select Match" />
+            <g:TextBox ui:field="opponentBox" />
+          </g:HorizontalPanel>
+          <g:HorizontalPanel>
+            <g:Button ui:field="loadMatch" text="Load Match" />
+            <g:ListBox ui:field="matchBox" />
+          </g:HorizontalPanel>
+          <g:Label ui:field="matchTime" text="" />
+          <g:HorizontalPanel>
+            <g:Button ui:field="gameSave" text="Save" />
+            <g:Button ui:field="gameLoad" text="Load" />
+            <g:Button ui:field="gameRestart" text="Restart" />
+            <g:Button ui:field="gameDelete" text="Delete" />
+          </g:HorizontalPanel>
+        </g:VerticalPanel>
+        <g:VerticalPanel ui:field="mid" styleName="{css.mid}">
+          <g:Label ui:field="gameStatus" />
+          <g:Grid ui:field="gameGrid" styleName="{css.grid}" />
+        </g:VerticalPanel>
+
+      </g:HorizontalPanel>
+    </div>
+  </g:HTMLPanel>
+</ui:UiBinder> 

@@ -1,0 +1,204 @@
+package org.karthikmahadevan.hw2;
+
+
+import org.shared.chess.AbstractStateChangerAllTest;
+import org.shared.chess.StateChanger;
+
+
+
+public class StateChangerImplAllTest extends AbstractStateChangerAllTest {
+	  @Override
+	  public StateChanger getStateChanger() {
+	    return new StateChangerImpl();
+	  }
+	  
+	  
+	  
+	
+	/**
+	 * @param args
+	 */
+	  /* 
+	public static void main(String[] args) {
+		// TODO Auto-generated method stub
+        StateChangerImplAllTest test = new StateChangerImplAllTest();
+        test.stateChanger = test.getStateChanger();
+        test.setup();
+        test.testIllegalKingMovement();
+        test.setup();
+        try {
+        	test.testBishopAllMovements();
+        	System.out.println("PASSED");
+        }
+        catch (AssertionError e) {
+        	System.out.println("FAILED: " + e.getMessage());
+        }
+        catch (IllegalMove e) {
+        	System.out.println("FAILED: Illegal Move");
+        }
+        
+        
+        test.setup();
+        try {
+        	test.testBishopIllegalMoveStraight();
+        	System.out.println("PASSED");
+        }
+        catch (AssertionError e) {
+        	System.out.println("FAILED: " + e.getMessage());
+        }
+        catch (IllegalMove e) {
+        	System.out.println("PASSED");
+        }
+        
+        test.setup();
+        try {
+        	test.testIllegalBishopJump();
+        }
+        catch (AssertionError e) {
+        	System.out.println("FAILED: " + e.getMessage());
+        }
+        catch (IllegalMove e) {
+        	System.out.println("PASSED");
+        } 
+        
+        test.setup();
+        test.testBishopMovement();
+        
+        test.setup();
+        try {
+        	test.testIllegalRookMovementDiagonal();
+        }
+        catch (AssertionError e) {
+        	System.out.println("FAILED: " + e.getMessage());
+        }
+        catch (IllegalMove e) {
+        	System.out.println("PASSED");
+        }
+        
+        test.setup();
+        test.testQueenAcrossMovement();
+        
+        test.setup();
+        test.testQueenCapture();
+        
+        test.setup();
+        try {
+        	test.testQueenIllegalMovement();
+        }
+        catch (AssertionError e) {
+        	System.out.println("FAILED: " + e.getMessage());
+        }
+        catch (IllegalMove e) {
+        	System.out.println("PASSED");
+        }
+        
+        test.setup();
+        try {
+        	test.testRookCapturesOwnPawn();
+        }
+        catch (AssertionError e) {
+        	System.out.println("FAILED: " + e.getMessage());
+        }
+        catch (IllegalMove e) {
+        	System.out.println("PASSED");
+        }
+        
+        test.setup();
+        test.testRookForwardBackwardMovements();
+        
+        test.setup();
+        try {
+        	test.testRookIllegalJump();
+        }
+        catch (AssertionError e) {
+        	System.out.println("FAILED: " + e.getMessage());
+        }
+        catch (IllegalMove e) {
+        	System.out.println("PASSED");
+        }
+        
+        test.setup();
+        try {
+        	test.testRookMovementCrossBoundary();
+        }
+        catch (AssertionError e) {
+        	System.out.println("FAILED: " + e.getMessage());
+        }
+        catch (IllegalMove e) {
+        	System.out.println("PASSED");
+        }
+        
+        test.setup();
+        test.testKnightJumpCapture();
+        
+        test.setup();
+        try {
+        	test.testKnightJumpIllegal();
+        }
+        catch (AssertionError e) {
+        	System.out.println("FAILED: " + e.getMessage());
+        }
+        catch (IllegalMove e) {
+        	System.out.println("PASSED");
+        }
+        
+        test.setup();
+        try {
+        	test.testKnightJumpIllegal1();
+        }
+        catch (AssertionError e) {
+        	System.out.println("FAILED: " + e.getMessage());
+        }
+        catch (IllegalMove e) {
+        	System.out.println("PASSED");
+        }
+        
+        test.setup();
+        try {
+        	test.testKnightJumpIllegalSquare();
+        }
+        catch (AssertionError e) {
+        	System.out.println("FAILED: " + e.getMessage());
+        }
+        catch (IllegalMove e) {
+        	System.out.println("PASSED");
+        }
+        
+        test.setup();
+        test.testKnightJumpLegal();
+        System.out.println("PASSED");
+        
+
+        test.setup();
+        test.atStartKnightOneCanMoveUpLeft();
+        System.out.println("PASSED");
+        
+        test.setup();
+        try {
+        	test.atStartKnightOneCannotMoveDiagLeft();
+        }
+        catch (AssertionError e) {
+        	System.out.println("FAILED: " + e.getMessage());
+        }
+        catch (IllegalMove e) {
+        	System.out.println("PASSED");
+        }
+        
+        test.setup();
+        try {
+        	test.bishopOneIllegalMoveFromStart();
+        }
+        catch (AssertionError e) {
+        	System.out.println("FAILED: " + e.getMessage());
+        }
+        catch (IllegalMove e) {
+        	System.out.println("PASSED");
+        }
+        
+        test.setup();
+        
+        test.testBishopCaptureRook();
+        System.out.println("PASSED");
+   	}
+*/
+}

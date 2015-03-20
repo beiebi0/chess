@@ -1,0 +1,40 @@
+signIn = Logg på
+signOut = Logge ut
+
+rank = Rangere
+win = Rask Seier
+startMatchWith = Begynn Matche Med
+loadMatch = Laste Match
+deleteMatch = Slette matche
+autoMatch = Auto Kamp
+noGame = Ingen spill
+quickWin = Rask Seier
+
+translate = Oversette
+
+status = estado
+noGameSelected = no es un juego seleccionados
+
+
+blacksTurn = turno de Negro
+whitesTurn = turno de Blanco
+
+
+checkmateWinner = Checkmate ganador es {0}.
+fiftyMoveRule = Cincuenta regla de mover. dibujar.
+threeFoldRule = Regla Repitition Triple Draw.
+stalemate = estancamiento.
+
+opponent = adversario
+youAre = eres
+matchId = coincidir id
+
+newMatch = Nuevo juego de emparejamiento automático. oponente es {0} eres {1} cargar coincidir id: {2}
+findOpponent = {0} hecho nuevo juego. Cargar coincidir id: {1} para jugar.
+
+invalidEmail = Introduzca una dirección de correo electrónico oponente.
+emailErrorYourself = No se puede abrir el partido con uno mismo.
+
+noGames = No hay juegos en Cargas para cargar
+
+ai = 1 player modus 

@@ -1,0 +1,255 @@
+package org.leozis.hw6.server;
+
+import static com.googlecode.objectify.ObjectifyService.ofy;
+
+import java.util.Date;
+import java.util.UUID;
+
+import org.leozis.hw3.StateEncoder;
+import org.leozis.hw6.client.ChessService;
+import org.leozis.hw8.PlayerInfo;
+import org.shared.chess.Color;
+import org.shared.chess.GameResult;
+import org.shared.chess.State;
+
+import com.google.appengine.api.channel.ChannelMessage;
+import com.google.appengine.api.channel.ChannelService;
+import com.google.appengine.api.channel.ChannelServiceFactory;
+import com.google.appengine.api.users.User;
+import com.google.appengine.api.users.UserService;
+import com.google.appengine.api.users.UserServiceFactory;
+import com.google.gwt.i18n.client.DateTimeFormat;
+import com.google.gwt.user.server.rpc.RemoteServiceServlet;
+import com.googlecode.objectify.ObjectifyService;
+
+public class ChessServiceImpl extends RemoteServiceServlet implements
+		ChessService {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+	private ChannelService channelService = ChannelServiceFactory
+			.getChannelService();
+	private static Player white;
+	private static Player black;
+	private static Color nextColor;
+
+	static {
+		ObjectifyService.register(PlayerInfo.class);
+	}
+
+	@Override
+	public Player connect() {
+		UserService userService = UserServiceFactory.getUserService();
+		User user = userService.getCurrentUser();
+		String clientId = user.getNickname() + UUID.randomUUID().toString();
+		String token = channelService.createChannel(clientId);
+
+		Player player = new Player();
+		player.setUser(user.getEmail());
+		player.setClientId(clientId);
+		player.setChannelId(token);
+
+		PlayerInfo playerInfo = ofy().load().type(PlayerInfo.class)
+				.id(user.getEmail()).get();
+
+		// we create a playerinfo object if there is no player with this email
+		if (playerInfo == null) {
+			playerInfo = new PlayerInfo();
+			playerInfo.setEmail(user.getEmail());
+			playerInfo.setElo(1500);
+			playerInfo.setNickname(user.getNickname());
+
+			ofy().save().entity(playerInfo).now();
+		}
+
+		if (this.white == null) {
+			player.setColor(Color.WHITE);
+			this.white = player;
+			this.nextColor = Color.BLACK;
+		} else if (this.black == null) {
+			player.setColor(Color.BLACK);
+			this.black = player;
+			this.nextColor = Color.WHITE;
+		} else { // if neither are null
+			if (nextColor == Color.WHITE) {
+				player.setColor(Color.WHITE);
+				this.white = player;
+				this.nextColor = Color.BLACK;
+			} else {
+				player.setColor(Color.BLACK);
+				this.black = player;
+				this.nextColor = Color.WHITE;
+			}
+		}
+
+		player.setElo(playerInfo.getElo());
+
+		return player;
+	}
+
+	@Override
+	public String sendResult(String stateStr) {
+		State state = StateEncoder.decode(stateStr);
+
+		GameResult gameResult = state.getGameResult();
+
+		int whiteElo = this.calculateElo(this.white, gameResult);
+		int blackElo = this.calculateElo(this.black, gameResult);
+
+		channelService.sendMessage(new ChannelMessage(this.white.getClientId(),
+				"R" + whiteElo));
+		channelService.sendMessage(new ChannelMessage(this.black.getClientId(),
+				"R" + blackElo));
+
+		PlayerInfo playerInfoWhite = ofy().load().type(PlayerInfo.class)
+				.id(this.white.getUser()).get();
+		PlayerInfo playerInfoBlack = ofy().load().type(PlayerInfo.class)
+				.id(this.black.getUser()).get();
+
+		if (playerInfoWhite == null || playerInfoBlack == null) {
+			throw new IllegalArgumentException("A Player not found");
+		}
+
+		playerInfoWhite.setElo(whiteElo);
+		playerInfoBlack.setElo(blackElo);
+
+		ofy().save().entity(playerInfoWhite).now();
+		ofy().save().entity(playerInfoBlack).now();
+
+		return null;
+	}
+
+	private int calculateElo(Player playerA, GameResult gameResult) {
+		Color playerAColor = playerA.getColor();
+		int K = 15;
+		int Sa = 0;
+		// set the Sa
+		if (gameResult.isDraw()) {
+			Sa = 0;
+		} else if (gameResult.getWinner().equals(Color.WHITE)) {
+			if (playerAColor.isWhite()) {
+				Sa = 1;
+			} else {
+				Sa = -1;
+			}
+		}
+
+		int playerAElo;
+		int playerBElo;
+
+		if (playerAColor.isWhite()) {
+			playerAElo = this.white.getElo();
+			playerBElo = this.black.getElo();
+		} else {
+			playerAElo = this.black.getElo();
+			playerBElo = this.white.getElo();
+		}
+
+		double Ea = 1 / (1 + Math.pow(10, (playerBElo - playerAElo) / 400));
+
+		int newElo = (int) (playerAElo + K * (Sa - Ea));
+
+		return newElo;
+	}
+
+	@Override
+	// get the state of the game and update players boards through channel
+	public String updateBoard(String state) {
+		
+		PlayerInfo playerInfoWhite = ofy().load()
+				.type(PlayerInfo.class).id(this.white.getUser())
+				.get();
+		PlayerInfo playerInfoBlack = ofy().load()
+				.type(PlayerInfo.class).id(this.black.getUser())
+				.get();
+
+		if (playerInfoWhite == null || playerInfoBlack == null) {
+			throw new IllegalArgumentException("A Player not found");
+		}
+		
+		channelService.sendMessage(new ChannelMessage(this.white.getClientId(),
+				state));
+		channelService.sendMessage(new ChannelMessage(this.black.getClientId(),
+				state));
+		
+		channelService.sendMessage(new ChannelMessage(this.white
+				.getClientId(), "U" + this.black.getUser() + " ELO"
+				+ playerInfoBlack.getElo()));
+		channelService.sendMessage(new ChannelMessage(this.black
+				.getClientId(), "U" + this.white.getUser() + " ELO"
+				+ playerInfoWhite.getElo()));
+		
+		return state;
+	}
+
+	@Override
+	public String getUser() {
+		UserService userService = UserServiceFactory.getUserService();
+		User user = userService.getCurrentUser();
+		return user.getNickname();
+	}
+
+	@Override
+	public String getSignout(String href) {
+		UserService userService = UserServiceFactory.getUserService();
+		return userService.createLogoutURL(href);
+
+	}
+
+	@Override
+	public String getSignin(String href) {
+		UserService userService = UserServiceFactory.getUserService();
+		return userService.createLoginURL(href);
+
+	}
+
+	@Override
+	// if both players are ready, it sends back the opponents name
+	public String sendReady(String color) {
+		if (this.white != null) {
+			if (color.equals("W")) {
+				this.white.setReady(true);
+			}
+
+			if (this.black != null) {
+
+				if (color.equals("B")) {
+					this.black.setReady(true);
+				}
+
+				//if (this.white.isReady() && this.black.isReady()) {
+					PlayerInfo playerInfoWhite = ofy().load()
+							.type(PlayerInfo.class).id(this.white.getUser())
+							.get();
+					PlayerInfo playerInfoBlack = ofy().load()
+							.type(PlayerInfo.class).id(this.black.getUser())
+							.get();
+
+					if (playerInfoWhite == null || playerInfoBlack == null) {
+						throw new IllegalArgumentException("A Player not found");
+					}
+
+					channelService.sendMessage(new ChannelMessage(this.white
+							.getClientId(), "U" + this.black.getUser() + " ELO"
+							+ playerInfoBlack.getElo()));
+					
+					channelService.sendMessage(new ChannelMessage(this.black
+							.getClientId(), "U" + this.white.getUser() + " ELO"
+							+ playerInfoWhite.getElo()));
+					return "ready";
+				//}
+			}
+		}
+
+		return "notready";
+
+	}
+
+	@Override
+	public Date getDate() {
+		Date today = new Date();
+		return today;
+	}
+
+}

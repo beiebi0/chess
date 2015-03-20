@@ -1,0 +1,95 @@
+<!DOCTYPE ui:UiBinder SYSTEM "http://dl.google.com/gwt/DTD/xhtml.ent">
+
+<!-- ui:generateFormat='com.google.gwt.i18n.rebind.format.PropertiesFormat' 
+	ui:generateKeys="com.google.gwt.i18n.rebind.keygen.MD5KeyGenerator" ui:generateLocales="default" -->
+
+<!-- TODO: PUT IN NAMESPACE AREA xmlns:mgwt="urn:import:com.googlecode.mgwt.ui.client.widget" -->
+
+<ui:UiBinder xmlns:ui='urn:ui:com.google.gwt.uibinder'
+	xmlns:g="urn:import:com.google.gwt.user.client.ui">
+	<ui:image field="background" src="chessbaord.png" />
+
+	<ui:style field="css" type="org.markanderson.hw3.GameCss">
+		.highlighted {
+			outline: dotted red 6px;
+		}
+		
+		.narrowAnimation {
+			width: 100px;
+			transition-property: width;
+			transition-duration: 1s;
+		}
+		
+		.wideAnimation {
+			width: 400px;
+			transition-property: width;
+			transition-duration: 2s;
+		}
+		
+		.dragover {
+			outline: solid green 4px;
+		}
+		
+		@sprite .board {
+			gwt-image: "background";
+		}
+		
+		.grid {
+			margin-top: 4px;
+			margin-left: 4px;
+			border-spacing: 0px;
+			border-collapse: collapse;
+		}
+		
+		.promotionGrid {
+			margin-top: 1px;
+			margin-left: 1px;
+		}
+		
+		.customButton {
+			height: 5.7em;
+			width: 8em;
+			margin-bottom: 5px;
+			padding-bottom: 3px;
+			font-size: 12px;
+			font-family: monospace, sans-serif;
+			text-shadow: lime;
+			color: purple;
+		}
+		
+		.cellsizefix {
+			font-size: 0px;
+		}
+	</ui:style>
+	<!-- <mgwt:LayoutPanel> <mgwt:ScrollPanel scrollingEnabledX="false" scrollingEnabledY="false"> -->
+	<g:HTMLPanel>
+		<div align="center">
+			<g:Label ui:field="currentGameTime" />
+			<g:HorizontalPanel spacing="10">
+				<g:ListBox ui:field="currentGames" />
+				<g:Button ui:field="deleteMatch" />
+			</g:HorizontalPanel>
+			<g:Label ui:field="sendPlayerInviteLabel" />
+			<g:HorizontalPanel spacing="10">
+				<g:TextBox ui:field="playerInviteTextBox" />
+				<g:Button ui:field="sendPlayerInviteButton" />
+			</g:HorizontalPanel>
+			<g:Button ui:field="singlePlayerButton" />
+			<g:Label ui:field="gameStatus" text="Status" />
+			<br />
+			<div class="{css.board}">
+				<!-- <g:AbsolutePanel ui:field="gamePanel"> -->
+				<g:Grid ui:field="gameGrid" styleName="{css.grid}" />
+				<!-- </g:AbsolutePanel> -->
+			</div>
+			<g:Button ui:field="restartButton" />
+			<g:HorizontalPanel spacing="10">
+				<g:Button ui:field="save" text="save" />
+				<g:Button ui:field="load" text="load" />
+				<g:Grid ui:field="wPromotionGrid" />
+				<g:Grid ui:field="bPromotionGrid" />
+			</g:HorizontalPanel>
+		</div>
+	</g:HTMLPanel>
+	<!-- </mgwt:ScrollPanel> </mgwt:LayoutPanel> -->
+</ui:UiBinder> 

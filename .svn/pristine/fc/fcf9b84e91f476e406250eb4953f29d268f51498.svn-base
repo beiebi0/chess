@@ -1,0 +1,369 @@
+package org.yuehlinchung.hw2_5;
+
+import java.util.HashSet;
+import java.util.Set;
+
+import org.shared.chess.Move;
+import org.shared.chess.Piece;
+import org.shared.chess.PieceKind;
+import org.shared.chess.Position;
+import org.shared.chess.State;
+import org.shared.chess.StateExplorer;
+import org.shared.chess.Color;
+import org.yuehlinchung.hw2.StateChangerImpl;
+
+public class StateExplorerImpl implements StateExplorer {
+
+  @Override
+  public Set<Move> getPossibleMoves(State state) {
+    // TODO
+	Set<Move> result = new HashSet<Move>();
+	if (state.getGameResult() != null) {
+		// Game already ended!
+		return result;
+	} 
+	Color color = state.getTurn();
+	for (int i = 0; i < 8; i++) {
+		for (int j = 0; j < 8; j++) {
+			if (state.getPiece(i, j) != null
+					&& state.getPiece(i, j).getColor() == color) {
+				for (int x = 0; x < 8; x++) {
+					for (int y = 0; y < 8; y++) {
+						State testState = state.copy();
+						Move testMove = new Move(new Position(i, j), new Position(x, y), null);
+						if (new StateChangerImpl().moveCorrect(state, testState, testMove)
+								&& !kingUnderCheck(testState, state.getTurn())) {
+							result.add(testMove);
+						}
+						State testState2 = state.copy();
+						Move testMove2 = new Move(new Position(i, j), new Position(x, y), PieceKind.BISHOP);
+						if (new StateChangerImpl().moveCorrect(state, testState2, testMove2)
+								&& new StateChangerImpl().legalPromote(state, testMove2)
+								&& !kingUnderCheck(testState2, state.getTurn())) {
+							result.add(testMove2);
+						}
+						State testState3 = state.copy();
+						Move testMove3 = new Move(new Position(i, j), new Position(x, y), PieceKind.KNIGHT);
+						if (new StateChangerImpl().moveCorrect(state, testState3, testMove3)
+								&& new StateChangerImpl().legalPromote(state, testMove3)
+								&& !kingUnderCheck(testState3, state.getTurn())) {
+							result.add(testMove3);
+						}
+						State testState4 = state.copy();
+						Move testMove4 = new Move(new Position(i, j), new Position(x, y), PieceKind.QUEEN);
+						if (new StateChangerImpl().moveCorrect(state, testState4, testMove4)
+								&& new StateChangerImpl().legalPromote(state, testMove4)
+								&& !kingUnderCheck(testState4, state.getTurn())) {
+							result.add(testMove4);
+						}
+						State testState5 = state.copy();
+						Move testMove5 = new Move(new Position(i, j), new Position(x, y), PieceKind.ROOK);
+						if (new StateChangerImpl().moveCorrect(state, testState5, testMove5)
+								&& new StateChangerImpl().legalPromote(state, testMove5)
+								&& !kingUnderCheck(testState5, state.getTurn())) {
+							result.add(testMove5);
+						}
+					}
+				}
+			}
+		}
+	}
+    return result;
+  }
+
+  @Override
+  public Set<Move> getPossibleMovesFromPosition(State state, Position start) {
+    // TODO
+	Set<Move> result = new HashSet<Move>();
+	if (state.getGameResult() != null) {
+		// Game already ended!
+		return result;
+	}
+	Color color = state.getTurn();
+	for (int i = 0; i < 8; i++) {
+		for (int j = 0; j < 8; j++) {
+			if (state.getPiece(start) != null
+					&& state.getPiece(start).getColor() == color) {
+				State testState1 = state.copy();
+				Move testMove1 = new Move(start, new Position(i, j), null);
+				if (new StateChangerImpl().moveCorrect(state, testState1, testMove1)
+						&& !kingUnderCheck(testState1, state.getTurn())) {
+					result.add(testMove1);
+				}
+				State testState2 = state.copy();
+				Move testMove2 = new Move(start, new Position(i, j), PieceKind.BISHOP);
+				if (new StateChangerImpl().moveCorrect(state, testState2, testMove2)
+						&& new StateChangerImpl().legalPromote(state, testMove2)
+						&& !kingUnderCheck(testState2, state.getTurn())) {
+					result.add(testMove2);
+				}
+				State testState3 = state.copy();
+				Move testMove3 = new Move(start, new Position(i, j), PieceKind.KNIGHT);
+				if (new StateChangerImpl().moveCorrect(state, testState3, testMove3)
+						&& new StateChangerImpl().legalPromote(state, testMove3)
+						&& !kingUnderCheck(testState3, state.getTurn())) {
+					result.add(testMove3);
+				}
+				State testState4 = state.copy();
+				Move testMove4 = new Move(start, new Position(i, j), PieceKind.QUEEN);
+				if (new StateChangerImpl().moveCorrect(state, testState4, testMove4)
+						&& new StateChangerImpl().legalPromote(state, testMove4)
+						&& !kingUnderCheck(testState4, state.getTurn())) {
+					result.add(testMove4);
+				}
+				State testState5 = state.copy();
+				Move testMove5 = new Move(start, new Position(i, j), PieceKind.ROOK);
+				if (new StateChangerImpl().moveCorrect(state, testState5, testMove5)
+						&& new StateChangerImpl().legalPromote(state, testMove5)
+						&& !kingUnderCheck(testState5, state.getTurn())) {
+					result.add(testMove5);
+				}
+			}
+		}
+	}
+    return result;
+  }
+
+  @Override
+  public Set<Position> getPossibleStartPositions(State state) {
+    // TODO
+	Set<Position> result = new HashSet<Position>();
+	if (state.getGameResult() != null) {
+		// Game already ended!
+		return result;
+	} 
+	Move testMove;
+	Color color = state.getTurn();
+	for (int i = 0; i < 8; i++) {
+		for (int j = 0; j < 8; j++) {
+			if (state.getPiece(i, j) != null
+					&& state.getPiece(i, j).getColor() == color) {
+				for (int x = 0; x < 8; x++) {
+					for (int y = 0; y < 8; y++) {
+						State testState = state.copy();
+						testMove = new Move(new Position(i, j), new Position(x, y), null);
+						if (state.getPiece(i, j).getKind() == PieceKind.PAWN
+								&& ((i == 6 && x == 7) || (i == 1 && x == 0)))
+							testMove = new Move(new Position(i, j), new Position(x, y), PieceKind.QUEEN);
+						if (new StateChangerImpl().moveCorrect(state, testState, testMove)
+								&& !kingUnderCheck(testState, state.getTurn())) {
+							result.add(new Position(i, j));
+						}
+					}
+				}
+			}
+		}
+	}
+    return result;
+  }
+  
+  private boolean kingUnderCheck(State estimatedState, Color color) {
+		Position kingPosition = new Position(0, 0);
+		Piece king = new Piece(color, PieceKind.KING);
+		Color opColor = color.getOpposite();
+		Move testMove;
+		for (int i = 0; i < 8; i++) {
+			for (int j = 0; j < 8; j++) {
+				if (estimatedState.getPiece(i, j) != null
+						&& estimatedState.getPiece(i, j).equals(king)) {
+					kingPosition = new Position(i, j);
+				}
+			}
+		}
+		for (int i = 0; i < 8; i ++) {
+			for (int j = 0; j < 8; j++) {
+				if (estimatedState.getPiece(i, j) != null
+						&& estimatedState.getPiece(i, j).getColor() == opColor) {
+					State testState = estimatedState.copy();
+					testMove = new Move(new Position(i, j), kingPosition, null);
+					if (capturePossible(estimatedState, testState, testMove)) {
+						return true;
+					}
+				}
+			}
+		}
+		return false;
+	}
+  
+  private boolean capturePossible(State estimatedState, State testState, Move testMove) {
+		Position from = testMove.getFrom();
+		Piece piece = estimatedState.getPiece(from);
+		Position to = testMove.getTo();
+		Color color = piece.getColor();
+		int to_Col = to.getCol();
+		int to_Row = to.getRow();
+		int from_Col = from.getCol();
+		int from_Row = from.getRow();
+		int tmp_Row = Math.abs(to_Row - from_Row);
+		int tmp_Col = Math.abs(to_Col - from_Col);
+
+		// Move
+		testState.setPiece(to, null);
+		testState.setPiece(to, piece);
+		testState.setPiece(from, null);
+		testState.setEnpassantPosition(null);
+
+		switch (piece.getKind()) {
+		case PAWN:
+			// White
+			if (color == Color.WHITE) {
+				// Capture
+				if ((tmp_Row == 1) && (tmp_Col == 1)
+						&& (to_Row > from_Row)) {
+					if (estimatedState.getPiece(to) == null) {
+						return false;
+					}
+				} else {
+					return false;
+				}
+				return true;
+			// Black
+			} else if (color == Color.BLACK) {
+				// Capture
+				if ((tmp_Row == 1) && (tmp_Col == 1)
+							&& (to_Row < from_Row)) {
+					if (estimatedState.getPiece(to) == null) {
+							return false;
+					}
+				} else {
+					return false;
+				}
+				return true;
+			}
+			break;
+		case KING:
+			if ((tmp_Row == 1 && from_Col == to_Col)
+					|| (tmp_Col == 1 && from_Row == to_Row)
+					|| (tmp_Col == 1 && tmp_Row == 1)) {
+				return true;
+			}
+			break;
+		case QUEEN:
+			if ((tmp_Row == tmp_Col) || (to_Col == from_Col)
+					|| (to_Row == from_Row)) {
+				// If there is some piece on the path
+				if ((to_Col > from_Col) && (to_Row > from_Row)) {
+					for (int i = 1; i < tmp_Row; i++) {
+						if (estimatedState.getPiece(from_Row + i, from_Col + i) != null) {
+							return false;
+						}
+					}
+				} else if ((to_Col < from_Col) && (to_Row > from_Row)) {
+					for (int i = 1; i < tmp_Row; i++) {
+						if (estimatedState.getPiece(from_Row + i, from_Col - i) != null) {
+							return false;
+						}
+					}
+				} else if ((to_Col > from_Col) && (to_Row < from_Row)) {
+					for (int i = 1; i < tmp_Row; i++) {
+						if (estimatedState.getPiece(from_Row - i, from_Col + i) != null) {
+							return false;
+						}
+					}
+				} else if ((to_Col < from_Col) && (to_Row < from_Row)) {
+					for (int i = 1; i < tmp_Row; i++) {
+						if (estimatedState.getPiece(from_Row - i, from_Col - i) != null) {
+							return false;
+						}
+					}
+				} else if ((to_Row == from_Row) && (to_Col > from_Col)) {
+					for (int i = 1; i < tmp_Col; i++) {
+						if (estimatedState.getPiece(from_Row, from_Col + i) != null) {
+							return false;
+						}
+					}
+				} else if ((to_Row == from_Row) && (to_Col < from_Col)) {
+					for (int i = 1; i < tmp_Col; i++) {
+						if (estimatedState.getPiece(from_Row, from_Col - i) != null) {
+							return false;
+						}
+					}
+				} else if ((to_Row > from_Row) && (to_Col == from_Col)) {
+					for (int i = 1; i < tmp_Row; i++) {
+						if (estimatedState.getPiece(from_Row + i, from_Col) != null) {
+							return false;
+						}
+					}
+				} else if ((to_Row < from_Row) && (to_Col == from_Col)) {
+					for (int i = 1; i < tmp_Row; i++) {
+						if (estimatedState.getPiece(from_Row - i, from_Col) != null) {
+							return false;
+						}
+					}
+				}
+				return true;
+			}
+			break;
+		case KNIGHT:
+			if (((tmp_Row == 2) && (tmp_Col == 1))
+					|| ((tmp_Row == 1) && (tmp_Col == 2))) {
+				return true;
+			}
+			break;
+		case ROOK:
+			if ((to_Col == from_Col) || (to_Row == from_Row)) {
+				// If there is some piece on the path
+				if ((to_Row == from_Row) && (to_Col > from_Col)) {
+					for (int i = 1; i < tmp_Col; i++) {
+						if (estimatedState.getPiece(from_Row, from_Col + i) != null) {
+							return false;
+						}
+					}
+				} else if ((to_Row == from_Row) && (to_Col < from_Col)) {
+					for (int i = 1; i < tmp_Col; i++) {
+						if (estimatedState.getPiece(from_Row, from_Col - i) != null) {
+							return false;
+						}
+					}
+				} else if ((to_Row > from_Row) && (to_Col == from_Col)) {
+					for (int i = 1; i < tmp_Row; i++) {
+						if (estimatedState.getPiece(from_Row + i, from_Col) != null) {
+							return false;
+						}
+					}
+				} else if ((to_Row < from_Row) && (to_Col == from_Col)) {
+					for (int i = 1; i < tmp_Row; i++) {
+						if (estimatedState.getPiece(from_Row - i, from_Col) != null) {
+							return false;
+						}
+					}
+				}
+				return true;
+			}
+			break;
+		case BISHOP:
+			if (tmp_Row == tmp_Col) {
+				// If there is some piece on the path
+				if ((to_Col > from_Col) && (to_Row > from_Row)) {
+					for (int i = 1; i < tmp_Row; i++) {
+						if (estimatedState.getPiece(from_Row + i, from_Col + i) != null) {
+							return false;
+						}
+					}
+				} else if ((to_Col < from_Col) && (to_Row > from_Row)) {
+					for (int i = 1; i < tmp_Row; i++) {
+						if (estimatedState.getPiece(from_Row + i, from_Col - i) != null) {
+							return false;
+						}
+					}
+				} else if ((to_Col > from_Col) && (to_Row < from_Row)) {
+					for (int i = 1; i < tmp_Row; i++) {
+						if (estimatedState.getPiece(from_Row - i, from_Col + i) != null) {
+							return false;
+						}
+					}
+				} else if ((to_Col < from_Col) && (to_Row < from_Row)) {
+					for (int i = 1; i < tmp_Row; i++) {
+						if (estimatedState.getPiece(from_Row - i, from_Col - i) != null) {
+							return false;
+						}
+					}
+				}
+				return true;
+			}
+			break;
+		}
+		return false;
+	}
+  
+}

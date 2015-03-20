@@ -1,0 +1,18 @@
+package org.zhaohuizhang.hw6.client;
+import org.zhaohuizhang.hw8.ResultOfPlayer;
+
+import com.google.gwt.user.client.rpc.RemoteService;
+import com.google.gwt.user.client.rpc.RemoteServiceRelativePath;
+
+@RemoteServiceRelativePath("chessGames")
+public interface ChessGameService extends RemoteService{
+	public LoginInfo login(String requestUri);
+	void sendMove(String moveStr);
+	void sendState(String stateStr);
+	void matchPlayers();
+	String connectToServer();
+	void updateMatch(String email, String state, String turn, boolean isOver);
+	String[] getAllMatches();
+	String[] getPlayerInfo();
+	String updateRank(String OpponentEmail, ResultOfPlayer result);
+}

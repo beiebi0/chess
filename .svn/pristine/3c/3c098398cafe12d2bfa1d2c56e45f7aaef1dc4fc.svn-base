@@ -1,0 +1,47 @@
+package org.karthikmahadevan.hw3;
+
+import com.google.gwt.animation.client.Animation;
+import com.google.gwt.resources.client.ImageResource;
+import com.google.gwt.user.client.ui.Image;
+import com.google.gwt.user.client.ui.RootPanel;
+
+public class MoveAnimation extends Animation {
+
+	int xInitial;
+	int yInitial;
+	int xFinal;
+	int yFinal;
+	int xIncrement;
+	int yIncrement;
+	Image[][] board;
+	Image image;
+	int count = 1;
+	
+	public MoveAnimation(int rowInit, int colInit, int rowFin, int colFin, 
+			ImageResource resource, Image[][] board) {
+		this.board = board;
+		xInitial = board[rowInit][colInit].getAbsoluteLeft();
+		yInitial = board[rowInit][colInit].getAbsoluteTop();
+		xFinal = board[rowFin][colFin].getAbsoluteLeft();
+		yFinal = board[rowFin][colFin].getAbsoluteTop();
+		xIncrement = (xFinal - xInitial)/20;
+		yIncrement = (yInitial - yFinal)/20;
+		image = new Image();
+		image.setResource(resource);
+	}
+	
+	@Override
+	protected void onUpdate(double progress) {
+		int left = xInitial + count*xIncrement;
+		int top = yInitial + count*yIncrement;
+		RootPanel.get().add(image, left, top);
+		count++;
+		System.out.println(count + ": " + left + " " + top);
+	}
+	
+	@Override
+	protected void onComplete() {
+		RootPanel.get().remove(image);
+	}
+
+}

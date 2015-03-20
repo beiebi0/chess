@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- When updating your version of GWT, you should also update this DTD reference, 
+	so that your app can take advantage of the latest GWT module capabilities. -->
+<!DOCTYPE module PUBLIC "-//Google Inc.//DTD Google Web Toolkit 2.5.0//EN"
+  "http://google-web-toolkit.googlecode.com/svn/tags/2.5.0/distro-source/core/src/gwt-module.dtd">
+<module rename-to='markanderson'>
+	<!-- Inherit the core Web Toolkit stuff. -->
+	<inherits name='com.google.gwt.user.User' />
+	<inherits name='com.allen_sauer.gwt.dnd.gwt-dnd' />
+
+<!-- TODO: MGWT SHTUFF -->
+<!-- 	<inherits name="com.googlecode.mgwt.linker.Linker" />
+	<add-linker name="permutationmaplinker" />
+	<inherits name='com.googlecode.mgwt.MGWT' />
+	<set-property name="user.agent" value="safari" />
+ -->
+<!-- 	<extend-configuration-property name="html5manifestlinker_files"
+		value="./" />
+	<extend-configuration-property name="html5manifestlinker_files"
+		value="markanderson.html" />
+	<extend-configuration-property name="html5manifestlinker_files"
+		value="markanderson.css" />
+ -->
+ <!-- END TODO -->
+ 
+	<!-- <inherits name="com.google.gwt.i18n.I18N" /> -->
+	<!-- Inherit the default GWT style sheet. You can change -->
+	<!-- the theme of your GWT application by uncommenting -->
+	<!-- any one of the following lines. -->
+	<!-- <inherits name='com.google.gwt.user.theme.clean.Clean'/> -->
+	<!-- <inherits name='com.google.gwt.user.theme.standard.Standard'/> -->
+	<inherits name='com.google.gwt.user.theme.chrome.Chrome' />
+	<!-- <inherits name='com.google.gwt.user.theme.dark.Dark'/> -->
+
+	<!-- <extend-property values="en_US,sv_SE" name="locale" /> <set-property-fallback 
+		name="locale" value="en_US" /> -->
+	
+	<inherits name='com.googlecode.gwtphonegap.PhoneGap' />	
+	<inherits name='com.google.common.collect.Collect' />
+	<inherits name='com.google.gwt.appengine.channel.Channel' />
+	<inherits name='com.google.gwt.inject.Inject' />
+	<!-- Specify the app entry point class. -->
+	<entry-point class='org.markanderson.hw3.ChessEntryPoint' />
+
+	<add-linker name="xsiframe" />
+
+	<!-- Specify the paths for translatable code -->
+	<source path='markanderson' />
+	<source path='shared' />
+
+</module>

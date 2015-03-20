@@ -1,0 +1,56 @@
+package org.sanjana.hw3;
+
+import com.google.gwt.resources.client.ClientBundle;
+import com.google.gwt.resources.client.ImageResource;
+import com.google.gwt.resources.client.ClientBundle.Source;
+
+public interface GameImages extends ClientBundle {
+
+	@Source("background.jpg")
+	ImageResource backGround();
+
+	@Source("black_tile.png")
+	ImageResource blackTile();
+
+	@Source("white_tile.png")
+	ImageResource whiteTile();
+
+	@Source("emptyTile.png")
+	ImageResource emptyTile();
+
+	@Source("whiteKing.png")
+	ImageResource whiteKing();
+
+	@Source("blackKing.png")
+	ImageResource blackKing();
+
+	@Source("whiteQueen.png")
+	ImageResource whiteQueen();
+
+	@Source("blackQueen.png")
+	ImageResource blackQueen();
+
+	@Source("whiteBishop.png")
+	ImageResource whiteBishop();
+
+	@Source("blackBishop.png")
+	ImageResource blackBishop();
+
+	@Source("whiteRook.png")
+	ImageResource whiteRook();
+
+	@Source("blackRook.png")
+	ImageResource blackRook();
+
+	@Source("whiteKnight.png")
+	ImageResource whiteKnight();
+
+	@Source("blackKnight.png")
+	ImageResource blackKnight();
+
+	@Source("whitePawn.png")
+	ImageResource whitePawn();
+
+	@Source("blackPawn.png")
+	ImageResource blackPawn();
+}

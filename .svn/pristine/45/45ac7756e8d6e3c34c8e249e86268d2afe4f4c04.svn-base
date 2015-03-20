@@ -1,0 +1,108 @@
+package org.wenjiechen.hw3;
+
+import com.google.gwt.core.client.EntryPoint;
+import com.google.gwt.core.client.GWT;
+import com.google.gwt.event.dom.client.ClickEvent;
+import com.google.gwt.event.dom.client.ClickHandler;
+import com.google.gwt.user.client.History;
+import com.google.gwt.user.client.Window;
+import com.google.gwt.user.client.rpc.AsyncCallback;
+import com.google.gwt.user.client.ui.Anchor;
+import com.google.gwt.user.client.ui.Button;
+import com.google.gwt.user.client.ui.Label;
+import com.google.gwt.user.client.ui.MultiWordSuggestOracle;
+import com.google.gwt.user.client.ui.PopupPanel;
+import com.google.gwt.user.client.ui.RootPanel;
+import com.google.gwt.user.client.ui.SuggestBox;
+import com.google.gwt.user.client.ui.TextBox;
+import com.google.gwt.user.client.ui.VerticalPanel;
+
+import org.shared.chess.State;
+import org.wenjiechen.hw6.client.ChessGameService;
+import org.wenjiechen.hw6.client.ChessGameServiceAsync;
+import org.wenjiechen.hw6.client.LoginInfo;
+import org.wenjiechen.hw6.client.LoginService;
+import org.wenjiechen.hw6.client.LoginServiceAsync;
+
+public class ChessEntryPoint implements EntryPoint {
+
+	private LoginInfo loginInfo = null;
+	private Label loginLabel = new Label(
+			"Use your Google Account to sign in the Chess Game by wenjie chen.");
+	private Anchor signInLink = new Anchor("Sign In");
+	
+	private VerticalPanel fakeLoginPanel = new VerticalPanel();
+	private PopupPanel popupLoginPanel  = new PopupPanel();
+	private TextBox emailBox = new TextBox();
+	private Button submit = new Button();
+
+//	SuggestBox emailMatchSuggestBox = new SuggestBox();	
+//    private final MultiWordSuggestOracle oracle = new MultiWordSuggestOracle();
+	
+	@Override
+	public void onModuleLoad() {				
+		loadModule();
+		
+//		LoginServiceAsync loginService = GWT.create(LoginService.class);
+//		loginService.login(GWT.getHostPageBaseURL()+ "wenjiechen.html",
+//				
+//				new AsyncCallback<LoginInfo>() {
+//					@Override
+//					public void onFailure(Throwable error) {
+//						Window.alert("Login page failure!");
+//					}
+//
+//					@Override
+//					public void onSuccess(LoginInfo result) {
+////						Window.alert("Login page success!");
+//						loginInfo = result;
+//						if (loginInfo.isLoggedIn()) {
+//							loadModule();
+//						} else {
+//							loadLogin();
+//						}
+//					}
+//				});
+		
+	}
+
+	private void loadModule() {
+		submit.setText("Login");
+		fakeLoginPanel.add(new Label("Enter your email to login"));
+		fakeLoginPanel.add(emailBox);
+		fakeLoginPanel.add(submit);
+		popupLoginPanel.add(fakeLoginPanel);
+		popupLoginPanel.center();
+		
+		final Graphics graphics = new Graphics();
+		Presenter presenter = new Presenter();
+//		final Presenter finalPresenter = presenter;
+		presenter.setView(graphics);
+		graphics.setPresenter(presenter);
+//		graphics.setLogoutURL(loginInfo.getLogoutUrl());		
+		presenter.viewBinder();
+		presenter.setState(new State());
+
+		
+		submit.addClickHandler(new ClickHandler() {
+			@Override
+			public void onClick(ClickEvent event) {
+			 String email = emailBox.getText();				
+			 graphics.getPlayerEmail(email);
+			 popupLoginPanel.hide();
+			}
+		});
+
+		RootPanel.get().add(graphics);
+	}
+
+//	private void loadLogin() {
+//		// Assemble login panel.
+////		System.out.println("loadModule(): loadLogin");
+//		signInLink.setHref(loginInfo.getLoginUrl());
+//		loginPanel.add(loginLabel);
+//		loginPanel.add(signInLink);
+//		RootPanel.get().add(loginPanel);
+//	}
+	
+}

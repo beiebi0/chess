@@ -1,0 +1,36 @@
+package org.wenjiechen.hw5;
+
+import com.google.gwt.animation.client.Animation;
+import com.google.gwt.dom.client.Style.Unit;
+import com.google.gwt.user.client.ui.Widget;
+
+public class ResizeAnimation extends Animation {
+
+	private int startWidth = 0;
+	private int desiredWidth = 0;
+	private int startHeight = 0;
+	private int desiredHeight = 0;
+	private Widget widget;
+	
+	public ResizeAnimation(Widget widget, int desiredWidth, int desiredHeight){
+		this.startHeight = widget.getOffsetHeight();
+		this.startWidth = widget.getOffsetWidth();
+		this.desiredHeight = desiredHeight;
+		this.desiredWidth = desiredWidth;
+		this.widget = widget;
+	}
+	
+	@Override
+	protected void onUpdate(double progress){
+		double width = extractProportionalLength(startWidth,desiredWidth, progress);
+		widget.setWidth(width + Unit.PX.getType());
+		double height = extractProportionalLength(startHeight,desiredHeight, progress);
+		widget.setHeight(height + Unit.PX.getType());
+				
+	}
+
+	private double extractProportionalLength(int startLength,int desiredLength, double progress){
+		double outLength = startLength - (startLength - desiredLength) * progress;
+        return outLength;
+	}
+}

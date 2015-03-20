@@ -1,0 +1,458 @@
+package org.kanwang.hw1;
+
+import static org.junit.Assert.assertEquals;
+
+import org.junit.Test;
+import org.shared.chess.AbstractStateChangerTest;
+import org.shared.chess.Color;
+import org.shared.chess.IllegalMove;
+import org.shared.chess.Move;
+import org.shared.chess.Piece;
+import org.shared.chess.PieceKind;
+import org.shared.chess.Position;
+import org.shared.chess.State;
+
+/**
+ * JUnit test for promotion of white.
+ * 
+ * for legal promotion: 
+ * 1. create a certain state s1;
+ * 2. new a move with not-null 3rd parameter, promote it to a certain type; 
+ * 3. make a new state s2. it should be the state after this move. 
+ * 4. compare: stateChanger(s1, move) & s2.
+ * 
+ * for illegal promotion:
+ * 1. a pawn is not in (6, x) but move by promotion. 
+ * 2. a pawn is in (6, x) but move is impossible. 
+ * 3. move to (7, x) but did not promote or promote to a king.
+ * 4. move when king it is under check.
+ * 5. try to promote a not-pawn piece.
+ * 
+ * @author Kan Wang, kw1308@nyu.edu
+ * 
+ */
+
+public abstract class AbstractStateChangerPromotionForWhiteTest extends
+		AbstractStateChangerTest {
+	/**
+	 * legal promotion test: move to empty piece
+	 */
+	@Test
+	public void testPromotionToQueenEmptyPiece() {
+		Move move = new Move(new Position(6, 0), new Position(7, 0),
+				PieceKind.QUEEN);
+		start.setPiece(7, 0, null);
+		start.setPiece(6, 0, null);
+		start.setPiece(1, 0, null);
+		start.setPiece(6, 0, new Piece(Color.WHITE, PieceKind.PAWN));
+		start.setCanCastleQueenSide(Color.BLACK, false);
+
+		State expected = start.copy();
+
+		// set pieces
+		expected.setPiece(7, 0, new Piece(Color.WHITE, PieceKind.QUEEN));
+		expected.setPiece(6, 0, null);
+
+		// other states do not need to be set
+		expected.setNumberOfMovesWithoutCaptureNorPawnMoved(0);
+		expected.setTurn(Color.BLACK);
+
+		stateChanger.makeMove(start, move);
+		assertEquals(expected, start);
+		start = new State();
+	}
+
+	@Test
+	public void testPromotionToBishopEmptyPiece() {
+		Move move = new Move(new Position(6, 1), new Position(7, 1),
+				PieceKind.BISHOP);
+		start.setPiece(7, 1, null);
+		start.setPiece(6, 1, null);
+		start.setPiece(1, 1, null);
+		start.setPiece(6, 1, new Piece(Color.WHITE, PieceKind.PAWN));
+
+		State expected = start.copy();
+
+		// set pieces
+		expected.setPiece(7, 1, new Piece(Color.WHITE, PieceKind.BISHOP));
+		expected.setPiece(6, 1, null);
+
+		// other states do not need to be set
+		expected.setNumberOfMovesWithoutCaptureNorPawnMoved(0);
+		expected.setTurn(Color.BLACK);
+
+		stateChanger.makeMove(start, move);
+		assertEquals(expected, start);
+		start = new State();
+	}
+
+	@Test
+	public void testPromotionToKnightEmptyPiece() {
+		Move move = new Move(new Position(6, 2), new Position(7, 2),
+				PieceKind.KNIGHT);
+		start.setPiece(7, 2, null);
+		start.setPiece(6, 2, null);
+		start.setPiece(1, 2, null);
+		start.setPiece(6, 2, new Piece(Color.WHITE, PieceKind.PAWN));
+
+		State expected = start.copy();
+
+		// set pieces
+		expected.setPiece(7, 2, new Piece(Color.WHITE, PieceKind.KNIGHT));
+		expected.setPiece(6, 2, null);
+
+		// other states do not need to be set
+		expected.setNumberOfMovesWithoutCaptureNorPawnMoved(0);
+		expected.setTurn(Color.BLACK);
+
+		stateChanger.makeMove(start, move);
+		assertEquals(expected, start);
+		start = new State();
+	}
+
+	@Test
+	public void testPromotionToRookEmptyPiece() {
+		Move move = new Move(new Position(6, 3), new Position(7, 3),
+				PieceKind.ROOK);
+		start.setPiece(7, 3, null);
+		start.setPiece(6, 3, null);
+		start.setPiece(1, 3, null);
+		start.setPiece(6, 4, null);
+		start.setPiece(6, 3, new Piece(Color.WHITE, PieceKind.PAWN));
+
+		State expected = start.copy();
+
+		// set pieces
+		expected.setPiece(7, 3, new Piece(Color.WHITE, PieceKind.ROOK));
+		expected.setPiece(6, 3, null);
+
+		// other states do not need to be set
+		expected.setNumberOfMovesWithoutCaptureNorPawnMoved(0);
+		expected.setTurn(Color.BLACK);
+
+		stateChanger.makeMove(start, move);
+		assertEquals(expected, start);
+		start = new State();
+	}
+
+	/**
+	 * test for promotion: promotion with a capture
+	 */
+
+	@Test
+	public void testPromotionToQueenWithCapture() {
+		Move move = new Move(new Position(6, 4), new Position(7, 5),
+				PieceKind.QUEEN);
+		start.setPiece(6, 4, null);
+		start.setPiece(1, 4, null);
+		start.setPiece(6, 4, new Piece(Color.WHITE, PieceKind.PAWN));
+
+		State expected = start.copy();
+
+		// set pieces
+		expected.setPiece(7, 5, new Piece(Color.WHITE, PieceKind.QUEEN));
+		expected.setPiece(6, 4, null);
+
+		// other states do not need to be set
+		expected.setNumberOfMovesWithoutCaptureNorPawnMoved(0);
+		expected.setTurn(Color.BLACK);
+
+		stateChanger.makeMove(start, move);
+		assertEquals(expected, start);
+
+		// make sure start is the beginning state
+		start = new State();
+	}
+	
+	@Test
+	public void testPromotionToBishopWithCapture() {
+		Move move = new Move(new Position(6, 5), new Position(7, 6),
+				PieceKind.BISHOP);
+		start.setPiece(6, 5, null);
+		start.setPiece(1, 5, null);
+		start.setPiece(6, 5, new Piece(Color.WHITE, PieceKind.PAWN));
+
+		State expected = start.copy();
+
+		// set pieces
+		expected.setPiece(7, 6, new Piece(Color.WHITE, PieceKind.BISHOP));
+		expected.setPiece(6, 5, null);
+
+		// other states do not need to be set
+		expected.setNumberOfMovesWithoutCaptureNorPawnMoved(0);
+		expected.setTurn(Color.BLACK);
+
+		stateChanger.makeMove(start, move);
+		assertEquals(expected, start);
+
+		// make sure start is the beginning state
+		start = new State();
+	}
+
+	@Test
+	public void testPromotionToKnightWithCapture() {
+		Move move = new Move(new Position(6, 6), new Position(7, 7),
+				PieceKind.KNIGHT);
+		start.setPiece(6, 6, null);
+		start.setPiece(1, 6, null);
+		start.setPiece(6, 6, new Piece(Color.WHITE, PieceKind.PAWN));
+
+		State expected = start.copy();
+
+		// set pieces
+		expected.setPiece(7, 7, new Piece(Color.WHITE, PieceKind.KNIGHT));
+		expected.setPiece(6, 6, null);
+
+		// other states do not need to be set
+		expected.setNumberOfMovesWithoutCaptureNorPawnMoved(0);
+		expected.setTurn(Color.BLACK);
+		expected.setCanCastleKingSide(Color.BLACK, false);
+
+		stateChanger.makeMove(start, move);
+		assertEquals(expected, start);
+
+		// make sure start is the beginning state
+		start = new State();
+	}
+
+	@Test
+	public void testPromotionToRookWithCapture() {
+		Move move = new Move(new Position(6, 7), new Position(7, 6),
+				PieceKind.ROOK);
+		start.setPiece(6, 7, null);
+		start.setPiece(1, 7, null);
+		start.setPiece(6, 7, new Piece(Color.WHITE, PieceKind.PAWN));
+
+		State expected = start.copy();
+
+		// set pieces
+		expected.setPiece(7, 6, new Piece(Color.WHITE, PieceKind.ROOK));
+		expected.setPiece(6, 7, null);
+
+		// other states do not need to be set
+		expected.setNumberOfMovesWithoutCaptureNorPawnMoved(0);
+		expected.setTurn(Color.BLACK);
+
+		stateChanger.makeMove(start, move);
+		assertEquals(expected, start);
+
+		// make sure start is the beginning state
+		start = new State();
+	}
+
+	// some random test of promotion to queen
+	@Test
+	public void testPromotionToQueenRandom1() {
+		Move move = new Move(new Position(6, 3), new Position(7, 3),
+				PieceKind.QUEEN);
+		start.setPiece(7, 3, null);
+		start.setPiece(6, 3, null);
+		start.setPiece(1, 3, null);
+		start.setPiece(6, 4, null);
+		start.setPiece(6, 5, null);
+		start.setPiece(6, 3, new Piece(Color.WHITE, PieceKind.PAWN));
+
+		State expected = start.copy();
+
+		// set pieces
+		expected.setPiece(7, 3, new Piece(Color.WHITE, PieceKind.QUEEN));
+		expected.setPiece(6, 3, null);
+
+		// other states do not need to be set
+		expected.setNumberOfMovesWithoutCaptureNorPawnMoved(0);
+		expected.setTurn(Color.BLACK);
+
+		stateChanger.makeMove(start, move);
+		assertEquals(expected, start);
+		start = new State();
+	}
+
+	// some random test of promotion to queen
+	@Test
+	public void testPromotionToQueenRandom2() {
+		Move move = new Move(new Position(6, 5), new Position(7, 6),
+				PieceKind.QUEEN);
+		start.setPiece(6, 5, null);
+		start.setPiece(1, 5, null);
+		start.setPiece(6, 5, new Piece(Color.WHITE, PieceKind.PAWN));
+
+		State expected = start.copy();
+
+		// set pieces
+		expected.setPiece(7, 6, new Piece(Color.WHITE, PieceKind.QUEEN));
+		expected.setPiece(6, 5, null);
+
+		// other states do not need to be set
+		expected.setNumberOfMovesWithoutCaptureNorPawnMoved(0);
+		expected.setTurn(Color.BLACK);
+
+		stateChanger.makeMove(start, move);
+		assertEquals(expected, start);
+		start = new State();
+	}
+	
+	/**
+	 * test for illegal promotion: not in (6, x)
+	 */
+	
+	@Test(expected = IllegalMove.class)
+	public void testIllegalPromotionWrongPosition1() {
+		Move move = new Move(new Position(1, 3), new Position(3, 3),
+				PieceKind.QUEEN);
+		stateChanger.makeMove(start, move);
+	}
+
+	@Test(expected = IllegalMove.class)
+	public void testIllegalPromotionWrongPosition2() {
+		start.setPiece(4, 4, new Piece(Color.WHITE, PieceKind.PAWN));
+		start.setPiece(1, 4, null);
+		Move move = new Move(new Position(4, 4), new Position(5, 4),
+				PieceKind.QUEEN);
+		stateChanger.makeMove(start, move);
+		start = new State();
+	}
+	
+	/**
+	 * test for illegal promotion: move is not possible
+	 */
+	@Test(expected = IllegalMove.class)
+	public void testIllegalPromotionIllegalMove1() {
+		Move move = new Move(new Position(6, 5), new Position(7, 6),
+				PieceKind.QUEEN);
+		start.setPiece(7, 6, null);
+		start.setPiece(6, 5, null);
+		start.setPiece(1, 5, null);
+		start.setPiece(6, 5, new Piece(Color.WHITE, PieceKind.PAWN));
+		
+		stateChanger.makeMove(start, move);
+		start = new State();
+	}
+	
+	@Test(expected = IllegalMove.class)
+	public void testIllegalPromotionIllegalMove2() {
+		Move move = new Move(new Position(6, 5), new Position(7, 5),
+				PieceKind.QUEEN);
+		start.setPiece(6, 5, null);
+		start.setPiece(1, 5, null);
+		start.setPiece(6, 5, new Piece(Color.WHITE, PieceKind.PAWN));
+		start.setPiece(0, 3, null);
+		start.setPiece(7, 5, new Piece(Color.WHITE, PieceKind.QUEEN));
+		
+		stateChanger.makeMove(start, move);
+		start = new State();
+	}
+	
+	/**
+	 * test for promote: do not promote when a pawn get (7, x)
+	 */
+	@Test(expected = IllegalMove.class)
+	public void testIllegalPromotionNotPromote1() {
+		Move move = new Move(new Position(6, 5), new Position(7, 5),
+				null);
+		start.setPiece(6, 5, null);
+		start.setPiece(1, 5, null);
+		start.setPiece(6, 5, new Piece(Color.WHITE, PieceKind.PAWN));
+		
+		stateChanger.makeMove(start, move);
+		start = new State();
+	}
+	
+	@Test(expected = IllegalMove.class)
+	public void testIllegalPromotionNotPromote2() {
+		Move move = new Move(new Position(6, 1), new Position(7, 1),
+				null);
+		start.setPiece(6, 1, null);
+		start.setPiece(1, 1, null);
+		start.setPiece(6, 1, new Piece(Color.WHITE, PieceKind.PAWN));
+		
+		stateChanger.makeMove(start, move);
+		start = new State();
+	}
+	
+	/**
+	 * test for promotion: promote to a king or to a pawn
+	 */
+	
+	@Test(expected = IllegalMove.class)
+	public void testIllegalPromotionWrongPromotionKind1() {
+		Move move = new Move(new Position(6, 1), new Position(7, 1),
+				PieceKind.PAWN);
+		start.setPiece(6, 1, null);
+		start.setPiece(1, 1, null);
+		start.setPiece(6, 1, new Piece(Color.WHITE, PieceKind.PAWN));
+		
+		stateChanger.makeMove(start, move);
+		start = new State();
+	}
+	
+	@Test(expected = IllegalMove.class)
+	public void testIllegalPromotionWrongPromotionKind2() {
+		Move move = new Move(new Position(6, 5), new Position(7, 5),
+				PieceKind.KING);
+		start.setPiece(6, 5, null);
+		start.setPiece(1, 5, null);
+		start.setPiece(6, 5, new Piece(Color.WHITE, PieceKind.PAWN));
+		
+		stateChanger.makeMove(start, move);
+		start = new State();
+	}
+	
+	/**
+	 * test for promotion: promotion when king is under check
+	 */
+	@Test(expected = IllegalMove.class)
+	public void testIllegalPromotionUnderCheck1() {
+		Move move = new Move(new Position(6, 5), new Position(7, 5),
+				PieceKind.QUEEN);
+		start.setPiece(6, 5, null);
+		start.setPiece(1, 5, null);
+		start.setPiece(6, 5, new Piece(Color.WHITE, PieceKind.PAWN));
+		
+		start.setPiece(1, 4, new Piece(Color.BLACK, PieceKind.ROOK));
+		
+		stateChanger.makeMove(start, move);
+		start = new State();
+	}
+	
+	@Test(expected = IllegalMove.class)
+	public void testIllegalPromotionUnderCheck2() {
+		Move move = new Move(new Position(6, 5), new Position(7, 5),
+				PieceKind.QUEEN);
+		start.setPiece(6, 5, null);
+		start.setPiece(1, 5, null);
+		start.setPiece(6, 5, new Piece(Color.WHITE, PieceKind.PAWN));
+		
+		start.setPiece(2, 6, new Piece(Color.BLACK, PieceKind.QUEEN));
+		
+		stateChanger.makeMove(start, move);
+		start = new State();
+	}
+	
+	/**
+	 * test for promotion: try to promote a not-pawn piece
+	 */
+	@Test(expected = IllegalMove.class)
+	public void testIllegalPromotionPromoteOtherPiece1() {
+		Move move = new Move(new Position(6, 5), new Position(7, 5),
+				PieceKind.QUEEN);
+		start.setPiece(6, 5, null);
+		start.setPiece(1, 5, null);
+		start.setPiece(6, 5, new Piece(Color.WHITE, PieceKind.ROOK));
+		
+		stateChanger.makeMove(start, move);
+		start = new State();
+	}
+	
+	@Test(expected = IllegalMove.class)
+	public void testIllegalPromotionPromoteOtherPiece2() {
+		Move move = new Move(new Position(6, 1), new Position(7, 1),
+				PieceKind.ROOK);
+		start.setPiece(6, 1, null);
+		start.setPiece(1, 1, null);
+		start.setPiece(6, 1, new Piece(Color.WHITE, PieceKind.QUEEN));
+		
+		stateChanger.makeMove(start, move);
+		start = new State();
+	}
+
+}

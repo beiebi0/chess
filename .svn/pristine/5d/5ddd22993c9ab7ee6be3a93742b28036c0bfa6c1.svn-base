@@ -1,0 +1,322 @@
+package org.longjuntan.hw2_5;
+
+import static org.junit.Assert.assertEquals;
+import static org.shared.chess.Color.BLACK;
+import static org.shared.chess.Color.WHITE;
+
+import java.util.Set;
+
+import org.junit.Test;
+import org.shared.chess.AbstractStateExplorerTest;
+import org.shared.chess.Color;
+import org.shared.chess.Move;
+import org.shared.chess.Piece;
+import org.shared.chess.PieceKind;
+import org.shared.chess.Position;
+import org.shared.chess.State;
+import org.shared.chess.StateExplorer;
+
+import com.google.common.collect.Sets;
+
+public class StateExplorerImplTest extends AbstractStateExplorerTest {
+	@Override
+	public StateExplorer getStateExplorer() {
+		return new StateExplorerImpl();
+	}
+	
+	/*
+	 * Begin Tests by Longjun Tan <longjuntan@gmail.com>
+	 */
+	
+	private void initForTLJ() {
+		for (int row : new int[] { 0, 1, 6, 7 }) {
+			for (int col = 0; col <= 7; col++) {
+				start.setPiece(row, col, null);
+			}
+		}
+		start.setCanCastleKingSide(WHITE, false);
+		start.setCanCastleKingSide(BLACK, false);
+		start.setCanCastleQueenSide(WHITE, false);
+		start.setCanCastleQueenSide(BLACK, false);
+	}
+	
+	private void whiteKingCheckByBlackQueenForTLJ(){
+		start.setPiece(new Position(0, 7), new Piece(Color.WHITE,
+				PieceKind.KING));
+		start.setPiece(new Position(5, 2), new Piece(Color.BLACK,
+				PieceKind.QUEEN));
+		start.setPiece(new Position(1, 2), new Piece(Color.WHITE,
+				PieceKind.ROOK));
+		start.setPiece(new Position(7, 6), new Piece(Color.BLACK,
+				PieceKind.KING));
+	}
+	
+	private void blackKingCheckByMultipleForTLJ(){
+		start.setPiece(new Position(7, 3), new Piece(Color.BLACK,
+				PieceKind.KING));
+		start.setPiece(new Position(7, 5), new Piece(Color.WHITE,
+				PieceKind.KING));
+		start.setPiece(new Position(5, 3), new Piece(Color.WHITE,
+				PieceKind.ROOK));
+		start.setPiece(new Position(6, 3), new Piece(Color.BLACK,
+				PieceKind.QUEEN));	
+		start.setPiece(new Position(6, 4), new Piece(Color.WHITE,
+				PieceKind.BISHOP));
+		start.setTurn(BLACK);
+	}
+	
+	private void canCastlingAndPromotionForTLJ(){
+		start.setPiece(new Position(0, 4), new Piece(Color.WHITE,
+				PieceKind.KING));
+		start.setPiece(new Position(0, 7), new Piece(Color.WHITE,
+				PieceKind.ROOK));
+		start.setCanCastleKingSide(WHITE, true);
+		start.setPiece(new Position(5, 0), new Piece(Color.BLACK,
+				PieceKind.KING));
+		start.setPiece(new Position(1, 2), new Piece(Color.BLACK,
+				PieceKind.PAWN));	
+	}
+	
+	@Test
+	public void testGetPossibleMoves_WhiteKingUnderCheck(){
+		initForTLJ();
+		whiteKingCheckByBlackQueenForTLJ();
+		
+		Set<Move> expectedMoves = Sets.newHashSet();
+		expectedMoves.add(new Move(new Position(1, 2), new Position(5, 2),
+				null));
+		expectedMoves.add(new Move(new Position(0, 7), new Position(0, 6),
+				null));
+		expectedMoves.add(new Move(new Position(0, 7), new Position(1, 7),
+				null));
+		expectedMoves.add(new Move(new Position(1, 2), new Position(1, 6),
+				null));
+		
+		assertEquals(expectedMoves,
+				stateExplorer.getPossibleMoves(start));	
+	}
+	
+	
+	@Test
+	public void testGetPossibleStartPositions_WhiteKingUnderCheck(){
+		initForTLJ();
+		whiteKingCheckByBlackQueenForTLJ();
+		
+		Set<Position> expectedPositions = Sets.newHashSet();
+		expectedPositions.add(new Position(1, 2));
+		expectedPositions.add(new Position(0, 7));
+		
+		
+		assertEquals(expectedPositions,
+				stateExplorer.getPossibleStartPositions(start));	
+	}
+	
+	@Test
+	public void testGetPossibleMoves_BlackKingCheckByMultiple_KingMove(){
+		initForTLJ();
+		blackKingCheckByMultipleForTLJ();
+		start.setPiece(new Position(6, 1), new Piece(Color.WHITE,
+				PieceKind.PAWN));
+		
+		Set<Move> expectedMoves = Sets.newHashSet();
+		expectedMoves.add(new Move(new Position(7, 3), new Position(6, 2),
+				null));
+			
+		assertEquals(expectedMoves,
+				stateExplorer.getPossibleMoves(start));	
+	}
+	
+	@Test
+	public void testGetPossibleMoves_BlackKingCheckByMultiple_withCheckmate(){
+		initForTLJ();
+		blackKingCheckByMultipleForTLJ();
+		start.setPiece(new Position(6, 1), new Piece(Color.WHITE,
+				PieceKind.QUEEN));
+		
+		Set<Move> expectedMoves = Sets.newHashSet();
+	
+		assertEquals(expectedMoves,
+				stateExplorer.getPossibleMoves(start));	
+	}
+	
+	@Test
+	public void testGetPossibleStartPositions_BlackKingCheckByMultiple_withCheckmate(){
+		initForTLJ();
+		blackKingCheckByMultipleForTLJ();
+		start.setPiece(new Position(6, 1), new Piece(Color.WHITE,
+				PieceKind.QUEEN));
+		
+		Set<Position> expectedPositions = Sets.newHashSet();
+
+		assertEquals(expectedPositions,
+				stateExplorer.getPossibleStartPositions(start));	
+	}
+	
+	@Test
+	public void testGetPossibleMoves_BlackKingCheckByMultiple_canCapture(){
+		initForTLJ();
+		blackKingCheckByMultipleForTLJ();
+		start.setPiece(new Position(5, 2), new Piece(Color.BLACK,
+				PieceKind.KNIGHT));
+		
+		Set<Move> expectedMoves = Sets.newHashSet();
+		expectedMoves.add(new Move(new Position(7, 3), new Position(7, 2),
+				null));
+		expectedMoves.add(new Move(new Position(7, 3), new Position(6, 2),
+				null));
+		expectedMoves.add(new Move(new Position(5, 2), new Position(6, 4),
+				null));
+	
+		assertEquals(expectedMoves,
+				stateExplorer.getPossibleMoves(start));	
+	}
+
+	@Test
+	public void testGetPossibleStartPositions_BlackKingCheckByMultiple_canCapture(){
+		initForTLJ();
+		blackKingCheckByMultipleForTLJ();
+		start.setPiece(new Position(5,2), new Piece(Color.BLACK,
+				PieceKind.KNIGHT));
+		
+		Set<Position> expectedPositions = Sets.newHashSet();
+		expectedPositions.add(new Position(7, 3));
+		expectedPositions.add(new Position(5, 2));
+	
+		assertEquals(expectedPositions,
+				stateExplorer.getPossibleStartPositions(start));	
+	}
+	
+	@Test
+	public void testGetPossibleMovesFromPosition_BlackKingCheckByMultiple_canCapture(){
+		initForTLJ();
+		blackKingCheckByMultipleForTLJ();
+		start.setPiece(new Position(5, 2), new Piece(Color.BLACK,
+				PieceKind.KNIGHT));
+		
+		Set<Move> expectedMoves = Sets.newHashSet();
+		expectedMoves.add(new Move(new Position(7, 3), new Position(7, 2),
+				null));
+		expectedMoves.add(new Move(new Position(7, 3), new Position(6, 2),
+				null));
+	
+		assertEquals(expectedMoves,
+				stateExplorer.getPossibleMovesFromPosition(start,new Position(7,3)));	
+	}
+	
+	@Test
+	public void testGetPossibleMoves_castling(){
+		initForTLJ();
+		canCastlingAndPromotionForTLJ();
+		
+		Set<Move> expectedMoves = Sets.newHashSet();
+		expectedMoves.add(new Move(new Position(0, 4), new Position(0, 6),
+				null));
+		expectedMoves.add(new Move(new Position(0, 4), new Position(0, 5),
+				null));
+		for(int col :new int[]{3,4,5}){
+			expectedMoves.add(new Move(new Position(0, 4), new Position(1, col),
+					null));
+		}
+		for(int row=1;row<State.COLS;row++){
+			expectedMoves.add(new Move(new Position(0, 7), new Position(row, 7),
+					null));
+		}
+	
+		for(int col :new int[]{5,6}){
+			expectedMoves.add(new Move(new Position(0, 7), new Position(0, col),
+					null));
+		}
+		assertEquals(expectedMoves,
+				stateExplorer.getPossibleMoves(start));	
+	}
+	
+	@Test
+	public void testGetPossibleMoves_promotion(){
+		initForTLJ();
+		canCastlingAndPromotionForTLJ();
+		start.setTurn(BLACK);
+		
+		Set<Move> expectedMoves = Sets.newHashSet();
+		expectedMoves.add(new Move(new Position(5, 0), new Position(4, 0),
+				null));
+		expectedMoves.add(new Move(new Position(5, 0), new Position(6, 0),
+				null));
+		for(int row :new int[]{4,5,6}){
+			expectedMoves.add(new Move(new Position(5, 0), new Position(row,1),
+					null));
+		}
+		
+		expectedMoves.add(new Move(new Position(1, 2), new Position(0, 2),
+					PieceKind.BISHOP));
+		expectedMoves.add(new Move(new Position(1, 2), new Position(0, 2),
+				PieceKind.KNIGHT));
+		expectedMoves.add(new Move(new Position(1, 2), new Position(0, 2),
+				PieceKind.QUEEN));
+		expectedMoves.add(new Move(new Position(1, 2), new Position(0, 2),
+				PieceKind.ROOK));
+		
+		assertEquals(expectedMoves,
+				stateExplorer.getPossibleMoves(start));	
+	}
+	
+	@Test
+	public void testGetPossibleMovesFromPosition_promotion(){
+		initForTLJ();
+		canCastlingAndPromotionForTLJ();
+		start.setPiece(new Position(0, 1), new Piece(Color.WHITE,
+				PieceKind.ROOK));
+		start.setTurn(BLACK);
+		
+		Set<Move> expectedMoves = Sets.newHashSet();
+		Position p = new Position(1, 2);
+		
+		for(int col:new int[]{1,2}){
+	
+		expectedMoves.add(new Move(p , new Position(0, col),
+					PieceKind.BISHOP));
+		expectedMoves.add(new Move(p, new Position(0, col),
+				PieceKind.KNIGHT));
+		expectedMoves.add(new Move(p, new Position(0, col),
+				PieceKind.QUEEN));
+		expectedMoves.add(new Move(p, new Position(0, col),
+				PieceKind.ROOK));
+		}
+		
+		assertEquals(expectedMoves,
+				stateExplorer.getPossibleMovesFromPosition(start,p));	
+	}
+	
+	@Test
+	public void testGetPossibleStartPositions_canCastlingAndPromotion(){
+		initForTLJ();
+		canCastlingAndPromotionForTLJ();
+		start.setPiece(new Position(0, 1), new Piece(Color.WHITE,
+				PieceKind.ROOK));
+		start.setTurn(BLACK);
+		
+		Set<Position> expectedPositions = Sets.newHashSet();
+		expectedPositions.add(new Position(1, 2));
+		expectedPositions.add(new Position(5, 0));
+	
+		assertEquals(expectedPositions,
+				stateExplorer.getPossibleStartPositions(start));	
+	}
+	
+	@Test
+	public void testGetPossibleMovesFromPosition_canCastlingAndPromotion(){
+		initForTLJ();
+		canCastlingAndPromotionForTLJ();
+		start.setPiece(new Position(0, 1), new Piece(Color.WHITE,
+				PieceKind.ROOK));
+		start.setTurn(BLACK);
+		
+		Set<Move> expectedMoves = Sets.newHashSet();
+	
+		assertEquals(expectedMoves,
+				stateExplorer.getPossibleMovesFromPosition(start,new Position(0,7)));	
+	}
+	
+	/*
+	 * End Tests by Longjun Tan <longjuntan@gmail.com>
+	 */
+}

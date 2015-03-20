@@ -1,0 +1,36 @@
+package org.sanjana.hw6.server;
+
+import java.util.ArrayList;
+
+import com.google.appengine.api.channel.ChannelMessage;
+import com.google.appengine.api.channel.ChannelService;
+import com.google.appengine.api.channel.ChannelServiceFactory;
+
+public class GameManager 
+{
+	private static ArrayList<String> waitingList=new ArrayList<String>();
+	private static int playerCount=waitingList.size();
+	
+	public static void match() 
+	{
+		if (playerCount%2 == 0) 
+		{ 
+			MatchedPlayers.matchedPlayersId++;
+			GameDetails newGame=new GameDetails();
+			newGame.setPlayer1(new Integer(playerCount++).toString());
+			MatchedPlayers.setmatchedPlayers(newGame);
+		}
+
+		else
+		{
+			GameDetails oldGame=MatchedPlayers.getmatchedPlayers(MatchedPlayers.getmatchedPlayersId());
+			oldGame.setPlayer2(new Integer(playerCount++).toString());
+			ChannelService channelService = ChannelServiceFactory.getChannelService();
+			channelService.sendMessage(new ChannelMessage(oldGame.getPlayer1(), new String("start")));
+		}
+	}
+
+	public static int getPlayerCount(){
+		return playerCount;
+	}
+}

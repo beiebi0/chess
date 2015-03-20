@@ -1,0 +1,44 @@
+package org.bohuang.hw1;
+
+import static org.junit.Assert.assertEquals;
+import static org.shared.chess.Color.BLACK;
+import static org.shared.chess.Color.WHITE;
+import static org.shared.chess.PieceKind.KING;
+import static org.shared.chess.PieceKind.PAWN;
+import static org.shared.chess.PieceKind.ROOK;
+
+import org.junit.Test;
+import org.shared.chess.AbstractStateChangerTest;
+import org.shared.chess.Move;
+import org.shared.chess.Piece;
+import org.shared.chess.Position;
+import org.shared.chess.State;
+
+public abstract class TempTestClass  extends AbstractStateChangerTest{
+	
+	@Test
+	public void testWhitePawnMoveOneSquareNotFromInitialPositionNotChangeEnpassantPosition() {
+		Piece[][] board = new Piece[8][8];
+		board[4][0] = new Piece(BLACK, PAWN);
+		board[5][0] = new Piece(BLACK, ROOK);
+		board[4][1] = new Piece(WHITE, PAWN);
+		board[0][4] = new Piece(WHITE, KING);
+		board[7][4] = new Piece(BLACK, KING);
+		board[0][0] = new Piece(WHITE, ROOK);
+		board[0][7] = new Piece(WHITE, ROOK);
+		board[7][0] = new Piece(BLACK, ROOK);
+		board[7][7] = new Piece(BLACK, ROOK);
+		State former = new State(WHITE, board, new boolean[] { true, true },
+				new boolean[] { true, true }, new Position(4, 0), 0, null);
+		Move move = new Move(new Position(4, 1), new Position(5, 1), null);
+		State expected = former.copy();
+		expected.setTurn(BLACK);
+		expected.setPiece(4, 1, null);
+		expected.setPiece(5, 1, new Piece(WHITE, PAWN));
+		expected.setEnpassantPosition(null);
+		expected.setNumberOfMovesWithoutCaptureNorPawnMoved(0);
+		stateChanger.makeMove(former, move);
+		assertEquals(former, expected);
+	}
+
+}

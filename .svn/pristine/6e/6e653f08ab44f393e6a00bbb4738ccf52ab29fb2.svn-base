@@ -1,0 +1,89 @@
+<!DOCTYPE ui:UiBinder SYSTEM "http://dl.google.com/gwt/DTD/xhtml.ent">
+<ui:UiBinder xmlns:ui="urn:ui:com.google.gwt.uibinder" xmlns:g="urn:import:com.google.gwt.user.client.ui">
+<ui:image field="background" src="board.jpg"/>
+  <ui:style field="css" type="org.haoxiangzuo.hw3.GameCss">
+    .highlighted {
+      outline: solid red 5px;
+    }
+    .showMoveHL
+    {
+		outline: solid blue 4px;
+	}
+    td img {
+      display: block
+    }
+    .grid{
+	margin-top: 19px;
+	margin-left: 19px;
+	}
+	@sprite .back{
+		margin-top: 100px;
+		margin-left: 10px;
+		gwt-image: "background";
+		}
+	.status
+	{
+		position:absolute;
+		left: 10px;
+		top: 60px;
+		font-family: "Lucida Console";
+		font-size: 20px;
+	}
+	.pro
+	{
+		margin-top:10px;
+		margin-left:600px;
+	}
+	.pro2
+	{
+		margin-top: 10px;
+		margin-left:600px;	
+	}
+	.button{
+		margin-left: 650px;
+		font-family: "Lucida Console";
+	}
+	.button2{
+		position:absolute;
+		top: 20px;
+		left: 20px;
+		font-family: "Lucida Console";
+	}
+	.flex{
+		position:absolute;
+		left: 15px;
+		top: 80px;
+		background-color: red;
+	}
+  </ui:style>
+  <g:HTMLPanel>
+  	<g:Button ui:field="show" text="Show Which Piece Can Move" styleName="{css.button2}"/>
+  	
+    <g:Label ui:field="gameStatus" text="Status" styleName="{css.status}"/>
+    <g:Button ui:field="reset" text="ResetGame" styleName="{css.button}"/>
+    <g:Grid ui:field="promotion" styleName = "{css.pro}"/>
+    <div class="{css.back}">
+    <g:Grid ui:field="gameGrid" styleName = "{css.grid}"/>
+    </div>
+    <g:Grid ui:field="promotion2" styleName = "{css.pro2}"/>
+    <g:FlexTable ui:field="flex" styleName="{css.flex}"/>
+     <g:TextBox ui:field="fakeLoginText"/>
+    <g:Button ui:field="fakeLogin" text="Fake Login"/>
+    <g:HorizontalPanel ui:field="fakePanel"/>  
+    <g:VerticalPanel ui:field="mainPanel"/>
+    <g:HorizontalPanel ui:field="loginPanel"/>
+    <g:Label ui:field="welcome"/>
+    <g:Anchor ui:field="signout" text="sign out"/>
+    <g:Button ui:field="autoMatch" text="Auto Match"/>
+    <g:Label ui:field="opponentStatus" />
+    <g:HorizontalPanel ui:field="emailGamePanel"/> 
+     <g:Button ui:field="findThisUser" text="Find me this User"/>
+   <!--  <g:SuggestBox ui:field="emailAddress"/> -->
+    <g:HorizontalPanel ui:field="MatchListPanel"/>
+    <g:ListBox ui:field="matchesList"/>
+    <g:Button ui:field="loadMatch" text="Load This Match"/>
+    <g:Button ui:field="deleteMatch" text="Delete This Match"/>
+    <g:Button ui:field="showRank" text="Show My Rank"/>
+    <g:Button ui:field="playAi" text="Play with Ai"/>
+  </g:HTMLPanel>
+</ui:UiBinder> 

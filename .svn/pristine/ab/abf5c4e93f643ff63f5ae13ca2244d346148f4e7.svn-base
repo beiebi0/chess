@@ -1,0 +1,293 @@
+package org.vorasahil.hw7.server;
+
+import static com.googlecode.objectify.ObjectifyService.ofy;
+
+import java.util.Date;
+import java.util.List;
+
+import com.google.appengine.api.channel.ChannelMessage;
+import com.google.appengine.api.channel.ChannelService;
+import com.google.appengine.api.channel.ChannelServiceFactory;
+import com.google.gwt.user.server.rpc.RemoteServiceServlet;
+import com.googlecode.objectify.Key;
+import com.googlecode.objectify.ObjectifyService;
+
+import org.vorasahil.hw7.client.Match;
+import org.vorasahil.hw7.client.Player;
+import org.vorasahil.hw7.client.Register;
+import org.vorasahil.hw7.client.RegisterService;
+
+public class RegisterServiceImpl extends RemoteServiceServlet implements
+		RegisterService {
+	private ChannelService channelService = ChannelServiceFactory
+			.getChannelService();
+
+	private static final long serialVersionUID = 1L;
+
+	static {
+		ObjectifyService.register(Player.class);
+		ObjectifyService.register(Match.class);
+	}
+
+	/**
+	 * Registers a user to a game, and creates/begins the game.
+	 */
+	public Register registerPlayer(String email, boolean createChannel) {
+		Key<Player> playerKey = Key.create(Player.class, email);
+		Player player = ofy().load().key(playerKey).get();
+		Register register = new Register();
+		String matches = "";
+		if (player == null) {
+			player = new Player(email);
+			ofy().save().entity(player).now();
+		} else {
+			for (Key<Match> matchKey : player.getMatches()) {
+				Match match = ofy().load().key(matchKey).get();
+				if (match.getSerialString() != null) {
+					matches += match.getSerialString();
+					matches += "@&#&;&;&#&@";
+				}
+			}
+		}
+		if (createChannel) {
+			String token = channelService.createChannel(email);
+			register.setToken(token);
+		}
+		register.setMatchesString(matches);
+		register.setRank(player.getRank());
+		return register;
+	}
+
+	@Override
+	public Register autoMatchMe(String email, String state) {
+
+		Register register = registerPlayer(email, false);
+		Key<Player> playerKey = Key.create(Player.class, email);
+		Player player = ofy().load().key(playerKey).get();
+		List<Player> players = ofy().load().type(Player.class)
+				.filter("matchMe", true).list();
+		if (!players.isEmpty()) {
+			boolean found = false;
+			Player other = null;
+			for (Player pl : players) {
+				if (!found && !player.equals(pl)) {
+					found = true;
+					other = pl;
+					break;
+				}
+			}
+			if (found) {
+				Date startDate = new Date();
+				Match match = new Match(Key.create(Player.class, email),
+						Key.create(Player.class, other.getEmail()), state,
+						email, other.getEmail(), startDate);
+				Key<Match> matchKey = ofy().save().entity(match).now();
+				other.setMatchMe(false);
+				other.addMatch(matchKey);
+				player.addMatch(matchKey);
+				ofy().save().entity(player).now();
+				ofy().save().entity(other).now();
+				register = registerPlayer(email, false);
+				register.setCurrentMatchId(match.getId());
+
+				Register otherP = registerPlayer(other.getEmail(), false);
+				String mess = otherP.getMatchesString() + "&&&&&"
+						+ match.getId() + "&&&&&" + other.getRank();
+				channelService.sendMessage(new ChannelMessage(other.getEmail(),
+						mess));
+			} else {
+				player.setMatchMe(true);
+				ofy().save().entity(player).now();
+			}
+		} else {
+			player.setMatchMe(true);
+			ofy().save().entity(player).now();
+		}
+		return register;
+	}
+
+	@Override
+	public Register challenge(String myEmail, String opponentEmail, String state) {
+		Key<Player> playerKey = Key.create(Player.class, myEmail);
+		Key<Player> otherPlayerKey = Key.create(Player.class, opponentEmail);
+		Player player = ofy().load().key(playerKey).get();
+		Player otherPlayer = ofy().load().key(otherPlayerKey).get();
+
+		if (player == null || otherPlayer == null) {
+			return null;
+		}
+		Date startDate = new Date();
+		Match match = new Match(playerKey, otherPlayerKey, state, myEmail,
+				opponentEmail, startDate);
+		Key<Match> matchKey = ofy().save().entity(match).now();
+		otherPlayer.addMatch(matchKey);
+		player.addMatch(matchKey);
+		ofy().save().entity(player).now();
+		ofy().save().entity(otherPlayer).now();
+		Register register = registerPlayer(myEmail, false);
+		register.setCurrentMatchId(match.getId());
+		Register otherP = registerPlayer(opponentEmail, false);
+		String mess = otherP.getMatchesString() + "&&&&&" + match.getId()
+				+ "&&&&&" + otherPlayer.getRank();
+		channelService.sendMessage(new ChannelMessage(opponentEmail, mess));
+		return register;
+	}
+
+	@Override
+	public Boolean myMove(String myEmail, String newState, long gameId,
+			int winner) {
+		Key<Player> playerKey = Key.create(Player.class, myEmail);
+		Key<Match> matchKey = Key.create(Match.class, gameId);
+		Player player = ofy().load().key(playerKey).get();
+		Match match = ofy().load().key(matchKey).get();
+
+		if (player == null || match == null) {
+			return false;
+		}
+		Player otherPlayer = ofy().load().key(match.getOpponent(playerKey))
+				.get();
+
+		match.setState(newState);
+		if (winner != -1) {
+			updateRank(match, player, otherPlayer, winner, playerKey);
+		}
+		ofy().save().entity(match).now();
+		ofy().save().entity(player).now();
+		ofy().save().entity(otherPlayer).now();
+		Register otherP = registerPlayer(otherPlayer.getEmail(), false);
+		String mess = otherP.getMatchesString() + "&&&&&" + match.getId()
+				+ "&&&&&" + otherPlayer.getRank();
+		channelService.sendMessage(new ChannelMessage(otherPlayer.getEmail(),
+				mess));
+		return true;
+	}
+
+	private void updateRank(Match match, Player playerA, Player playerB,
+			int winner, Key<Player> playerKey) {
+		double ea, eb, ra, rb, qa, qb, sa, sb;
+		ra = playerA.getRank();
+		rb = playerB.getRank();
+		qa = Math.pow(10, (rb - ra) / 400);
+		qb = Math.pow(10, (ra - rb) / 400);
+		ea = qa / (qa + qb);
+		eb = qb / (qa / qb);
+		sa = 0;
+		sb = 0;
+		if (winner == 0) {
+			sa = 0.5;
+			sb = 0.5;
+		}
+		if (winner == 1) {
+			if (match.isPlayerWhite(playerKey)) {
+				sa = 1;
+				sb = 0;
+			} else {
+				sa = 0;
+				sb = 1;
+			}
+		}
+		if (winner == 2) {
+			if (!match.isPlayerWhite(playerKey)) {
+				sa = 1;
+				sb = 0;
+			} else {
+				sa = 0;
+				sb = 1;
+			}
+		}
+		playerA.setRank((int) ((ra) + 15 * (sa - ea)));
+		playerB.setRank((int) ((rb) + 15 * (sb - eb)));
+	}
+
+	@Override
+	public Register reloadGames(String myEmail) {
+		return registerPlayer(myEmail, false);
+	}
+
+	@Override
+	public Boolean deleteGame(String myEmail, long gameId) {
+		Key<Player> playerKey = Key.create(Player.class, myEmail);
+		Key<Match> matchKey = Key.create(Match.class, gameId);
+		Player player = ofy().load().key(playerKey).get();
+		Match match = ofy().load().key(matchKey).get();
+		if (player == null || match == null) {
+			return false;
+		}
+		player.removeMatch(matchKey);
+		ofy().save().entity(player).now();
+		try {
+			if (!match.getIsSinglePlayer()) {
+				Key<Player> playerKey2 = match.getOpponent(playerKey);
+				Player player2 = ofy().load().key(playerKey2).get();
+				if (!player2.containsMatch(matchKey)) {
+					ofy().delete().entity(match).now();
+					ofy().delete().key(matchKey).now();
+				}
+			} else {
+				ofy().delete().entity(match).now();
+				ofy().delete().key(matchKey).now();
+			}
+		} catch (Exception e) {
+			Key<Player> playerKey2 = match.getOpponent(playerKey);
+			Player player2 = ofy().load().key(playerKey2).get();
+			if (player2 != null && !player2.containsMatch(matchKey)) {
+				ofy().delete().entity(match);
+				ofy().delete().key(matchKey);
+			}
+		}
+		return true;
+	}
+
+	@Override
+	public int getRank(String Email) {
+		Key<Player> playerKey = Key.create(Player.class, Email);
+		Player player = ofy().load().key(playerKey).get();
+		return player.getRank();
+	}
+
+	@Override
+	public Register RegisterAIGame(String myEmail, String newState,
+			int playerTurn) {
+		Key<Player> playerKey = Key.create(Player.class, myEmail);
+		Player player = ofy().load().key(playerKey).get();
+		Key<Player> AIKey = Key.create(Player.class, "Computer");
+
+		if (player == null) {
+			return null;
+		}
+		Date startDate = new Date();
+		Match match;
+		if (playerTurn == 0) {
+			match = new Match(playerKey, AIKey, newState, myEmail, "Computer",
+					startDate);
+		} else {
+			match = new Match(AIKey, playerKey, newState, "Computer", myEmail,
+					startDate);
+		}
+		match.setIsSinglePlayer(true);
+		Key<Match> matchKey = ofy().save().entity(match).now();
+		player.addMatch(matchKey);
+		ofy().save().entity(player).now();
+		Register register = registerPlayer(myEmail, false);
+		register.setCurrentMatchId(match.getId());
+		System.out.println(register.getMatchesString());
+		return register;
+	}
+
+	@Override
+	public Boolean updateAIGameMove(String myEmail, long gameId, String state) {
+		Key<Player> playerKey = Key.create(Player.class, myEmail);
+		Key<Match> matchKey = Key.create(Match.class, gameId);
+		Player player = ofy().load().key(playerKey).get();
+		Match match = ofy().load().key(matchKey).get();
+
+		if (player == null || match == null) {
+			return false;
+		}
+
+		match.setState(state);
+		ofy().save().entity(match).now();
+		ofy().save().entity(player).now();
+		return true;
+	}
+}

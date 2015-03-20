@@ -1,0 +1,21 @@
+package org.leozis.hw6.client;
+
+import java.util.Date;
+
+import org.leozis.hw6.server.Player;
+import org.shared.chess.GameResult;
+
+import com.google.gwt.user.client.rpc.AsyncCallback;
+
+public interface ChessServiceAsync {
+
+  void updateBoard(String state, AsyncCallback<String> callback);
+  void sendReady(String color, AsyncCallback<String> callback);
+  void getUser(AsyncCallback<String> callback);
+  void getDate(AsyncCallback<Date> callback);
+  void connect(AsyncCallback<Player> callback);
+  void getSignout(String href,AsyncCallback<String> callback);
+  void getSignin(String href,AsyncCallback<String> callback);
+  void sendResult(String state, AsyncCallback<String> callback);
+
+}

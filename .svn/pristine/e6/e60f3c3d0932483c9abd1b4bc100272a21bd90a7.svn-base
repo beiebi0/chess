@@ -1,0 +1,86 @@
+package org.kuangchelee.hw6;
+
+import java.util.Date;
+import java.util.HashMap;
+
+import com.google.gwt.user.client.rpc.IsSerializable;
+
+import com.googlecode.objectify.annotation.Entity;
+import com.googlecode.objectify.annotation.Id;
+import com.googlecode.objectify.annotation.Serialize;
+
+@Entity
+public class UserInfo implements IsSerializable{
+	@Id private String User;
+	private String ChID;
+	@Serialize private HashMap<Long, String> MatchMap;
+	private String URL;
+	private double RD;
+	private double Rating;
+	private Date lastMatch;
+	public UserInfo(){}
+	public UserInfo(String user, String ChannelID, String CurURL){
+		this.User = user;
+		this.ChID = ChannelID;
+		MatchMap = new HashMap<Long, String>();
+		this.URL = CurURL;
+		this.Rating = 1500;
+		this.RD = 350;
+		this.lastMatch = null;
+	}
+	public UserInfo(String user, String ChannelID, HashMap<Long, String> mm, String CurURL, double Rating, double RD, Date lastMatch){
+		this.User = user;
+		this.ChID = ChannelID;
+		MatchMap = new HashMap<Long, String>();
+		MatchMap.putAll(mm);
+		this.URL = CurURL;
+		this.Rating = Rating;
+		this.RD = RD;
+		this.lastMatch = lastMatch;
+	}
+	public String getUser(){
+		return User;
+	}
+	public String getChID(){
+		return ChID;
+	}
+	public void setChID(String ChID){
+		this.ChID = ChID;
+	}
+	public String getOpponent(Long key){
+		return MatchMap.get(key);
+	}
+	public void addMatch(Long matchID, String opponent){
+		MatchMap.put(matchID, opponent);
+	}
+	public void removeMatch(Long matchID){
+		MatchMap.remove(matchID);
+	}
+	public HashMap<Long, String> getHashMap(){
+		return MatchMap;
+	}
+	public String getURL(){
+		return URL;
+	}
+	public double getRating(){
+		return Rating;
+	}
+	public void setRating(double rating){
+		this.Rating = rating; 
+	}
+	public double getRD(){
+		return RD;
+	}
+	public void setRD(double RD){
+		this.RD = RD;
+	}
+	public Date getLastMatch(){
+		return lastMatch;
+	}
+	public void setLastMatch(Date lastMatch){
+		this.lastMatch = lastMatch;
+	}
+	public UserInfo copy(){
+		return new UserInfo(User, ChID, MatchMap, URL, Rating, RD, lastMatch);
+	}
+}

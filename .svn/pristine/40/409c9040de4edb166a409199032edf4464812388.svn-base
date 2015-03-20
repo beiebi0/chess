@@ -1,0 +1,388 @@
+package org.mengyanhuang.hw6.server;
+
+import java.util.Date;
+import java.util.Iterator;
+import java.util.LinkedList;
+
+import org.mengyanhuang.hw6.client.LoginInfo;
+
+import org.mengyanhuang.hw6.client.UserLoginService;
+import org.mengyanhuang.hw7.Match;
+import org.mengyanhuang.hw7.Player;
+import org.shared.chess.Color;
+
+import com.google.appengine.api.channel.ChannelMessage;
+import com.google.appengine.api.channel.ChannelService;
+import com.google.appengine.api.channel.ChannelServiceFactory;
+import com.google.appengine.api.users.User;
+import com.google.appengine.api.users.UserService;
+import com.google.appengine.api.users.UserServiceFactory;
+import com.google.gwt.user.server.rpc.RemoteServiceServlet;
+import com.googlecode.objectify.Objectify;
+import com.googlecode.objectify.ObjectifyService;
+import com.googlecode.objectify.Ref;
+
+
+@SuppressWarnings("serial")
+public class UserLoginServiceImpl extends RemoteServiceServlet implements
+		UserLoginService {
+
+	public static String wait="";
+	
+	static{
+		ObjectifyService.register(Match.class);
+	    ObjectifyService.register(Player.class);
+	}
+	 
+	public String newState = "castling=YYYY&turn=W&numberOfMovesWithoutCaptureNorPawnMoved=0&board=00:WR,01:WN,02:WB,03:WQ,04:WK,05:WB,06:WN,07:WR,10:WP,11:WP,12:WP,13:WP,14:WP,15:WP,16:WP,17:WP,60:BP,61:BP,62:BP,63:BP,64:BP,65:BP,66:BP,67:BP,70:BR,71:BN,72:BB,73:BQ,74:BK,75:BB,76:BN,77:BR";
+    //to initiate the process of creating a channel
+	ChannelService channelService = ChannelServiceFactory.getChannelService();
+	
+	@Override
+	public LoginInfo login(String requestUri) {
+		// TODO Auto-generated method stub
+		
+		UserService userService = UserServiceFactory.getUserService();
+	    User user = userService.getCurrentUser();
+	    LoginInfo loginInfo = new LoginInfo();
+
+	    //channelService.sendMessage(new ChannelMessage("testtoken","lalalalal"));
+	    
+	    if (user != null) {
+	    	loginInfo.setLoggedIn(true);
+			loginInfo.setEmailAddress(user.getEmail());
+			loginInfo.setNickname(user.getNickname());
+			loginInfo.setLogoutUrl(userService.createLogoutURL(requestUri));
+			String  token =  channelService.createChannel(loginInfo.getEmailAddress());
+		    loginInfo.setToken(token);
+		    //ChessMoveServiceImpl.users.put(loginInfo.getEmailAddress(), loginInfo.getEmailAddress());
+		    
+		    // when a player logs in, save new player or add new token
+		    if (ObjectifyService.ofy().load().type(Player.class).id(user.getEmail()).get() == null) {
+		    		Player player = new Player(user.getEmail(), user.getNickname());
+		    		ObjectifyService.ofy().save().entity(player).now();
+		  	} else {
+		    		Player player1 = ObjectifyService.ofy().load().type(Player.class).id(user.getEmail()).get();
+		 			player1.addToken(token);
+		 			ObjectifyService.ofy().save().entity(player1).now();
+		  	}
+	    } else {
+	      loginInfo.setLoggedIn(false);
+	      loginInfo.setLoginUrl(userService.createLoginURL(requestUri));
+	    }
+	    
+	    return loginInfo;	
+	    }
+	
+	@Override
+	public LoginInfo fakelogin(String requestUri) {
+		// TODO Auto-generated method stub
+		
+		UserService userService = UserServiceFactory.getUserService();
+	    User user = userService.getCurrentUser();
+	    LoginInfo loginInfo = new LoginInfo();
+
+	    //channelService.sendMessage(new ChannelMessage("testtoken","lalalalal"));
+	    
+	    if (user != null) {
+	    	loginInfo.setLoggedIn(true);
+			loginInfo.setEmailAddress(user.getEmail());
+			loginInfo.setNickname(user.getNickname());
+			loginInfo.setLogoutUrl(userService.createLogoutURL(requestUri));
+			String  token =  channelService.createChannel(loginInfo.getEmailAddress());
+		    loginInfo.setToken(token);
+		    //ChessMoveServiceImpl.users.put(loginInfo.getEmailAddress(), loginInfo.getEmailAddress());
+		    
+		    // when a player logs in, save new player or add new token
+		    if (ObjectifyService.ofy().load().type(Player.class).id(user.getEmail()).get() == null) {
+		    		Player player = new Player(user.getEmail(), user.getNickname());
+		    		ObjectifyService.ofy().save().entity(player).now();
+		  	} else {
+		    		Player player1 = ObjectifyService.ofy().load().type(Player.class).id(user.getEmail()).get();
+		 			player1.addToken(token);
+		 			ObjectifyService.ofy().save().entity(player1).now();
+		  	}
+	    } else {
+	      loginInfo.setLoggedIn(false);
+	      loginInfo.setLoginUrl(userService.createLoginURL(requestUri));
+	    }
+	    
+	    return loginInfo;	
+	    }
+	
+	@Override
+	public LinkedList<Match> LoadGame(String userId) {	
+		LinkedList<Match> resultlist= new LinkedList<Match>();
+		
+		Objectify ofy = ObjectifyService.ofy();
+		
+		Iterable<Match> list = ofy.load().type(Match.class);
+		Iterator<Match> iterator = list.iterator();
+		while(iterator.hasNext()){
+			Match match = iterator.next();
+			if((match.getWhite().equals(userId) && !match.isWdeleteMatch())||(match.getBlack().equals(userId) && !match.isBdeleteMatch()))
+				resultlist.add(match);
+		}
+		
+		return resultlist;
+	}
+
+	@Override
+	public Match AutoMatch(String userId){
+		Match match = null;
+		Objectify ofy = ObjectifyService.ofy().transaction();
+		String matchresult;
+		
+		UserService userService = UserServiceFactory.getUserService();
+		User user = userService.getCurrentUser();
+		
+		try
+		{
+		if (wait.equals("") || wait.equals(user.getEmail())) {
+			wait = user.getEmail();
+			matchresult = "wait&&Auto Matching...Please wait.";
+			} else {
+
+			match = new Match(System.currentTimeMillis(), wait, user.getEmail(), newState, true);
+
+			Player waitPlayer = ofy.load().type(Player.class).id(wait).get();
+			Player player = ofy.load().type(Player.class).id(user.getEmail()).get();
+			
+			Date date = match.getStartDate();
+			@SuppressWarnings("deprecation")
+			int year = date.getYear()+1900;
+			@SuppressWarnings("deprecation")
+			int month = date.getMonth()+1;
+			@SuppressWarnings("deprecation")
+			int day = date.getDate();
+			@SuppressWarnings("deprecation")
+			int hour = date.getHours();
+			@SuppressWarnings("deprecation")
+			int minutes = date.getMinutes();
+			@SuppressWarnings("deprecation")
+			int seconds = date.getSeconds();
+			//setGameDate(mymessage.startdate()+String.valueOf(month)+"/"+String.valueOf(day)+"/"+String.valueOf(year)
+			//		+" "+String.valueOf(hour)+":"+String.valueOf(minutes)+":"+String.valueOf(seconds));
+			String datestr= String.valueOf(month)+"/"+String.valueOf(day)+"/"+String.valueOf(year)+" "+String.valueOf(hour)+":"+String.valueOf(minutes)+":"+String.valueOf(seconds);
+			channelService.sendMessage(new ChannelMessage(wait,"begin#"+"white#"+user.getEmail()+"#"+match.getMatchid()+"#"+datestr+"#"+String.valueOf(player.getRank())));
+			channelService.sendMessage(new ChannelMessage(user.getEmail(),"begin#"+"black#"+wait+"#"+match.getMatchid()+"#"+datestr+"#"+String.valueOf(player.getRank())));
+			
+			match.setWhite(wait);
+			match.setBlack(userId);
+			ofy.save().entity(match).now();
+		    
+			//add new match entity to 2 player entities
+			player.addMatch(match);
+			waitPlayer.addMatch(match);
+			ofy.save().entity(player).now();
+			ofy.save().entity(waitPlayer).now();
+			
+			matchresult = "play&&Now you may begin your game.&&"+match.getMatchid();
+			
+			ofy.getTxn().commit();
+			
+			wait = "";
+			}
+		}finally{
+			if(ofy.getTxn().isActive()) 
+				ofy.getTxn().rollback();
+		}
+		
+			return match;
+	}
+	
+	@Override
+	public Match MatchbyEmail(String opponentId){
+		Match match = null;
+		Objectify ofy = ObjectifyService.ofy().transaction();
+		String matchresult = "";
+		
+		UserService userService = UserServiceFactory.getUserService();
+		User user = userService.getCurrentUser();
+		String result = opponentId;
+		Player player = ofy.load().type(Player.class).id(user.getEmail()).get();
+		Player opponent = ofy.load().type(Player.class).id(opponentId).get();
+		try
+		{
+		if (opponent == null) {
+			matchresult = "wait&&"+ opponentId + " does not exist.";
+		}else {
+			match = new Match(System.currentTimeMillis(), opponentId, user.getEmail(), newState, true);
+						
+			Date date = match.getStartDate();
+			@SuppressWarnings("deprecation")
+			int year = date.getYear()+1900;
+			@SuppressWarnings("deprecation")
+			int month = date.getMonth()+1;
+			@SuppressWarnings("deprecation")
+			int day = date.getDate();
+			@SuppressWarnings("deprecation")
+			int hour = date.getHours();
+			@SuppressWarnings("deprecation")
+			int minutes = date.getMinutes();
+			@SuppressWarnings("deprecation")
+			int seconds = date.getSeconds();
+			String datestr= String.valueOf(month)+"/"+String.valueOf(day)+"/"+String.valueOf(year)+" "+String.valueOf(hour)+":"+String.valueOf(minutes)+":"+String.valueOf(seconds);
+			
+			channelService.sendMessage(new ChannelMessage(opponentId,"begin#"+"white#"+user.getEmail()+"#"+match.getMatchid()+"#"+datestr+"#"+String.valueOf(player.getRank())));
+			channelService.sendMessage(new ChannelMessage(user.getEmail(),"begin#"+"black#"+opponentId+"#"+match.getMatchid()+"#"+datestr+"#"+String.valueOf(player.getRank())));
+			
+			match.setWhite(opponentId);
+			match.setBlack(user.getEmail());
+			ofy.save().entity(match).now();
+			
+			player.addMatch(match);
+			opponent.addMatch(match);
+			ofy.save().entity(player).now();
+			ofy.save().entity(opponent).now();
+			
+			matchresult = "play&&Now you may begin your game.&&"+match.getMatchid();
+			ofy.getTxn().commit();
+		}
+	}finally{
+		if(ofy.getTxn().isActive()) 
+			ofy.getTxn().rollback();
+	}
+	//	return matchresult;
+		return match;
+	}
+	
+	@Override
+	public Match getMatch(long matchId){
+		Match match = ObjectifyService.ofy().load().type(Match.class).id(matchId).get();
+		return match;
+	}
+	
+	@Override
+	public String getCurrentState(String state, String Uid, long matchid){
+		String res = "";
+		Objectify ofy = ObjectifyService.ofy().transaction();
+		try
+		{
+		Match match = ObjectifyService.ofy().load().type(Match.class).id(matchid).get();
+		
+		//if(match == null) channelService.sendMessage(new ChannelMessage(Uid,"makemove#"+"match not found"));
+		String opponent = "";
+		if (match.getWhite().equals(Uid)){
+			match.setWhiteTurn(false);
+			opponent = match.getBlack();
+			//channelService.sendMessage(new ChannelMessage(match.getBlack(),"makemove#"+state+"#"+match.getBlack()+"#black"));
+			//channelService.sendMessage(new ChannelMessage(Uid,"makemove#"+state+"#"+match.getBlack()+"#black"));
+		}else if(match.getBlack().equals(Uid)){
+			match.setWhiteTurn(true);
+			opponent = match.getWhite();
+			//channelService.sendMessage(new ChannelMessage(match.getWhite(),"makemove#"+state+"#"+match.getWhite()+"#white"));
+			//channelService.sendMessage(new ChannelMessage(Uid,"makemove#"+state+"#"+match.getWhite()+"#white"));
+		}
+
+		match.setState(state);
+		Player white = ObjectifyService.ofy().load().type(Player.class).id(match.getWhite()).get();
+		Player black = ObjectifyService.ofy().load().type(Player.class).id(match.getBlack()).get();
+		white.deletebyMatchid(matchid);
+		black.deletebyMatchid(matchid);
+		white.addMatch(match);
+		black.addMatch(match);
+		
+		ObjectifyService.ofy().save().entity(match).now();
+		ObjectifyService.ofy().save().entity(white).now();
+		ObjectifyService.ofy().save().entity(black).now();
+		
+		channelService.sendMessage(new ChannelMessage(opponent,"makemove#"+state+"#"+opponent+"#"+match.getTurn()+"#"+String.valueOf(match.getMatchid())));
+		channelService.sendMessage(new ChannelMessage(Uid,"makemove#"+state+"#"+opponent+"#"+match.getTurn()+"#"+String.valueOf(match.getMatchid())));
+		
+		res = match.getState()+" "+match.getTurn()+" "+match.getWhite()+" "+match.getBlack()+" "+String.valueOf(match.getMatchid());
+		
+		ofy.getTxn().commit();
+		}
+		finally{
+			if(ofy.getTxn().isActive()) 
+				ofy.getTxn().rollback();
+		}
+		
+		return res;
+	}
+	
+	@Override
+	public String Delete(String userId, long matchid){
+		String res="";
+		Match match = ObjectifyService.ofy().load().type(Match.class).id(matchid).get();
+		String blackPlayer = match.getBlack();
+		String whitePlayer = match.getWhite();
+		
+		if (whitePlayer.equals(userId)){ 
+			//update player entity
+			Player player = ObjectifyService.ofy().load().type(Player.class).id(whitePlayer).get();
+			player.getMatchList().remove(match);
+			ObjectifyService.ofy().save().entity(player);
+			res += "white player deleted";
+			//update or delete match entity
+			match.setWdeleteMatch(true);
+			if(match.isBdeleteMatch()) {
+				ObjectifyService.ofy().delete().entity(match);
+			    res += " match entity deleted";
+			}
+			else {
+				ObjectifyService.ofy().save().entities(match).now();
+				res += " match entity deleted";
+			}
+		}
+		else if(blackPlayer.equals(userId)){
+			//update player entity
+			Player player = ObjectifyService.ofy().load().type(Player.class).id(blackPlayer).get();
+			player.getMatchList().remove(match);//Ref.create(match)
+			ObjectifyService.ofy().save().entity(player);
+			res += "black player deleted";
+			match.setBDeleteMatch(true);
+			ObjectifyService.ofy().save().entities(match).now();
+			//update  or delete match entity
+			if(match.isWdeleteMatch()) {
+				ObjectifyService.ofy().delete().entity(match);
+			    res += " match entity deleted";
+			}
+			else {
+				ObjectifyService.ofy().save().entities(match).now();
+			}
+		}
+		
+		return res;
+	}
+	
+	@Override
+	public Match loadMatch(String userId, long matchid){
+		
+		Match match = ObjectifyService.ofy().load().type(Match.class).id(matchid).get();
+		
+		return match;
+	}
+	
+	@Override
+	public Player getPlayer(String userId){
+		
+		Player player = ObjectifyService.ofy().load().type(Player.class).id(userId).get();
+		
+		return player;
+	}
+	
+	@Override
+	public void setPlayerLastPlayedTime(String userId, long date){
+		Player player  = ObjectifyService.ofy().load().type(Player.class).id(userId).get();
+		player.setLastPlayedTIme(date);
+		ObjectifyService.ofy().save().entities(player).now();
+	}
+	
+	@Override
+	public void setPlayerRD(String userId, int RD){
+		Player player  = ObjectifyService.ofy().load().type(Player.class).id(userId).get();
+		player.setRD(RD);
+		ObjectifyService.ofy().save().entities(player).now();
+	}
+	
+	@Override
+	public void setPlayerRank(String userId, int rank){
+		Player player  = ObjectifyService.ofy().load().type(Player.class).id(userId).get();
+		player.setRank(rank);
+		ObjectifyService.ofy().save().entities(player).now();
+	}
+	
+	
+}

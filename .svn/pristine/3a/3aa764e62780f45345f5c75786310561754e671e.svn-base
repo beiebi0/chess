@@ -1,0 +1,97 @@
+package org.bohuang.hw6.client;
+
+import java.util.Date;
+
+import com.google.gwt.i18n.client.Messages;
+
+
+public interface ChessMessages extends Messages {
+	@DefaultMessage("opponentId :''{0}''")
+	String opponentId(String id);
+	
+	@DefaultMessage("Welcome ''{0}''")
+	String welcome(String userId);
+	
+	@DefaultMessage("Saved Games")
+	String saved();
+	
+	@DefaultMessage("Load")
+	String load();
+	
+	@DefaultMessage("Delete")
+	String delete();
+	
+	@DefaultMessage("Enter the opponent email you want match with")
+	String matchwith();
+	
+	@DefaultMessage("Quick Match")
+	String quickmatch();
+	
+	@DefaultMessage("Custom Match")
+	String custommatch();
+	
+	@DefaultMessage("Load Failed")
+	String loadfailed();
+	
+	@DefaultMessage("Player Found ! Match ID : ''{0}''")
+	String playerfound(Long matchid);
+	
+	@DefaultMessage("Delete Failed")
+	String deletefailed();
+	
+	@DefaultMessage("Match Failed")
+	String matchfailed();
+	
+	@DefaultMessage("No Other Players Now")
+	String nootherplayer();
+	
+	@DefaultMessage("BLACK PLAYER TURN")
+	String blackplayerturn();
+	
+	@DefaultMessage("WHITE PLAYER TURN")
+	String whiteplayerturn();
+	
+	@DefaultMessage("BLACK PLAYER WIN")
+	String blackplayerwin();
+	
+	@DefaultMessage("WHITE PLAYER WIN")
+	String whiteplayerwin();
+	
+	@DefaultMessage("DRAW GAME")
+	String drawgame();
+	
+	@DefaultMessage("CHECKMATE")
+	String checkmate();
+	
+	@DefaultMessage("STALEMATE")
+	String stalemate();
+	
+	@DefaultMessage("FIFTY MOVE RULE")
+	String fiftymove();
+	
+	@DefaultMessage("You Have Not Matched")
+	String notmatched();
+	
+	@DefaultMessage("GAME ID : ''{0}''")
+	String gameId(Long id);
+	
+	@DefaultMessage("You Play White Side")
+	String whiteside();
+	
+	@DefaultMessage("You Play Black Side")
+	String blackside();
+	
+	@DefaultMessage("Start Date: {0,date,MM/dd/yyyy} {0,time}")
+	String startdate(Date timestamp);
+	
+	@DefaultMessage("Your Rank: ''{0}''")
+	String yourrank(String receive);
+	
+	@DefaultMessage("Opponent Rank: ''{0}''")
+	String opporank(String rank);
+	
+	@DefaultMessage("Play Against Bot")
+	String againstBot();
+
+
+}

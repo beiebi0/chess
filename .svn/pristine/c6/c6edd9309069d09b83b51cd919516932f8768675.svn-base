@@ -1,0 +1,341 @@
+package org.jiangfengchen.hw3;
+
+
+
+import org.shared.chess.Color;
+import org.shared.chess.GameResult;
+import org.shared.chess.GameResultReason;
+import org.shared.chess.Piece;
+import org.shared.chess.Position;
+import org.jiangfengchen.hw10.MyDropController;
+import org.jiangfengchen.hw3.Presenter.View;
+import org.jiangfengchen.hw6.client.MyMessages;
+
+
+import com.allen_sauer.gwt.dnd.client.PickupDragController;
+import com.google.gwt.core.client.GWT;
+import com.google.gwt.event.dom.client.ClickEvent;
+import com.google.gwt.event.dom.client.ClickHandler;
+import com.google.gwt.event.dom.client.MouseOverEvent;
+import com.google.gwt.event.dom.client.MouseOverHandler;
+import com.google.gwt.media.client.Audio;
+import com.google.gwt.resources.client.ImageResource;
+import com.google.gwt.uibinder.client.UiBinder;
+import com.google.gwt.uibinder.client.UiField;
+import com.google.gwt.user.client.Element;
+import com.google.gwt.user.client.Timer;
+import com.google.gwt.user.client.ui.Composite;
+import com.google.gwt.user.client.ui.Grid;
+import com.google.gwt.user.client.ui.Image;
+import com.google.gwt.user.client.ui.Label;
+import com.google.gwt.user.client.ui.SimplePanel;
+import com.google.gwt.user.client.ui.Widget;
+import com.googlecode.mgwt.ui.client.widget.RoundPanel;
+
+
+
+public class Graphics extends Composite implements View{
+  private static GameImages gameImages = GWT.create(GameImages.class);
+  private static GraphicsUiBinder uiBinder = GWT.create(GraphicsUiBinder.class);
+
+  interface GraphicsUiBinder extends UiBinder<Widget, Graphics> {
+  }
+  
+ 
+  @UiField ImageResource background;
+  @UiField GameCss css;
+  @UiField Label gameStatus;
+  @UiField Label Email;
+  @UiField Label Nickname;
+  @UiField Label Rank;
+  @UiField Grid gameGrid;
+  @UiField RoundPanel MPanel;
+
+  final MyMessages myMessage = GWT.create(MyMessages.class);
+  private Presenter presenter;
+  private Image[][] board = new Image[8][8];
+  private MyDropController[][] drops= new MyDropController[8][8];
+  private SimplePanel[][] panels = new SimplePanel[8][8];
+  private PickupDragController dragController;
+  public Audio drag = presenter.createDrag();
+  Audio click = presenter.createClick();
+  Image moving = new Image();
+  Position from;
+  Position to;
+  Piece p=null;
+  int x;
+  int y;
+  
+  public Graphics() {
+	
+    initWidget(uiBinder.createAndBindUi(this));  
+    
+  }
+  public void init(PickupDragController drag){
+	setEmail("");
+	setNick("");
+	setRank("");
+	setGameStatus("Game Status");
+	MPanel.setWidth("390px");
+    this.dragController=drag;
+  //  gameGrid.setPixelSize(400, 400);
+    gameGrid.resize(8, 8);
+    gameGrid.setCellPadding(0);
+    gameGrid.setCellSpacing(0);
+    gameGrid.setBorderWidth(0);
+ 
+    for (int row = 0; row < 8; row++) {
+      for (int col = 0; col < 8; col++) {
+        final Image image = new Image();
+        image.setWidth("100%");
+        image.setResource(gameImages.empty());
+        final int rowI=row;
+        final int colI=col;
+        board[row][col] = image;   
+        panels[row][col] = new SimplePanel();
+     //   panels[row][col].setPixelSize(50, 50);
+        drops[row][col] = new MyDropController(panels[row][col]);
+        drops[row][col].sets(this, presenter);
+        dragController.registerDropController(drops[row][col]);  
+        panels[row][col].setWidget(image);
+        dragController.makeDraggable(board[rowI][colI]);
+        image.addClickHandler(new ClickHandler(){
+			@Override
+			public void onClick(ClickEvent event){
+				if(presenter.isClicked()) {
+ 					to = convert(rowI,colI);
+ 					if(presenter.containStart(from)&&presenter.containTo(to)) presenter.DoAnimation(moving, x,y,board[rowI][colI].getAbsoluteLeft(),  board[rowI][colI].getAbsoluteTop(),board[rowI][colI]);
+ 					
+ 				}else{
+ 					from = convert(rowI,colI);
+ 					p=presenter.getState().getPiece(from);
+ 					ImageResource ir = getImg(p);
+ 					moving.setResource(ir);
+ 					if (rowI%2==0&&colI%2==1||rowI%2==1&&colI%2==0) moving.getElement().getStyle().setBackgroundColor("SaddleBrown");
+ 					else moving.getElement().getStyle().setBackgroundColor("GoldenRod");
+ 					x=board[rowI][colI].getAbsoluteLeft();
+ 					y=board[rowI][colI].getAbsoluteTop();
+ 				}
+ 				presenter.OnClick(rowI, colI);
+ 				click.play();
+			}});
+      
+     
+        image.addMouseOverHandler(new MouseOverHandler(){
+			@Override
+			public void onMouseOver(MouseOverEvent event) {
+				presenter.MouseOn(rowI, colI);	
+			}
+       
+		});
+  
+        gameGrid.setWidget(row, col,panels[row][col]);  
+                
+      }
+		
+    }
+ 
+  }
+
+  @Override
+  public void setPiece(int row, int col, Piece piece) {
+	
+	    Position p = convert(row,col);
+		final int rowI = p.getRow();
+		final int colI = p.getCol();
+		row=rowI;
+		col=colI;   
+    	panels[row][col].clear();
+		panels[row][col].setWidget(board[rowI][colI]);
+	 //   dragController.makeDraggable(board[rowI][colI]);
+    if (piece==null){
+    	board[rowI][colI].setResource(gameImages.empty());
+
+        return;
+    }
+    switch(piece.getKind()){
+    	case ROOK:
+    		if(piece.getColor().equals(Color.WHITE)){
+    			board[rowI][colI].setResource(gameImages.whiteRook());
+    		}else{
+    			board[rowI][colI].setResource(gameImages.blackRook());
+    		}
+    		break;
+    	case KING:
+    		if(piece.getColor().equals(Color.WHITE)){
+    			board[rowI][colI].setResource(gameImages.whiteKing());
+    		}else{
+    			board[rowI][colI].setResource(gameImages.blackKing());
+    		}
+    		break;
+    	case KNIGHT:
+    		if(piece.getColor().equals(Color.WHITE)){
+    			board[rowI][colI].setResource(gameImages.whiteKnight());
+    		}else{
+    			board[rowI][colI].setResource(gameImages.blackKnight());
+    		}
+    		break;
+    	case QUEEN:
+    		if(piece.getColor().equals(Color.WHITE)){
+    			board[rowI][colI].setResource(gameImages.whiteQueen());
+    		}else{
+    			board[rowI][colI].setResource(gameImages.blackQueen());
+    		}
+    		break;
+    	case PAWN:
+    		if(piece.getColor().equals(Color.WHITE)){
+    			board[rowI][colI].setResource(gameImages.whitePawn());
+    		}else{
+    			board[rowI][colI].setResource(gameImages.blackPawn());
+    		}
+    		break;
+    	case BISHOP:
+    		if(piece.getColor().equals(Color.WHITE)){
+    			board[rowI][colI].setResource(gameImages.whiteBishop());
+    		}else{
+    			board[rowI][colI].setResource(gameImages.blackBishop());
+    		}
+    		break;
+    	default:
+    		break;
+    
+    }
+    
+      
+    
+  }
+
+  @Override
+  public void setHighlighted(int row, int col, boolean highlighted) {
+    Element element = board[row][col].getElement();
+    if (highlighted) {
+      element.setClassName(css.highlighted());
+    } else {
+      element.removeClassName(css.highlighted());
+    }
+  }
+
+  @Override
+  public void setWhoseTurn(Color color) {
+	  if(color.isWhite()) gameStatus.setText("White's Turn");
+	  else if(color.isBlack()) gameStatus.setText("Black's Turn");
+  }
+
+  @Override
+  public void setGameResult(GameResult gameResult) {
+	if(gameResult==null) return;
+    if(gameResult.getWinner().isWhite()) gameStatus.setText(myMessage.wwins());
+    else if(gameResult.getWinner().isBlack()) gameStatus.setText(myMessage.bwins());
+    else {
+    	if(gameResult.getGameResultReason()==GameResultReason.FIFTY_MOVE_RULE) gameStatus.setText(myMessage.fiftymove());
+    	if(gameResult.getGameResultReason()==GameResultReason.STALEMATE) gameStatus.setText(myMessage.stalemate());
+    	if(gameResult.getGameResultReason()==GameResultReason.THREEFOLD_REPETITION_RULE) gameStatus.setText(myMessage.threefold());
+    }
+  }
+  
+  public void setGameStatus(String text){
+	  gameStatus.setText(text);
+  }
+  
+  public void setEmail(String email){
+	  Email.setText("Email: "+email);
+  }
+  
+  public void setNick(String name){
+	  Nickname.setText("Nickname: "+name);
+  }
+  
+  public void setRank(String rank){
+	  Rank.setText("Rank: "+rank);
+  }
+  
+  public Position convert(int row,int col){
+	  if(row>7||row<0||col>7||col<0) return null;
+	  return new Position(7-row,col);
+  }
+  public void setPresenter(Presenter p){
+	  this.presenter=p;
+  }
+  public void setStart(int row, int col, boolean highlighted) {
+	    Element element = board[row][col].getElement();
+	    if (highlighted) {
+	      element.setClassName(css.start());
+	    } else {
+	      element.removeClassName(css.start());
+	    }
+	  }
+  public ImageResource getResource(int i){
+	  if(i==0) return gameImages.Q();
+	  if(i==1) return gameImages.B();
+	  if(i==2) return gameImages.R();
+	  if(i==3) return gameImages.N();
+	  else return null;
+  }
+
+
+   public ImageResource getImg(Piece piece){
+	   switch(piece.getKind()){
+   	case ROOK:
+   		if(piece.getColor().equals(Color.WHITE)){
+   			return gameImages.whiteRook();
+   		}else{
+   			return gameImages.blackRook();
+   		}
+   	case KING:
+   		if(piece.getColor().equals(Color.WHITE)){
+   			return gameImages.whiteKing();
+   		}else{
+   			return gameImages.blackKing();
+   		}
+   	case KNIGHT:
+   		if(piece.getColor().equals(Color.WHITE)){
+   			return gameImages.whiteKnight();
+   		}else{
+   			return gameImages.blackKnight();
+   		}
+   	case QUEEN:
+   		if(piece.getColor().equals(Color.WHITE)){
+   			return gameImages.whiteQueen();
+   		}else{
+   			return gameImages.blackQueen();
+   		}
+
+   	case PAWN:
+   		if(piece.getColor().equals(Color.WHITE)){
+   			return gameImages.whitePawn();
+   		}else{
+   			return gameImages.blackPawn();
+   		}
+   	case BISHOP:
+   		if(piece.getColor().equals(Color.WHITE)){
+   			return gameImages.whiteBishop();
+   		}else{
+   			return gameImages.blackBishop();
+   		}
+   	default:
+   		   return null;
+   
+   }
+   }
+
+
+
+
+	  public Position findImage(Image image){
+		  for(int i=0;i<8;i++){
+			  for(int j=0;j<8;j++) {
+				  if(board[i][j].equals(image)) return convert(i,j);
+			  }
+		  }
+		  return null;
+	  }
+	
+	  
+	  public void setLabel(Label cg){
+		  cg.getElement().setClassName(css.cg());
+	  }
+	  
+	
+  }
+  
+

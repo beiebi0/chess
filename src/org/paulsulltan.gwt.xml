@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  When updating your version of GWT, you should also update this DTD reference,
+  so that your app can take advantage of the latest GWT module capabilities.
+-->
+<!DOCTYPE module PUBLIC "-//Google Inc.//DTD Google Web Toolkit 2.5.0//EN"
+  "http://google-web-toolkit.googlecode.com/svn/tags/2.5.0/distro-source/core/src/gwt-module.dtd">
+<module rename-to='paulsultan'>
+  <!-- Inherit the core Web Toolkit stuff.                        -->
+  <inherits name='com.google.gwt.user.User'/>
+  <inherits name='com.google.gwt.user.theme.clean.Clean'/>
+
+  <!--  packages for appengine                                    -->
+  <inherits name='com.google.gwt.appengine.channel.Channel'></inherits>
+  <inherits name='com.google.gwt.inject.Inject'/>
+  
+  <!-- Logging 													  -->
+  <inherits name="com.google.gwt.logging.Logging"/>
+  <set-property name="gwt.logging.popupHandler" value="DISABLED" />
+
+  <inherits name='com.googlecode.mgwt.MGWT'/>
+  <inherits name="com.googlecode.mgwt.linker.Linker" />
+  
+
+  <inherits name='com.allen_sauer.gwt.dnd.gwt-dnd' />
+  
+  <!--Phonegap													  -->
+  <inherits name='com.googlecode.gwtphonegap.PhoneGap' />
+  
+  <!-- Google Guava for GWT                                       -->
+  <inherits name='com.google.common.collect.Collect'/>
+
+  <!-- Specify the app entry point class.                         -->
+  <entry-point class='org.paulsultan.hw3.ChessEntryPoint'/>
+
+  <add-linker name="xsiframe"/>
+  
+  <!-- Specify the paths for translatable code                    -->
+  <source path='paulsultan'/>
+  <source path='shared'/>
+
+</module>

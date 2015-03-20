@@ -1,0 +1,321 @@
+package org.longjuntan.hw1;
+
+import static org.junit.Assert.assertEquals;
+import static org.shared.chess.Color.BLACK;
+import static org.shared.chess.Color.WHITE;
+import static org.shared.chess.PieceKind.*;
+
+import org.junit.Test;
+import org.shared.chess.AbstractStateChangerTest;
+import org.shared.chess.IllegalMove;
+import org.shared.chess.Move;
+import org.shared.chess.Piece;
+import org.shared.chess.Position;
+import org.shared.chess.State;
+
+public abstract class AbstractStateChangerEnpassantForBlackTest extends
+		AbstractStateChangerTest {
+	private void clearBoardForLT() {
+		for (int row : new int[] { 0, 1, 6, 7 }) {
+			for (int col = 0; col < State.COLS; col++) {
+				start.setPiece(row, col, null);
+			}
+		}
+
+		start.setCanCastleKingSide(WHITE, false);
+		start.setCanCastleKingSide(BLACK, false);
+		start.setCanCastleQueenSide(WHITE, false);
+		start.setCanCastleQueenSide(BLACK, false);
+	}
+
+	@Test
+	public void testInitialValueShouldBeNull() {
+		assertEquals(null, start.getEnpassantPosition());
+	}
+
+	@Test
+	public void testPositionWhenMoveBlackPawnOneSquare() {
+		// First white movement, helping to change turn to black
+		stateChanger.makeMove(start, new Move(new Position(1, 0), new Position(
+				2, 0), null));
+
+		Move move = new Move(new Position(6, 0), new Position(5, 0), null);
+		stateChanger.makeMove(start, move);
+		assertEquals(null, start.getEnpassantPosition());
+	}
+
+	@Test
+	public void testPositionWhenMoveBlackPawnTwoSquares() {
+		stateChanger.makeMove(start, new Move(new Position(1, 0), new Position(
+				2, 0), null));
+
+		Move move = new Move(new Position(6, 0), new Position(4, 0), null);
+		stateChanger.makeMove(start, move);
+		assertEquals(move.getTo(), start.getEnpassantPosition());
+	}
+
+	@Test
+	public void testRowWhenMoveBlackPawnTwoSquares() {
+		start.setTurn(BLACK);
+
+		Move move = new Move(new Position(6, 2), new Position(4, 2), null);
+		stateChanger.makeMove(start, move);
+
+		assertEquals(4, start.getEnpassantPosition().getRow());
+	}
+
+	@Test
+	public void testPieceKindWhenMoveBlackPawnTwoSquares() {
+		stateChanger.makeMove(start, new Move(new Position(1, 0), new Position(
+				2, 0), null));
+
+		Move move = new Move(new Position(6, 1), new Position(4, 1), null);
+		stateChanger.makeMove(start, move);
+		assertEquals(PAWN, start.getPiece(start.getEnpassantPosition())
+				.getKind());
+	}
+
+	public void testColorWhenMoveBlackPawnTwoSquares() {
+		stateChanger.makeMove(start, new Move(new Position(1, 0), new Position(
+				2, 0), null));
+
+		Move move = new Move(new Position(6, 5), new Position(4, 5), null);
+		stateChanger.makeMove(start, move);
+		assertEquals(BLACK, start.getPiece(start.getEnpassantPosition())
+				.getColor());
+	}
+
+	@Test
+	public void testEnpassantForfeitWithoutCapture() {
+		start.setTurn(BLACK);
+
+		Move move = new Move(new Position(6, 5), new Position(4, 5), null);
+		stateChanger.makeMove(start, move);
+
+		assertEquals(move.getTo(), start.getEnpassantPosition());
+
+		// Didn't capture that black pawn which just moved two squares,
+		// so it forfeit after this non-enpassant movement
+		move = new Move(new Position(1, 1), new Position(2, 1), null);
+		stateChanger.makeMove(start, move);
+
+		assertEquals(null, start.getEnpassantPosition());
+	}
+
+	@Test
+	public void testEnpassantPositionChanges() {
+		Move move = new Move(new Position(1, 1), new Position(3, 1), null);
+		stateChanger.makeMove(start, move);
+
+		assertEquals(move.getTo(), start.getEnpassantPosition());
+
+		move = new Move(new Position(6, 5), new Position(4, 5), null);
+		stateChanger.makeMove(start, move);
+
+		assertEquals(move.getTo(), start.getEnpassantPosition());
+	}
+
+	@Test
+	public void testEnpassantFromRightSide() {
+		// Black pawn captures white pawn by enpassant from right side
+		start.setPiece(6, 5, null);
+		start.setPiece(3, 5, new Piece(BLACK, PAWN));
+		State expected = start.copy();
+
+		expected.setPiece(1, 4, null);
+		expected.setPiece(3, 5, null);
+		expected.setPiece(2, 4, new Piece(BLACK, PAWN));
+
+		Move move = new Move(new Position(1, 4), new Position(3, 4), null);
+		stateChanger.makeMove(start, move);
+
+		assertEquals(move.getTo(), start.getEnpassantPosition());
+
+		move = new Move(new Position(3, 5), new Position(2, 4), null);
+		stateChanger.makeMove(start, move);
+
+		assertEquals(expected, start);
+	}
+
+	@Test
+	public void testEnpassantFromLeftSide() {
+		// Black pawn captures white pawn by enpassant from left side
+		start.setPiece(6, 5, null);
+		start.setPiece(3, 5, new Piece(BLACK, PAWN));
+		State expected = start.copy();
+
+		expected.setPiece(1, 6, null);
+		expected.setPiece(3, 5, null);
+		expected.setPiece(2, 6, new Piece(BLACK, PAWN));
+
+		Move move = new Move(new Position(1, 6), new Position(3, 6), null);
+		stateChanger.makeMove(start, move);
+
+		assertEquals(move.getTo(), start.getEnpassantPosition());
+
+		move = new Move(new Position(3, 5), new Position(2, 6), null);
+		stateChanger.makeMove(start, move);
+
+		assertEquals(expected, start);
+	}
+
+	@Test
+	public void testNumberOfMovesWithoutCaptureNorPawnMovedWhenEnpassantHappens() {
+		start.setPiece(6, 5, null);
+		start.setPiece(3, 5, new Piece(BLACK, PAWN));
+		start.setNumberOfMovesWithoutCaptureNorPawnMoved(42);
+
+		Move move = new Move(new Position(1, 4), new Position(3, 4), null);
+		stateChanger.makeMove(start, move);
+		assertEquals(0, start.getNumberOfMovesWithoutCaptureNorPawnMoved());
+
+		move = new Move(new Position(3, 5), new Position(2, 4), null);
+		stateChanger.makeMove(start, move);
+		assertEquals(0, start.getNumberOfMovesWithoutCaptureNorPawnMoved());
+	}
+
+	@Test(expected = IllegalMove.class)
+	public void testEnpassantForfeitWithCapture() {
+		start.setPiece(6, 5, null);
+		start.setPiece(3, 5, new Piece(BLACK, PAWN));
+		start.setPiece(1, 4, null);
+		start.setPiece(3, 4, new Piece(WHITE, PAWN));
+
+		start.setEnpassantPosition(null);
+
+		Move move = new Move(new Position(3, 5), new Position(2, 4), null);
+		stateChanger.makeMove(start, move);
+	}
+
+	@Test
+	public void testOtherMovementsWontAffectEnpassantPosition_Rook() {
+		start.setPiece(6, 7, null);
+		start.setPiece(4, 7, new Piece(BLACK, PAWN));
+
+		start.setTurn(BLACK);
+		stateChanger.makeMove(start, new Move(new Position(7, 7), new Position(
+				5, 7), null));
+		assertEquals(null, start.getEnpassantPosition());
+	}
+
+	@Test
+	public void testOtherMovementsWontAffectEnpassantPosition_Knight() {
+		start.setTurn(BLACK);
+		stateChanger.makeMove(start, new Move(new Position(7, 1), new Position(
+				5, 0), null));
+		assertEquals(null, start.getEnpassantPosition());
+	}
+
+	@Test
+	public void testOtherMovementsWontAffectEnpassantPosition_Bishop() {
+		start.setPiece(6, 1, null);
+		start.setPiece(5, 1, new Piece(BLACK, PAWN));
+
+		start.setTurn(BLACK);
+		stateChanger.makeMove(start, new Move(new Position(7, 2), new Position(
+				6, 1), null));
+		assertEquals(null, start.getEnpassantPosition());
+	}
+
+	@Test
+	public void testOtherMovementsWontAffectEnpassantPosition_Queen() {
+		start.setPiece(6, 3, null);
+		start.setPiece(4, 3, new Piece(BLACK, PAWN));
+
+		start.setTurn(BLACK);
+		stateChanger.makeMove(start, new Move(new Position(7, 3), new Position(
+				6, 3), null));
+		assertEquals(null, start.getEnpassantPosition());
+	}
+
+	@Test
+	public void testOtherMovementsWontAffectEnpassantPosition_King() {
+		start.setPiece(6, 5, null);
+		start.setPiece(4, 5, new Piece(BLACK, PAWN));
+
+		start.setTurn(BLACK);
+		stateChanger.makeMove(start, new Move(new Position(7, 4), new Position(
+				6, 5), null));
+		assertEquals(null, start.getEnpassantPosition());
+	}
+
+	@Test(expected = IllegalMove.class)
+	public void testCannotEnpassant_CannotCaptureKnight() {
+		start.setPiece(0, 6, null);
+		start.setPiece(3, 5, new Piece(WHITE, KNIGHT));
+
+		start.setPiece(6, 6, null);
+		start.setPiece(3, 6, new Piece(BLACK, PAWN));
+
+		Move move = new Move(new Position(1, 7), new Position(3, 7), null);
+		stateChanger.makeMove(start, move);
+
+		assertEquals(move.getTo(), start.getEnpassantPosition());
+
+		// Black pawn tried to enpassant a white knight, but failed
+		move = new Move(new Position(3, 6), new Position(2, 5), null);
+		stateChanger.makeMove(start, move);
+	}
+
+	@Test(expected = IllegalMove.class)
+	public void testCannotEnpassant_ExposeKing() {
+		clearBoardForLT();
+
+		start.setPiece(0, 3, new Piece(WHITE, KING));
+		start.setPiece(3, 5, new Piece(WHITE, PAWN));
+		start.setEnpassantPosition(new Position(3, 5));
+		start.setPiece(2, 4, new Piece(WHITE, ROOK));
+		start.setPiece(3, 4, new Piece(BLACK, PAWN));
+		start.setPiece(7, 4, new Piece(BLACK, KING));
+
+		start.setTurn(BLACK);
+
+		// This enpassant would expose black King to white Rook.
+		Move move = new Move(new Position(3, 4), new Position(2, 5), null);
+		stateChanger.makeMove(start, move);
+	}
+
+	@Test(expected = IllegalMove.class)
+	public void testCannotEnpassant_UnderCheck() {
+		clearBoardForLT();
+
+		start.setPiece(0, 3, new Piece(WHITE, KING));
+		start.setPiece(3, 5, new Piece(WHITE, PAWN));
+		start.setEnpassantPosition(new Position(3, 5));
+		start.setPiece(5, 4, new Piece(WHITE, ROOK));
+		start.setPiece(3, 4, new Piece(BLACK, PAWN));
+		start.setPiece(7, 4, new Piece(BLACK, KING));
+
+		start.setTurn(BLACK);
+
+		// The black King is under check by white rook,
+		// so this enpassant is illegal.
+		Move move = new Move(new Position(3, 4), new Position(2, 5), null);
+		stateChanger.makeMove(start, move);
+	}
+
+	@Test
+	public void testCanEnpassant_UnderCheck() {
+		clearBoardForLT();
+
+		// The black King(4x4) is under check by white pawn(3x5).
+		start.setPiece(3, 4, new Piece(BLACK, PAWN));
+		start.setPiece(3, 5, new Piece(WHITE, PAWN));
+		start.setEnpassantPosition(new Position(3, 5));
+		start.setPiece(4, 4, new Piece(BLACK, KING));
+		start.setPiece(1, 2, new Piece(WHITE, KING));
+
+		State expected = start.copy();
+
+		Move move = new Move(new Position(3, 4), new Position(2, 5), null);
+		stateChanger.makeMove(start, move);
+
+		expected.setPiece(3, 5, null);
+		expected.setPiece(3, 4, null);
+		expected.setPiece(2, 5, new Piece(BLACK, PAWN));
+		expected.setEnpassantPosition(null);
+
+		assertEquals(expected, start);
+	}
+
+}

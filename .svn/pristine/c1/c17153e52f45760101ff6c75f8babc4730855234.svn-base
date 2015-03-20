@@ -1,0 +1,267 @@
+package org.yuehlinchung.hw3;
+
+import org.shared.chess.Color;
+import org.shared.chess.GameResultReason;
+import org.shared.chess.GameResult;
+import org.shared.chess.Piece;
+import org.shared.chess.PieceKind;
+import org.yuehlinchung.hw3.Presenter.View;
+
+import com.google.gwt.core.client.GWT;
+import com.google.gwt.event.dom.client.ClickEvent;
+import com.google.gwt.event.dom.client.ClickHandler;
+import com.google.gwt.resources.client.ImageResource;
+import com.google.gwt.uibinder.client.UiBinder;
+import com.google.gwt.uibinder.client.UiField;
+import com.google.gwt.user.client.Element;
+import com.google.gwt.user.client.ui.Button;
+import com.google.gwt.user.client.ui.Composite;
+import com.google.gwt.user.client.ui.Grid;
+import com.google.gwt.user.client.ui.Image;
+import com.google.gwt.user.client.ui.Label;
+import com.google.gwt.user.client.ui.Widget;
+import com.google.gwt.user.client.ui.FlowPanel;
+
+import com.google.gwt.event.logical.shared.ValueChangeEvent;
+import com.google.gwt.event.logical.shared.ValueChangeHandler;
+import com.google.gwt.user.client.History;
+
+
+
+public class Graphics extends Composite implements View {
+  private static GameImages gameImages = GWT.create(GameImages.class);
+  private static GraphicsUiBinder uiBinder = GWT.create(GraphicsUiBinder.class);
+
+  interface GraphicsUiBinder extends UiBinder<Widget, Graphics> {
+  }
+
+  @UiField GameCss css;
+  @UiField Label gameStatus;
+  @UiField Grid gameGrid;
+  @UiField Button startButton;
+  @UiField Button backButton;
+  @UiField Button forwardButton;
+  @UiField Label promote;
+  @UiField Button queen;
+  @UiField Button knight;
+  @UiField Button rook;
+  @UiField Button bishop;
+  private Image[][] board = new Image[8][8];
+  public Presenter presenter;
+
+  public Graphics() {
+	this.presenter = new Presenter();
+    initWidget(uiBinder.createAndBindUi(this));
+    gameGrid.resize(8, 8);
+    gameGrid.setCellPadding(0);
+    gameGrid.setCellSpacing(0);
+    gameGrid.setBorderWidth(1);
+    for (int row = 0; row < 8; row++) {
+        for (int col = 0; col < 8; col++) {
+        	int r = presenter.reverseR(row);
+        	final Image image = new Image();
+	        board[r][col] = image;
+	        final int rowId = r;
+	        final int colId = col;
+    		image.setWidth("100%");
+    		image.setHeight("100%");
+    		FlowPanel panel = new FlowPanel();
+			if (row % 2 == 0 && col % 2 == 1 || row % 2 == 1 && col % 2 == 0) {
+				panel.setStylePrimaryName("gray-square");
+			} else {
+				panel.setStylePrimaryName("white-square");
+			}
+			panel.add(image);
+	        image.addClickHandler(new ClickHandler() {
+	        	@Override
+	        	public void onClick(ClickEvent event) {
+	        		presenter.clickedOn(rowId, colId);
+	        	}
+	        });	        		
+	        gameGrid.setWidget(r, col, panel);
+        }
+    }
+    startButton.addClickHandler(new ClickHandler() {
+    	@Override
+    	public void onClick(ClickEvent event) {
+    		presenter.initState();
+    	}
+    });
+    queen.addClickHandler(new ClickHandler() {
+    	@Override
+    	public void onClick(ClickEvent event) {
+    		presenter.pawnPromoteMove(PieceKind.QUEEN);
+    	}
+    });
+    knight.addClickHandler(new ClickHandler() {
+    	@Override
+    	public void onClick(ClickEvent event) {
+    		presenter.pawnPromoteMove(PieceKind.KNIGHT);
+    	}
+    });
+    rook.addClickHandler(new ClickHandler() {
+    	@Override
+    	public void onClick(ClickEvent event) {
+    		presenter.pawnPromoteMove(PieceKind.ROOK);
+    	}
+    });
+    bishop.addClickHandler(new ClickHandler() {
+    	@Override
+    	public void onClick(ClickEvent event) {
+    		presenter.pawnPromoteMove(PieceKind.BISHOP);
+    	}
+    });
+    backButton.addClickHandler(new ClickHandler() {
+    	@Override
+    	public void onClick(ClickEvent event) {
+    		History.back();
+    	}
+    });
+    forwardButton.addClickHandler(new ClickHandler() {
+    	@Override
+    	public void onClick(ClickEvent event) {
+    		History.forward();
+    	}
+    });
+    History.addValueChangeHandler(new ValueChangeHandler<String>() {
+    	public void onValueChange(ValueChangeEvent<String> event) {
+    		String historyToken = event.getValue();
+    		if (historyToken.isEmpty()) {
+    			presenter.initState();
+    		} else {
+    			presenter.setState(StateHistory.decode(historyToken));
+    		}
+    		hidePromoteOption();
+    	}
+    });
+    presenter.setView(this);
+  }
+  
+  @Override
+  public void addHistoryToken(String token) {
+	  History.newItem(token);
+  }
+    
+  @Override
+  public void setPiece(int row, int col, Piece piece) {
+    // TODO
+	int r = presenter.reverseR(row);	
+	ImageResource img = getImgPiece(piece);
+	
+	if (img == null) {
+		board[r][col].setUrl("");
+		board[r][col].setWidth("100%");
+		board[r][col].setHeight("100%");
+	} else {
+		board[r][col].setResource(getImgPiece(piece));	
+	}
+  }
+  
+  
+  private ImageResource getImgPiece(Piece piece) {
+	if (piece == null) {
+		return null;
+	} else {
+		if (piece.getColor().isBlack()) {
+			switch (piece.getKind()) {
+			case PAWN:
+				return gameImages.blackPawn();
+			case KING:
+				return gameImages.blackKing();
+			case QUEEN:
+				return gameImages.blackQueen();
+			case BISHOP:
+				return gameImages.blackBishop();
+			case ROOK:
+				return gameImages.blackRook();
+			case KNIGHT:
+				return gameImages.blackKnight();
+			}
+		} else if (piece.getColor().isWhite()) {
+			switch (piece.getKind()) {
+			case PAWN:
+				return gameImages.whitePawn();
+			case KING:
+				return gameImages.whiteKing();
+			case QUEEN:
+				return gameImages.whiteQueen();
+			case BISHOP:
+				return gameImages.whiteBishop();
+			case ROOK:
+				return gameImages.whiteRook();
+			case KNIGHT:
+				return gameImages.whiteKnight();
+			}
+		}
+		return null;
+	}
+  }
+
+  @Override
+  public void setHighlighted(int row, int col, boolean highlighted) {
+	int r = presenter.reverseR(row);
+    Element element = board[r][col].getElement();
+    if (highlighted) {
+      element.setClassName(css.highlighted());
+    } else {
+      element.removeClassName(css.highlighted());
+    }
+  }
+  
+  
+  @Override
+  public void setWhoseTurn(Color color) {
+    // TODO
+	if (color == Color.BLACK) {
+		setStatusText("Black's Turn");
+	} else if (color == Color.WHITE) {
+		setStatusText("White's Turn");
+	} else {
+		setStatusText("Unknown Color! Error!");
+	}
+  }
+  
+  private void setStatusText(String str) {
+	  gameStatus.setText(str);
+  }
+
+  @Override
+  public void setGameResult(GameResult gameResult) {
+    // TODO
+	if (gameResult == null)
+		return;
+	if (gameResult.getGameResultReason() == GameResultReason.CHECKMATE) {
+		if (gameResult.getWinner() == Color.BLACK) {
+			setStatusText("Checkmate! Black Wins!");
+		} else if (gameResult.getWinner() == Color.WHITE) {
+			setStatusText("Checkmate! White Wins!");
+		}
+	} else if (gameResult.getGameResultReason() == GameResultReason.FIFTY_MOVE_RULE) {
+		setStatusText("Fifty Move Rule, no one wins!");
+	} else if (gameResult.getGameResultReason() == GameResultReason.STALEMATE) {
+		setStatusText("Stalemate, no one wins!");
+	} else if (gameResult.getGameResultReason() == GameResultReason.THREEFOLD_REPETITION_RULE) {
+		setStatusText("Threefold Repetition Rule, no one wins!");
+	} else {
+		setStatusText("Game Result");
+	}
+  }
+  
+  @Override
+  public void displayPromoteOption() {
+	  promote.setVisible(true);
+	  queen.setVisible(true);
+	  knight.setVisible(true);
+	  rook.setVisible(true);
+	  bishop.setVisible(true);
+  }
+  
+  @Override
+  public void hidePromoteOption() {
+	  promote.setVisible(false);
+	  queen.setVisible(false);
+	  knight.setVisible(false);
+	  rook.setVisible(false);
+	  bishop.setVisible(false);
+  }
+}

@@ -1,0 +1,47 @@
+package org.zhaohuizhang.hw6.server;
+
+import static com.googlecode.objectify.ObjectifyService.ofy;
+
+import java.io.IOException;
+
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import org.zhaohuizhang.hw7.Player;
+
+import com.google.appengine.api.channel.ChannelPresence;
+import com.google.appengine.api.channel.ChannelService;
+import com.google.appengine.api.channel.ChannelServiceFactory;
+import com.googlecode.objectify.Key;
+
+public class ConnectedServlet extends HttpServlet {
+
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = -5946992410331816571L;
+
+	protected void doPost(HttpServletRequest req, HttpServletResponse resp)
+			throws ServletException, IOException {
+		// In the handler for _ah/channel/connected/
+		ChannelService channelService = ChannelServiceFactory
+				.getChannelService();
+		ChannelPresence presence = channelService.parsePresence(req);
+		String clientId = presence.clientId();
+		/*System.out.println("client ID: " + clientId);
+		//Window.alert("client ID: " + clientId);
+
+		Key<Player> playerKey = Key.create(Player.class, clientId);
+		Player player = ofy().load().key(playerKey).get();
+
+		if (presence.isConnected()) {
+			player.addToken(clientId);
+		} else {
+			player.addToken(clientId);
+		}
+		ofy().save().entity(player);*/
+
+	}
+}

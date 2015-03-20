@@ -1,0 +1,965 @@
+package org.vorasahil.hw3;
+
+import static org.shared.chess.Color.*;
+
+import java.util.Date;
+import java.util.HashMap;
+
+import org.shared.chess.Color;
+import org.shared.chess.GameResult;
+import org.shared.chess.Piece;
+import org.shared.chess.PieceKind;
+import org.vorasahil.hw8.ChessConstants;
+import org.vorasahil.hw3.Presenter.View;
+import org.vorasahil.hw5.AudioSupport;
+import org.vorasahil.hw5.ChessAnimation;
+
+import com.google.gwt.appengine.channel.client.Channel;
+import com.google.gwt.appengine.channel.client.ChannelError;
+import com.google.gwt.appengine.channel.client.ChannelFactoryImpl;
+import com.google.gwt.appengine.channel.client.SocketListener;
+import com.google.gwt.core.client.GWT;
+import com.google.gwt.event.dom.client.ChangeEvent;
+import com.google.gwt.event.dom.client.ClickEvent;
+import com.google.gwt.event.dom.client.ClickHandler;
+import com.google.gwt.uibinder.client.UiBinder;
+import com.google.gwt.uibinder.client.UiField;
+import com.google.gwt.user.client.Element;
+import com.google.gwt.user.client.Window;
+import com.google.gwt.user.client.rpc.AsyncCallback;
+import com.google.gwt.user.client.ui.Button;
+import com.google.gwt.user.client.ui.Composite;
+import com.google.gwt.user.client.ui.Grid;
+import com.google.gwt.user.client.ui.Image;
+import com.google.gwt.user.client.ui.Label;
+import com.google.gwt.user.client.ui.ListBox;
+import com.google.gwt.user.client.ui.TextBox;
+import com.google.gwt.user.client.ui.Widget;
+import com.google.gwt.event.dom.client.*;
+import com.google.gwt.i18n.shared.DateTimeFormat;
+import com.google.gwt.i18n.shared.DateTimeFormat.PredefinedFormat;
+import com.google.gwt.media.client.Audio;
+import org.vorasahil.hw7.client.*;
+import org.vorasahil.hw6.client.*;
+
+public class Graphics extends Composite implements View {
+	private static GameImages gameImages = GWT.create(GameImages.class);
+	private static GraphicsUiBinder uiBinder = GWT
+			.create(GraphicsUiBinder.class);
+	private static ChessConstants constants = GWT.create(ChessConstants.class);
+
+	private int rank;
+	private Channel channel;
+	private Presenter presenter = new Presenter();
+	private String[] matches = null;
+	private String currentState = "";
+	private RegisterServiceAsync registerService = GWT
+			.create(RegisterService.class);
+
+	interface GraphicsUiBinder extends UiBinder<Widget, Graphics> {
+	}
+
+	@UiField
+	GameCss css;
+	@UiField
+	Label gameStatus;
+	@UiField
+	Label whoseTurn;
+	@UiField
+	Label playerDetails;
+	@UiField
+	Grid gameGrid;
+	@UiField
+	Grid pieceGrid;
+	@UiField
+	Button button;
+	@UiField
+	Button autoMatchButton;
+	@UiField
+	Button loadGameButton;
+	@UiField
+	Button loadButton;
+	@UiField
+	Button deleteButton;
+	@UiField
+	ListBox gameList;
+	@UiField
+	TextBox inviteContact;
+	@UiField
+	Label matchDetails;
+	@UiField
+	Label rankDetails;
+	@UiField
+	Label dateDetails;
+	@UiField
+	Button aiWhite;
+	@UiField
+	Button aiBlack;
+
+	private long currentGameId = -1;
+	private Image[][] board = new Image[8][8];
+
+	private Image[][] pieceBoard = new Image[1][4];
+
+	private final LoginInfo login;
+	private Register regInfo;
+
+	public Graphics(String token, final Register message, final LoginInfo login) {
+		this.login = login;
+		final String email = login.getEmailAddress();
+		this.rank = message.getRank();
+		this.regInfo = message;
+		presenter.setView(this);
+		initWidget(uiBinder.createAndBindUi(this));
+		playerDetails
+				.setText("" + constants.loggedInAs() + login.getNickname());
+		rankDetails.setText(constants.rank() + "" + rank);
+		gameGrid.resize(8, 8);
+		gameGrid.setCellPadding(0);
+		gameGrid.setCellSpacing(0);
+		gameGrid.setBorderWidth(0);
+		for (int row = 0; row < 8; row++) {
+			for (int col = 0; col < 8; col++) {
+				final Image image = new Image();
+				board[row][col] = image;
+				image.setWidth("100%");
+				image.setResource(gameImages.emptyTile());
+				addHandlers(image, row, col);
+				gameGrid.setWidget(row, col, image);
+			}
+		}
+		pieceGrid.resize(8, 8);
+		pieceGrid.setCellPadding(0);
+		pieceGrid.setCellSpacing(0);
+		pieceGrid.setBorderWidth(0);
+
+		for (int col = 0; col < 4; col++) {
+			final Image image = new Image();
+			pieceBoard[0][col] = image;
+			image.setWidth("100%");
+			switch (col) {
+			case 0:
+				image.setResource(gameImages.GreenB());
+				break;
+			case 1:
+				image.setResource(gameImages.GreenN());
+				break;
+			case 2:
+				image.setResource(gameImages.GreenR());
+				break;
+			case 3:
+				image.setResource(gameImages.GreenQ());
+				break;
+			}
+			final int j = col;
+			image.addClickHandler(new ClickHandler() {
+				@Override
+				public void onClick(ClickEvent event) {
+					presenter.selectCell(j);
+				}
+			});
+
+			pieceGrid.setWidget(0, col, image);
+		}
+		pieceGrid.setVisible(false);
+		presenter.start("");
+
+		button.setText(constants.challenge() + "!");
+		button.addClickHandler(new ClickHandler() {
+			@Override
+			public void onClick(ClickEvent event) {
+				registerService.challenge(email, inviteContact.getText(),
+						presenter.getNewState(), new AsyncCallback<Register>() {
+
+							@Override
+							public void onFailure(Throwable caught) {
+								Window.alert(constants.connectionError());
+							}
+
+							@Override
+							public void onSuccess(Register result) {
+								if (result == null) {
+									Window.alert(constants.invalidEmailID());
+								} else {
+									currentGameId = result.getCurrentMatchId();
+									Window.alert(constants.challengePosted());
+									loadGameList(result.getMatchesString());
+									setCurrentGame(currentGameId);
+								}
+							}
+
+						});
+
+			}
+		});
+
+		deleteButton.setText(constants.deleteGame());
+		deleteButton.addClickHandler(new ClickHandler() {
+			@Override
+			public void onClick(ClickEvent event) {
+				long temp = -1;
+				final int index = gameList.getSelectedIndex();
+				for (long gameKey : indexMap.keySet()) {
+					if (indexMap.get(gameKey) == index) {
+						temp = gameKey;
+					}
+				}
+				final long gameKey = temp;
+				if (temp != -1) {
+					registerService.deleteGame(email, temp,
+							new AsyncCallback<Boolean>() {
+
+								@Override
+								public void onFailure(Throwable caught) {
+									Window.alert(constants.connectionError());
+								}
+
+								@Override
+								public void onSuccess(Boolean result) {
+									if (result == false) {
+										Window.alert(constants.deleteFailed());
+									} else {
+										indexMap.remove(gameKey);
+										gameMap.remove(gameKey);
+										gameList.removeItem(index);
+										long temp = -1;
+										for (long gameKey : indexMap.keySet()) {
+											temp = gameKey;
+										}
+										Window.alert(constants
+												.deleteSuccessful());
+
+										if (temp != -1) {
+											currentGameId = temp;
+											setCurrentGame(currentGameId);
+										} else {
+											currentGameId = temp;
+											presenter.start("");
+											disableMove();
+										}
+									}
+								}
+
+							});
+
+				}
+			}
+		});
+
+		loadGameList(regInfo.getMatchesString());
+		loadGameButton.setText(constants.reloadGameList());
+		loadGameButton.addClickHandler(new ClickHandler() {
+			@Override
+			public void onClick(ClickEvent event) {
+				registerService.reloadGames(email,
+						new AsyncCallback<Register>() {
+
+							@Override
+							public void onFailure(Throwable caught) {
+								Window.alert(constants.connectionError());
+							}
+
+							@Override
+							public void onSuccess(Register result) {
+								Window.alert(constants.reloaded());
+								loadGameList(result.getMatchesString());
+							}
+
+						});
+			}
+		});
+		loadButton.setText(constants.loadGame());
+		loadButton.addClickHandler(new ClickHandler() {
+			@Override
+			public void onClick(ClickEvent event) {
+				long temp = -1;
+				int index = gameList.getSelectedIndex();
+				for (long gameKey : indexMap.keySet()) {
+					if (indexMap.get(gameKey) == index) {
+						temp = gameKey;
+					}
+				}
+				currentGameId = temp;
+				setCurrentGame(currentGameId);
+			}
+
+		});
+
+		aiWhite.setText(constants.singlePlayerWhite());
+		aiWhite.addClickHandler(new ClickHandler() {
+			@Override
+			public void onClick(ClickEvent event) {
+				startSinglePlayerGame(WHITE);
+			}
+
+		});
+
+		aiBlack.setText(constants.singlePlayerBlack());
+		aiBlack.addClickHandler(new ClickHandler() {
+			@Override
+			public void onClick(ClickEvent event) {
+				startSinglePlayerGame(BLACK);
+			}
+
+		});
+
+		autoMatchButton.setText(constants.autoMatch());
+		autoMatchButton.addClickHandler(new ClickHandler() {
+			@Override
+			public void onClick(ClickEvent event) {
+				registerService.autoMatchMe(email, presenter.getNewState(),
+						new AsyncCallback<Register>() {
+
+							@Override
+							public void onFailure(Throwable caught) {
+								Window.alert(constants.connectionError());
+							}
+
+							@Override
+							public void onSuccess(Register result) {
+								if (result != null) {
+									currentGameId = result.getCurrentMatchId();
+									if (currentGameId == -1) {
+										Window.alert(constants
+												.findingOpponent());
+										setCurrentGame(currentGameId);
+									} else {
+										Window.alert(constants
+												.autoMatchComplete());
+										loadGameList(result.getMatchesString());
+										setCurrentGame(currentGameId);
+									}
+								} else {
+									Window.alert(constants.connectionError());
+								}
+
+							}
+
+						});
+
+			}
+		});
+
+		gameList.addChangeHandler(new ChangeHandler() {
+			@Override
+			public void onChange(ChangeEvent event) {
+				long temp = -1;
+				int index = gameList.getSelectedIndex();
+				for (long gameKey : indexMap.keySet()) {
+					if (indexMap.get(gameKey) == index) {
+						temp = gameKey;
+					}
+				}
+				gameStatus.setText("");
+				currentGameId = temp;
+				setCurrentGame(currentGameId);
+			}
+		});
+
+		// CHANNEL API
+		channel = new ChannelFactoryImpl().createChannel(message.getToken());
+		channel.open(new SocketListener() {
+			@Override
+			public void onOpen() {
+				Window.alert(constants.welcome() + login.getNickname() + "!");
+			}
+
+			@Override
+			public void onMessage(String mes) {
+				String str = mes.trim();
+				String[] gameStr = str.split("&&&&&");
+				String game = gameMap.get(Long.parseLong(gameStr[1]));
+				rank = Integer.parseInt(gameStr[2]);
+				updateRankDetails();
+				if (game == null) {
+					loadGameList(gameStr[0]);
+					if (currentGameId != -1) {
+						Window.alert(constants.match() + " " + gameStr[1] + " "
+								+ constants.addedToList());
+					} else {
+						setCurrentGame(Long.parseLong(gameStr[0]));
+					}
+				} else {
+					loadGameList(gameStr[0]);
+					if (currentGameId == Long.parseLong(gameStr[1])) {
+						setCurrentGame(Long.parseLong(gameStr[1]));
+					} else {
+						Window.alert(constants.match() + gameStr[1] + " "
+								+ constants.changed());
+					}
+				}
+			}
+
+			@Override
+			public void onError(ChannelError error) {
+				Window.alert(constants.error() + error.getCode() + " : "
+						+ error.getDescription());
+			}
+
+			@Override
+			public void onClose() {
+				Window.alert(constants.channelClosed());
+			}
+		});
+
+		if (gameList.getItemCount() > 0) {
+			int index = 0;
+			long temp = -1;
+			for (long gameKey : indexMap.keySet()) {
+				if (indexMap.get(gameKey) == index) {
+					temp = gameKey;
+					break;
+				}
+			}
+			currentGameId = temp;
+			setCurrentGame(temp);
+		} else {
+			disableMove();
+		}
+	}
+
+	private HashMap<Long, String> gameMap = new HashMap<Long, String>();
+	private HashMap<Long, Integer> indexMap = new HashMap<Long, Integer>();
+	private HashMap<Long, Date> dateMap = new HashMap<Long, Date>();
+	private boolean isSinglePlayer = false;
+
+	private void loadGameList(String matchesString) {
+		gameList.clear();
+		gameMap.clear();
+		indexMap.clear();
+		dateMap.clear();
+		if (matchesString.length() > 1) {
+			matches = matchesString.split("@&#&;&;&#&@");
+			String[] games;
+			String email = login.getEmailAddress();
+			for (int i = 0; i < matches.length; i++) {
+				String str = "";
+				games = matches[i].split("%%%%%");
+				gameMap.put(Long.parseLong(games[3]), matches[i]);
+				indexMap.put(Long.parseLong(games[3]), i);
+				dateMap.put(Long.parseLong(games[3]),
+						new Date(Long.parseLong(games[4])));
+				str += constants.match() + games[3];
+				char c = games[2].charAt(0);
+				if (games[0].equals(email)) {
+					str += " VS " + games[1] + ".";
+					if (c == 'w') {
+						str += "(" + constants.yourTurn() + ")";
+					}
+				} else {
+					str += " VS " + games[0] + ".";
+					if (c == 'b') {
+						str += "(" + constants.yourTurn() + ")";
+					}
+				}
+				gameList.addItem(str);
+			}
+		}
+
+	}
+
+	public void startSinglePlayerGame(Color color) {
+		int playerTurn = color.equals(WHITE) ? 0 : 1;
+		registerService.RegisterAIGame(login.getEmailAddress(),
+				presenter.getNewState(), playerTurn,
+				new AsyncCallback<Register>() {
+
+					@Override
+					public void onFailure(Throwable caught) {
+						Window.alert(constants.error());
+					}
+
+					@Override
+					public void onSuccess(Register result) {
+						if (result != null) {
+							currentGameId = result.getCurrentMatchId();
+							loadGameList(result.getMatchesString());
+							setCurrentGame(currentGameId);
+						} else {
+							Window.alert(constants.connectionError());
+						}
+					}
+				});
+
+	}
+
+	public void updateRankDetails() {
+		rankDetails.setText(constants.rank() + rank);
+	}
+
+	void setCurrentGame(long gameId) {
+		if (gameId == -1) {
+
+			currentState = "";
+			presenter.setState("");
+			if (gameList.getItemCount() == 0) {
+				gameMap.clear();
+				indexMap.clear();
+				gameList.clear();
+			}
+			disableMove();
+		} else {
+			String str = gameMap.get(gameId);
+			String gameString[] = str.split("%%%%%");
+			currentGameId = Long.parseLong(gameString[3]);
+			int gState = presenter.hasGameEnded(gameString[2]);
+			char c = gameString[2].charAt(0);
+			boolean isWhite = false;
+			boolean enable = false;
+			if (gameString[0].equals(login.getEmailAddress())) {
+				isWhite = true;
+				enable = (c == 'w');
+			} else {
+				isWhite = false;
+				enable = (c == 'b');
+			}
+			isSinglePlayer = Boolean.parseBoolean(gameString[5]);
+			String abc = gameList.getItemText(indexMap.get(gameId));
+			String xyz[] = abc.split("\\(");
+			if (enable && gState == 0) {
+				gameList.setItemText(indexMap.get(gameId), xyz[0] + "("
+						+ constants.yourTurn() + ")");
+				playerDetails.setText(login.getNickname() + ", "
+						+ constants.yourTurn());
+				enableMove();
+			} else {
+				gameList.setItemText(indexMap.get(gameId), xyz[0]);
+				playerDetails.setText(login.getNickname());
+				disableMove();
+			}
+
+			gameList.setSelectedIndex(indexMap.get(gameId));
+			if (isWhite)
+				matchDetails.setText(constants.currentMatch() + currentGameId
+						+ ".(" + constants.playingWhite() + ")");
+			else
+				matchDetails.setText(constants.currentMatch() + currentGameId
+						+ ".(" + constants.playingBlack() + ")");
+
+			dateDetails.setText(constants.startedOn()
+					+ DateTimeFormat.getFormat(PredefinedFormat.DATE_LONG)
+							.format(dateMap.get(gameId)));
+			presenter.setState(gameString[2]);
+			currentState = gameString[2];
+			if (gState != 0) {
+				switch (gState) {
+				case 1:
+					gameStatus.setText(constants.fiftyMove());
+					break;
+
+				case 2:
+					gameStatus.setText(constants.stalemate());
+					break;
+
+				case 3:
+					gameStatus.setText(constants.threefold());
+					break;
+
+				case 4:
+					if (isWhite)
+						gameStatus.setText(constants.youWon());
+					else
+						gameStatus.setText(constants.youLost());
+					break;
+
+				case 5:
+					if (!isWhite)
+						gameStatus.setText(constants.youWon());
+					else
+						gameStatus.setText(constants.youLost());
+					break;
+				}
+			}
+			if(!enable && gState==0 && isSinglePlayer){
+				System.out.println("In here");
+				presenter.makeAIMove(gameString[2]);
+			}
+			
+		}
+	}
+
+	void disableMove() {
+		presenter.disableMove();
+	}
+
+	void enableMove() {
+		presenter.enableMove();
+	}
+
+	@Override
+	public void setPiece(int row, int col, Piece piece) {
+		row = 7 - row;
+
+		if (piece != null) {
+			Color color = piece.getColor();
+			PieceKind kind = piece.getKind();
+			final Image image = new Image();
+			board[row][col] = image;
+			image.setWidth("100%");
+
+			switch (kind) {
+			case BISHOP:
+				if (isWhite(color))
+					image.setResource(gameImages.WhiteB());
+				else
+					image.setResource(gameImages.BlackB());
+				break;
+			case KING:
+				if (isWhite(color))
+					image.setResource(gameImages.WhiteK());
+				else
+					image.setResource(gameImages.BlackK());
+				break;
+			case KNIGHT:
+				if (isWhite(color))
+					image.setResource(gameImages.WhiteN());
+				else
+					image.setResource(gameImages.BlackN());
+				break;
+			case PAWN:
+				if (isWhite(color))
+					image.setResource(gameImages.WhiteP());
+				else
+					image.setResource(gameImages.BlackP());
+				break;
+			case QUEEN:
+				if (isWhite(color))
+					image.setResource(gameImages.WhiteQ());
+				else
+					image.setResource(gameImages.BlackQ());
+				break;
+			case ROOK:
+				if (isWhite(color))
+					image.setResource(gameImages.WhiteR());
+				else
+					image.setResource(gameImages.BlackR());
+				break;
+			default:
+				break;
+			}
+
+			addHandlers(image, row, col);
+			gameGrid.setWidget(row, col, image);
+		} else {
+			final Image image = new Image();
+			board[row][col] = image;
+			image.setWidth("100%");
+			image.setResource(gameImages.emptyTile());
+			addHandlers(image, row, col);
+			gameGrid.setWidget(row, col, image);
+		}
+
+	}
+
+	@Override
+	public void setHighlighted(int row, int col, boolean highlighted) {
+		row = 7 - row;
+
+		Element element = board[row][col].getElement();
+		if (highlighted) {
+			element.setClassName(css.highlighted());
+		} else {
+			element.removeClassName(css.highlighted());
+		}
+	}
+
+	@Override
+	public void animate(int row, int col, int toRow, int toCol) {
+		row = 7 - row;
+		toRow = 7 - toRow;
+		Element element = board[toRow][toCol].getElement();
+		int x1, x2, y1, y2;
+		x1 = board[row][col].getElement().getAbsoluteLeft();
+		x2 = board[toRow][toCol].getElement().getAbsoluteLeft();
+		y1 = board[row][col].getElement().getAbsoluteTop();
+		y2 = board[toRow][toCol].getElement().getAbsoluteTop();
+		ChessAnimation animation = new ChessAnimation(element);
+		animation.scrollTo(x1, y1, x2, y2, 50);
+	}
+
+	@Override
+	public void setWhoseTurn(Color color) {
+		whoseTurn.setText(getColor(color));
+	}
+
+	/**
+	 * Sets the text of the gameStatus label
+	 */
+	public void setGameStatus(String text) {
+		gameStatus.setText(text);
+	}
+
+	@Override
+	public void setGameResult(GameResult gameResult) {
+		String result = "";
+		if (gameResult.getWinner() != null)
+			result += gameResult.getWinner().equals(WHITE) ? "WHITE WINS!"
+					: "BLACK WINS";
+		else
+			result += "DRAW!";
+		result += "(" + gameResult.getGameResultReason() + ")";
+		gameStatus.setText(result);
+		whoseTurn.setText(constants.gameOver());
+	}
+
+	/**
+	 * Returns a string for the color.
+	 * 
+	 * @param color
+	 * @return
+	 */
+	private String getColor(Color color) {
+		if (color.equals(WHITE))
+			return constants.white();
+		else
+			return constants.black();
+	}
+
+	/**
+	 * Returns if the color is White.
+	 * 
+	 * @param color
+	 * @return
+	 */
+	private Boolean isWhite(Color color) {
+		return color.equals(WHITE);
+	}
+
+	@Override
+	public void setToMoveHighlighted(int row, int col, boolean highlighted) {
+		row = 7 - row;
+
+		Element element = board[row][col].getElement();
+		if (highlighted) {
+			element.setClassName(css.showMove());
+		} else {
+			element.removeClassName(css.showMove());
+		}
+	}
+
+	/*	*//**
+	 * Adds new tokens to the history
+	 */
+	/*
+	 * public void updateHistory(String token) { History.newItem(token); }
+	 */
+	String token = "";
+
+	public void updateOtherPlayer(final String token, GameResult gResult) {
+		if (!currentState.equals(token)) {
+			if (!isSinglePlayer) {
+				int winner = -1;
+				if (gResult == null)
+					winner = -1;
+				else {
+					if (gResult.isDraw())
+						winner = 0;
+					else {
+						if (gResult.getWinner().equals(WHITE))
+							winner = 1;
+						else
+							winner = 2;
+					}
+				}
+				registerService.myMove(login.getEmailAddress(), token,
+						currentGameId, winner, new AsyncCallback<Boolean>() {
+
+							@Override
+							public void onFailure(Throwable caught) {
+								Window.alert("Error, please try again!");
+							}
+
+							@Override
+							public void onSuccess(Boolean result) {
+								if (result) {
+									gameStatus.setText("Updated");
+									String str = gameMap.get(currentGameId);
+									String gameString[] = str.split("%%%%%");
+									gameString[2] = token;
+									str = "";
+									str += gameString[0];
+									for (int i = 1; i < gameString.length; i++) {
+										str += "%%%%%" + gameString[i];
+									}
+
+									gameMap.put(currentGameId, str);
+									setCurrentGame(currentGameId);
+								} else {
+									Window.alert("Problem");
+								}
+							}
+
+						});
+				if (gResult != null) {
+					registerService.getRank(login.getEmailAddress(),
+							new AsyncCallback<Integer>() {
+
+								@Override
+								public void onFailure(Throwable caught) {
+
+								}
+
+								@Override
+								public void onSuccess(Integer result) {
+									rank = result.intValue();
+									rankDetails.setText("Rank: " + rank);
+								}
+
+							});
+				}
+			}
+			else {
+				registerService.updateAIGameMove(login.getEmailAddress(),
+						currentGameId, token,new AsyncCallback<Boolean>() {
+
+							@Override
+							public void onFailure(Throwable caught) {
+								Window.alert("Error, please try again!");
+							}
+
+							@Override
+							public void onSuccess(Boolean result) {
+								if (result) {
+									gameStatus.setText("Updated");
+									String str = gameMap.get(currentGameId);
+									String gameString[] = str.split("%%%%%");
+									gameString[2] = token;
+									str = "";
+									str += gameString[0];
+									for (int i = 1; i < gameString.length; i++) {
+										str += "%%%%%" + gameString[i];
+									}
+
+									gameMap.put(currentGameId, str);
+									setCurrentGame(currentGameId);
+								} else {
+									Window.alert("Problem");
+								}
+							}
+
+						});
+			}
+		}
+
+	}
+
+	/**
+	 * Sets PieceBoard to be highlighted
+	 */
+	public void setPieceHighlighted(boolean highlighted) {
+
+		pieceGrid.setVisible(highlighted);
+
+		for (int i = 0; i < 4; i++) {
+			Element element = pieceBoard[0][i].getElement();
+
+			if (highlighted) {
+				element.setClassName(css.highlighted());
+			} else {
+				element.removeClassName(css.highlighted());
+			}
+		}
+	}
+
+	/**
+	 * Private method to add various handlers to any image.
+	 * 
+	 * @param image
+	 * @param row
+	 * @param col
+	 */
+	private void addHandlers(final Image image, int row, int col) {
+		final int i = 7 - row;
+		final int j = col;
+		image.addClickHandler(new ClickHandler() {
+			@Override
+			public void onClick(ClickEvent event) {
+				presenter.selectCell(i, j);
+			}
+		});
+		image.getElement().setDraggable(Element.DRAGGABLE_TRUE);
+		image.addDragStartHandler(new DragStartHandler() {
+			public void onDragStart(DragStartEvent event) {
+				// Required: set data for the event.
+				event.setData("text", "Hello World");
+				// Optional: show a copy of the widget under cursor.
+				event.getDataTransfer()
+						.setDragImage(image.getElement(), 30, 30);
+				presenter.selectCell(i, j);
+			}
+		});
+
+		image.addDragOverHandler(new DragOverHandler() {
+			public void onDragOver(DragOverEvent event) {
+				// image.getElement().setBackgroundColor("#ffa");
+			}
+		});
+		// Add a DropHandler.
+		image.addDropHandler(new DropHandler() {
+			public void onDrop(DropEvent event) {
+				// Prevent the native text drop.
+				event.preventDefault();
+				// Get the data out of the event.
+				presenter.selectCell(i, j);
+			}
+		});
+
+	}
+
+	/**
+	 * Audio for moves, game-over and restart events.
+	 */
+	Audio moveAudio = getAudio("move");
+	Audio gameOverAudio = getAudio("gameOver");
+	Audio restartAudio = getAudio("restart");
+
+	/*
+	 * Gets the appropriate audio file.
+	 */
+	public Audio getAudio(String file) {
+		return AudioSupport.getAudio(file);
+	}
+
+	/**
+	 * Makes the move sound
+	 */
+	public void moveSound() {
+		if (moveAudio != null) {
+			moveAudio.load();
+			moveAudio.play();
+		}
+	}
+
+	/**
+	 * Makes the game over sound
+	 */
+	public void gameOverSound() {
+		if (gameOverAudio != null) {
+			gameOverAudio.load();
+			gameOverAudio.play();
+		}
+	}
+
+	/**
+	 * Makes the restart event sound
+	 */
+	public void restartSound() {
+		if (restartAudio != null) {
+			restartAudio.load();
+			restartAudio.play();
+		}
+	}
+
+	/**
+	 * Local Storage Mechanism. Save & Load.
+	 */
+	/*
+	 * Storage storage = Storage.getLocalStorageIfSupported();
+	 * 
+	 * public void save() { if (storage != null) { storage.setItem("game",
+	 * presenter.seriaLize(presenter.getState())); } }
+	 * 
+	 * public void load() { if (storage != null) { String loader =
+	 * storage.getItem("game"); presenter.setState(loader); } }
+	 */
+}

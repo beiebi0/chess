@@ -1,0 +1,35 @@
+package org.peigenyou.hw3;
+
+import java.io.Serializable;
+import java.util.Date;
+
+import org.shared.chess.State;
+
+import com.googlecode.objectify.annotation.Entity;
+import com.googlecode.objectify.annotation.Id;
+@Entity
+public class Match implements Serializable{
+	
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = Long.MAX_VALUE;
+	@Id public String MatchID;
+	public String blackID;
+	public String whiteID;
+	public String state;
+	public int turn=0;
+	public Boolean isOver=false;
+	public Date startDate;
+	@SuppressWarnings("deprecation")
+	public Match(){
+		
+	}
+	public Match(String blackID,String whiteID){
+		this.startDate=new Date();
+		this.MatchID=startDate.toGMTString();
+		this.whiteID=whiteID;
+		this.blackID=blackID;
+		this.state=org.peigenyou.hw3.Presenter.stateToString(new State());
+	}
+}

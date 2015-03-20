@@ -1,0 +1,42 @@
+package org.leozis.hw3;
+
+import com.google.gwt.resources.client.ClientBundle;
+import com.google.gwt.resources.client.ImageResource;
+
+public interface GameImages extends ClientBundle {
+  @Source("Black B.png")
+  ImageResource blackB();
+  
+  @Source("Black K.png")
+  ImageResource blackK();
+  
+  @Source("Black N.png")
+  ImageResource blackN();
+  
+  @Source("Black P.png")
+  ImageResource blackP();
+  
+  @Source("Black Q.png")
+  ImageResource blackQ();
+  
+  @Source("Black R.png")
+  ImageResource blackR();
+  
+  @Source("White B.png")
+  ImageResource whiteB();
+  
+  @Source("White K.png")
+  ImageResource whiteK();
+  
+  @Source("White N.png")
+  ImageResource whiteN();
+  
+  @Source("White P.png")
+  ImageResource whiteP();
+  
+  @Source("White Q.png")
+  ImageResource whiteQ();
+  
+  @Source("White R.png")
+  ImageResource whiteR();
+}

@@ -1,0 +1,754 @@
+package org.bohouli.hw1;
+
+import static org.junit.Assert.assertEquals;
+import static org.shared.chess.Color.BLACK;
+import static org.shared.chess.Color.WHITE;
+
+import org.junit.Test;
+import org.shared.chess.AbstractStateChangerTest;
+import org.shared.chess.Color;
+import org.shared.chess.IllegalMove;
+import org.shared.chess.Move;
+import org.shared.chess.Piece;
+import org.shared.chess.PieceKind;
+import org.shared.chess.Position;
+import org.shared.chess.State;
+
+public abstract class AbstractStateChangerCastlingForWhiteTest extends
+		AbstractStateChangerTest {
+	  public static final int ROWS = 8;
+	  public static final int COLS = 8;
+	  
+	  /*
+	   * Test castle when canCastleKingside is set true for white
+	   */
+	  @Test
+	  public void testCanCastleKingSide() {
+	    Move move = new Move(new Position(0, 4), new Position(0, 6), null);
+	    boolean[] canCastleKingSide = new boolean[]{true, true};
+	    boolean[] canCastleQueenSide = new boolean[]{false, true};
+	    
+	    Piece[][] board = new Piece[8][8];
+		{
+			board[0][0] = new Piece(Color.WHITE, PieceKind.ROOK);
+			board[0][1] = new Piece(Color.WHITE, PieceKind.KNIGHT);
+			board[0][2] = new Piece(Color.WHITE, PieceKind.BISHOP);
+			board[0][3] = new Piece(Color.WHITE, PieceKind.QUEEN);
+			board[0][4] = new Piece(Color.WHITE, PieceKind.KING);
+			board[0][7] = new Piece(Color.WHITE, PieceKind.ROOK);
+			board[2][5] = new Piece(Color.WHITE, PieceKind.KNIGHT);
+			board[3][2] = new Piece(Color.WHITE, PieceKind.BISHOP);
+			
+			board[7][0] = new Piece(Color.BLACK, PieceKind.ROOK);
+			board[7][1] = new Piece(Color.BLACK, PieceKind.KNIGHT);
+			board[7][2] = new Piece(Color.BLACK, PieceKind.BISHOP);
+			board[7][3] = new Piece(Color.BLACK, PieceKind.QUEEN);
+			board[7][4] = new Piece(Color.BLACK, PieceKind.KING);
+			board[5][7] = new Piece(Color.BLACK, PieceKind.ROOK);
+			board[5][5] = new Piece(Color.BLACK, PieceKind.KNIGHT);
+		}
+		
+	    start = new State(Color.WHITE, board, canCastleKingSide, canCastleQueenSide, null, 0, null);
+	    State expected = start.copy();
+	    expected.setTurn(BLACK);
+	    expected.setPiece(0, 4, null);
+	    expected.setPiece(0, 6, new Piece(WHITE, PieceKind.KING));
+	    expected.setPiece(0, 7, null);
+	    expected.setPiece(0, 5, new Piece(WHITE, PieceKind.ROOK));
+	    expected.setNumberOfMovesWithoutCaptureNorPawnMoved(1);
+	    expected.setCanCastleKingSide(Color.WHITE, false);
+	    expected.setCanCastleQueenSide(Color.WHITE, false);
+	    stateChanger.makeMove(start, move);
+	    assertEquals(expected, start);
+	  }
+	  
+	  /*
+	   * Test castle when canCastleQueenside is set true for white
+	   */
+	  @Test
+	  public void testCanCastleQueenSide() {
+	    Move move = new Move(new Position(0, 4), new Position(0, 2), null);
+	    boolean[] canCastleKingSide = new boolean[]{false, true};
+	    boolean[] canCastleQueenSide = new boolean[]{true, true};
+	    
+	    Piece[][] board = new Piece[8][8];
+		{
+			board[0][0] = new Piece(Color.WHITE, PieceKind.ROOK);
+			board[0][4] = new Piece(Color.WHITE, PieceKind.KING);
+			board[0][5] = new Piece(Color.WHITE, PieceKind.BISHOP);
+			board[0][6] = new Piece(Color.WHITE, PieceKind.KNIGHT);
+			board[0][7] = new Piece(Color.WHITE, PieceKind.ROOK);
+			board[2][1] = new Piece(Color.WHITE, PieceKind.QUEEN);
+			board[2][2] = new Piece(Color.WHITE, PieceKind.KNIGHT);
+			board[2][4] = new Piece(Color.WHITE, PieceKind.BISHOP);
+			
+			board[7][0] = new Piece(Color.BLACK, PieceKind.ROOK);
+			board[7][4] = new Piece(Color.BLACK, PieceKind.KING);
+			board[7][5] = new Piece(Color.BLACK, PieceKind.BISHOP);
+			board[7][6] = new Piece(Color.BLACK, PieceKind.KNIGHT);
+			board[7][7] = new Piece(Color.BLACK, PieceKind.ROOK);
+			board[5][1] = new Piece(Color.BLACK, PieceKind.QUEEN);
+			board[5][2] = new Piece(Color.BLACK, PieceKind.KNIGHT);
+			board[5][4] = new Piece(Color.BLACK, PieceKind.BISHOP);
+		}
+		
+	    start = new State(Color.WHITE, board, canCastleKingSide, canCastleQueenSide, null, 0, null);
+	    State expected = start.copy();
+	    expected.setTurn(BLACK);
+	    expected.setPiece(0, 4, null);
+	    expected.setPiece(0, 2, new Piece(WHITE, PieceKind.KING));
+	    expected.setPiece(0, 0, null);
+	    expected.setPiece(0, 3, new Piece(WHITE, PieceKind.ROOK));
+	    expected.setNumberOfMovesWithoutCaptureNorPawnMoved(1);
+	    expected.setCanCastleKingSide(Color.WHITE, false);
+	    expected.setCanCastleQueenSide(Color.WHITE, false);
+	    stateChanger.makeMove(start, move);
+	    assertEquals(expected, start);
+	  }
+	  
+	  /*
+	   * Test castle when canCastleKingside and canCastleQueenside are both set true for white
+	   */
+	  @Test
+	  public void testCanCastleBothSide() {
+	    Move move = new Move(new Position(0, 4), new Position(0, 2), null);
+	    boolean[] canCastleKingSide = new boolean[]{true, true};
+	    boolean[] canCastleQueenSide = new boolean[]{true, true};
+	    
+	    Piece[][] board = new Piece[8][8];
+		{
+			board[0][0] = new Piece(Color.WHITE, PieceKind.ROOK);
+			board[0][4] = new Piece(Color.WHITE, PieceKind.KING);
+			board[0][5] = new Piece(Color.WHITE, PieceKind.BISHOP);
+			board[0][6] = new Piece(Color.WHITE, PieceKind.KNIGHT);
+			board[0][7] = new Piece(Color.WHITE, PieceKind.ROOK);
+			board[2][1] = new Piece(Color.WHITE, PieceKind.QUEEN);
+			board[2][2] = new Piece(Color.WHITE, PieceKind.KNIGHT);
+			board[2][4] = new Piece(Color.WHITE, PieceKind.BISHOP);
+			
+			board[7][0] = new Piece(Color.BLACK, PieceKind.ROOK);
+			board[7][4] = new Piece(Color.BLACK, PieceKind.KING);
+			board[7][5] = new Piece(Color.BLACK, PieceKind.BISHOP);
+			board[7][6] = new Piece(Color.BLACK, PieceKind.KNIGHT);
+			board[7][7] = new Piece(Color.BLACK, PieceKind.ROOK);
+			board[5][1] = new Piece(Color.BLACK, PieceKind.QUEEN);
+			board[5][2] = new Piece(Color.BLACK, PieceKind.KNIGHT);
+			board[5][4] = new Piece(Color.BLACK, PieceKind.BISHOP);
+		}
+		
+	    start = new State(Color.WHITE, board, canCastleKingSide, canCastleQueenSide, null, 0, null);
+	    State expected = start.copy();
+	    expected.setTurn(BLACK);
+	    expected.setPiece(0, 4, null);
+	    expected.setPiece(0, 2, new Piece(WHITE, PieceKind.KING));
+	    expected.setPiece(0, 0, null);
+	    expected.setPiece(0, 3, new Piece(WHITE, PieceKind.ROOK));
+	    expected.setNumberOfMovesWithoutCaptureNorPawnMoved(1);
+	    expected.setCanCastleKingSide(Color.WHITE, false);
+	    expected.setCanCastleQueenSide(Color.WHITE, false);
+	    stateChanger.makeMove(start, move);
+	    assertEquals(expected, start);
+	  }
+	  
+	  /*
+	   * Test castle when canCastleKingSide is set false for white
+	   */
+	  @Test(expected = IllegalMove.class)
+	  public void testCannotCastleKingSide() {
+	    Move move = new Move(new Position(0, 4), new Position(0, 6), null);
+	    boolean[] canCastleKingSide = new boolean[]{false, false};
+	    boolean[] canCastleQueenSide = new boolean[]{true, true};
+	    
+	    Piece[][] board = new Piece[8][8];
+		{
+			board[0][0] = new Piece(Color.WHITE, PieceKind.ROOK);
+			board[0][1] = new Piece(Color.WHITE, PieceKind.KNIGHT);
+			board[0][2] = new Piece(Color.WHITE, PieceKind.BISHOP);
+			board[0][3] = new Piece(Color.WHITE, PieceKind.QUEEN);
+			board[0][4] = new Piece(Color.WHITE, PieceKind.KING);
+			board[0][7] = new Piece(Color.WHITE, PieceKind.ROOK);
+			board[2][5] = new Piece(Color.WHITE, PieceKind.KNIGHT);
+			board[3][2] = new Piece(Color.WHITE, PieceKind.BISHOP);
+			
+			board[7][0] = new Piece(Color.BLACK, PieceKind.ROOK);
+			board[7][1] = new Piece(Color.BLACK, PieceKind.KNIGHT);
+			board[7][2] = new Piece(Color.BLACK, PieceKind.BISHOP);
+			board[7][3] = new Piece(Color.BLACK, PieceKind.QUEEN);
+			board[7][4] = new Piece(Color.BLACK, PieceKind.KING);
+			board[5][7] = new Piece(Color.BLACK, PieceKind.ROOK);
+			board[5][5] = new Piece(Color.BLACK, PieceKind.KNIGHT);
+			board[4][2] = new Piece(Color.BLACK, PieceKind.BISHOP);
+		}
+		
+	    start = new State(Color.WHITE, board, canCastleKingSide, canCastleQueenSide, null, 0, null);
+	    stateChanger.makeMove(start, move);
+	  }
+	  
+	  /*
+	   * Test Castle when canCastleQueenside is set false for white
+	   */
+	  @Test(expected = IllegalMove.class)
+	  public void testCannotCastleQueenSide() {
+	    Move move = new Move(new Position(0, 4), new Position(0, 2), null);
+	    boolean[] canCastleKingSide = new boolean[]{true, true};
+	    boolean[] canCastleQueenSide = new boolean[]{false, false};
+	    
+	    Piece[][] board = new Piece[8][8];
+		{
+			board[0][0] = new Piece(Color.WHITE, PieceKind.ROOK);
+			board[0][4] = new Piece(Color.WHITE, PieceKind.KING);
+			board[0][5] = new Piece(Color.WHITE, PieceKind.BISHOP);
+			board[0][6] = new Piece(Color.WHITE, PieceKind.KNIGHT);
+			board[0][7] = new Piece(Color.WHITE, PieceKind.ROOK);
+			board[2][1] = new Piece(Color.WHITE, PieceKind.QUEEN);
+			board[2][2] = new Piece(Color.WHITE, PieceKind.KNIGHT);
+			board[2][4] = new Piece(Color.WHITE, PieceKind.BISHOP);
+			
+			board[7][0] = new Piece(Color.BLACK, PieceKind.ROOK);
+			board[7][4] = new Piece(Color.BLACK, PieceKind.KING);
+			board[7][5] = new Piece(Color.BLACK, PieceKind.BISHOP);
+			board[7][6] = new Piece(Color.BLACK, PieceKind.KNIGHT);
+			board[7][7] = new Piece(Color.BLACK, PieceKind.ROOK);
+			board[5][1] = new Piece(Color.BLACK, PieceKind.QUEEN);
+			board[5][2] = new Piece(Color.BLACK, PieceKind.KNIGHT);
+			board[5][4] = new Piece(Color.BLACK, PieceKind.BISHOP);
+		}
+		
+	    start = new State(Color.WHITE, board, canCastleKingSide, canCastleQueenSide, null, 0, null);
+	    stateChanger.makeMove(start, move);
+	  }
+	  
+	  /*
+	   * Test Castle when canCastleKingside and canCastleQueenside are both set false for white
+	   */
+	  @Test(expected = IllegalMove.class)
+	  public void testCannotCastleBothSide() {
+	    Move move = new Move(new Position(0, 4), new Position(0, 2), null);
+	    boolean[] canCastleKingSide = new boolean[]{false, true};
+	    boolean[] canCastleQueenSide = new boolean[]{false, false};
+	    
+	    Piece[][] board = new Piece[8][8];
+		{
+			board[0][0] = new Piece(Color.WHITE, PieceKind.ROOK);
+			board[0][4] = new Piece(Color.WHITE, PieceKind.KING);
+			board[0][5] = new Piece(Color.WHITE, PieceKind.BISHOP);
+			board[0][6] = new Piece(Color.WHITE, PieceKind.KNIGHT);
+			board[0][7] = new Piece(Color.WHITE, PieceKind.ROOK);
+			board[2][1] = new Piece(Color.WHITE, PieceKind.QUEEN);
+			board[2][2] = new Piece(Color.WHITE, PieceKind.KNIGHT);
+			board[2][4] = new Piece(Color.WHITE, PieceKind.BISHOP);
+			
+			board[7][0] = new Piece(Color.BLACK, PieceKind.ROOK);
+			board[7][4] = new Piece(Color.BLACK, PieceKind.KING);
+			board[7][5] = new Piece(Color.BLACK, PieceKind.BISHOP);
+			board[7][6] = new Piece(Color.BLACK, PieceKind.KNIGHT);
+			board[7][7] = new Piece(Color.BLACK, PieceKind.ROOK);
+			board[5][1] = new Piece(Color.BLACK, PieceKind.QUEEN);
+			board[5][2] = new Piece(Color.BLACK, PieceKind.KNIGHT);
+			board[5][4] = new Piece(Color.BLACK, PieceKind.BISHOP);
+		}
+		
+	    start = new State(Color.WHITE, board, canCastleKingSide, canCastleQueenSide, null, 0, null);
+	    stateChanger.makeMove(start, move);
+	  }
+	  
+	  /*
+	   * Test white king side Castle when the sixth square is occupied by white
+	   */
+	  @Test(expected = IllegalMove.class)
+	  public void testCastleKingSideSixthSquareOccupied() {
+	    Move move = new Move(new Position(0, 4), new Position(0, 6), null);
+	    boolean[] canCastleKingSide = new boolean[]{true, true};
+	    boolean[] canCastleQueenSide = new boolean[]{true, true};
+	    
+	    Piece[][] board = new Piece[8][8];
+		{
+			board[0][0] = new Piece(Color.WHITE, PieceKind.ROOK);
+			board[0][1] = new Piece(Color.WHITE, PieceKind.KNIGHT);
+			board[0][2] = new Piece(Color.WHITE, PieceKind.BISHOP);
+			board[0][3] = new Piece(Color.WHITE, PieceKind.QUEEN);
+			board[0][4] = new Piece(Color.WHITE, PieceKind.KING);
+			board[0][6] = new Piece(Color.WHITE, PieceKind.KNIGHT);
+			board[0][7] = new Piece(Color.WHITE, PieceKind.ROOK);
+			board[3][2] = new Piece(Color.WHITE, PieceKind.BISHOP);
+			
+			board[7][0] = new Piece(Color.BLACK, PieceKind.ROOK);
+			board[7][1] = new Piece(Color.BLACK, PieceKind.KNIGHT);
+			board[7][2] = new Piece(Color.BLACK, PieceKind.BISHOP);
+			board[7][3] = new Piece(Color.BLACK, PieceKind.QUEEN);
+			board[7][4] = new Piece(Color.BLACK, PieceKind.KING);
+			board[7][6] = new Piece(Color.BLACK, PieceKind.KNIGHT);
+			board[7][7] = new Piece(Color.BLACK, PieceKind.ROOK);
+			board[4][2] = new Piece(Color.BLACK, PieceKind.BISHOP);
+		}
+		
+	    start = new State(Color.WHITE, board, canCastleKingSide, canCastleQueenSide, null, 0, null);
+	    stateChanger.makeMove(start, move);
+	  }
+	  
+	  /*
+	   * Test white queen side Castle when the second square is occupied by white
+	   */
+	  @Test(expected = IllegalMove.class)
+	  public void testCastleQueenSideSecondSquareOccupied() {
+	    Move move = new Move(new Position(0, 4), new Position(0, 2), null);
+	    boolean[] canCastleKingSide = new boolean[]{true, true};
+	    boolean[] canCastleQueenSide = new boolean[]{true, true};
+	    
+	    Piece[][] board = new Piece[8][8];
+		{
+			board[0][0] = new Piece(Color.WHITE, PieceKind.ROOK);
+			board[0][2] = new Piece(Color.WHITE, PieceKind.BISHOP);
+			board[0][4] = new Piece(Color.WHITE, PieceKind.KING);
+			board[0][5] = new Piece(Color.WHITE, PieceKind.BISHOP);
+			board[0][6] = new Piece(Color.WHITE, PieceKind.KNIGHT);
+			board[0][7] = new Piece(Color.WHITE, PieceKind.ROOK);
+			board[2][0] = new Piece(Color.WHITE, PieceKind.KNIGHT);
+			board[2][1] = new Piece(Color.WHITE, PieceKind.QUEEN);
+			
+			board[7][0] = new Piece(Color.BLACK, PieceKind.ROOK);
+			board[7][1] = new Piece(Color.BLACK, PieceKind.KNIGHT);
+			board[7][3] = new Piece(Color.BLACK, PieceKind.QUEEN);
+			board[7][4] = new Piece(Color.BLACK, PieceKind.KING);
+			board[7][5] = new Piece(Color.BLACK, PieceKind.BISHOP);
+			board[7][6] = new Piece(Color.BLACK, PieceKind.KNIGHT);
+			board[7][7] = new Piece(Color.BLACK, PieceKind.ROOK);
+			board[3][6] = new Piece(Color.BLACK, PieceKind.BISHOP);
+		}
+		
+	    start = new State(Color.WHITE, board, canCastleKingSide, canCastleQueenSide, null, 0, null);
+	    stateChanger.makeMove(start, move);
+	  }
+	  
+	  /*
+	   * Test white king side Castle when the fifth square is occupied by white
+	   */
+	  @Test(expected = IllegalMove.class)
+	  public void testCastleKingSideFifthSquareOccupied() {
+	    Move move = new Move(new Position(0, 4), new Position(0, 6), null);
+	    boolean[] canCastleKingSide = new boolean[]{true, true};
+	    boolean[] canCastleQueenSide = new boolean[]{true, true};
+	    
+	    Piece[][] board = new Piece[8][8];
+		{
+			board[0][0] = new Piece(Color.WHITE, PieceKind.ROOK);
+			board[0][1] = new Piece(Color.WHITE, PieceKind.KNIGHT);
+			board[0][2] = new Piece(Color.WHITE, PieceKind.BISHOP);
+			board[0][3] = new Piece(Color.WHITE, PieceKind.QUEEN);
+			board[0][4] = new Piece(Color.WHITE, PieceKind.KING);
+			board[0][5] = new Piece(Color.WHITE, PieceKind.BISHOP);
+			board[0][7] = new Piece(Color.WHITE, PieceKind.ROOK);
+			board[2][5] = new Piece(Color.WHITE, PieceKind.KNIGHT);
+			
+			
+			board[7][0] = new Piece(Color.BLACK, PieceKind.ROOK);
+			board[7][1] = new Piece(Color.BLACK, PieceKind.KNIGHT);
+			board[7][2] = new Piece(Color.BLACK, PieceKind.BISHOP);
+			board[7][3] = new Piece(Color.BLACK, PieceKind.QUEEN);
+			board[7][4] = new Piece(Color.BLACK, PieceKind.KING);
+			board[7][6] = new Piece(Color.BLACK, PieceKind.KNIGHT);
+			board[7][7] = new Piece(Color.BLACK, PieceKind.ROOK);
+			board[4][2] = new Piece(Color.BLACK, PieceKind.BISHOP);
+		}
+		
+	    start = new State(Color.WHITE, board, canCastleKingSide, canCastleQueenSide, null, 0, null);
+	    stateChanger.makeMove(start, move);
+	  }
+	  
+	  /*
+	   * Test white queen side Castle when the first square is occupied by white
+	   */
+	  @Test(expected = IllegalMove.class)
+	  public void testCastleQueenSideFirstSquareOccupied() {
+	    Move move = new Move(new Position(0, 4), new Position(0, 2), null);
+	    boolean[] canCastleKingSide = new boolean[]{true, true};
+	    boolean[] canCastleQueenSide = new boolean[]{true, true};
+	    
+	    Piece[][] board = new Piece[8][8];
+		{
+			board[0][0] = new Piece(Color.WHITE, PieceKind.ROOK);
+			board[0][1] = new Piece(Color.WHITE, PieceKind.KNIGHT);
+			board[0][4] = new Piece(Color.WHITE, PieceKind.KING);
+			board[0][5] = new Piece(Color.WHITE, PieceKind.BISHOP);
+			board[0][6] = new Piece(Color.WHITE, PieceKind.KNIGHT);
+			board[0][7] = new Piece(Color.WHITE, PieceKind.ROOK);
+			board[2][1] = new Piece(Color.WHITE, PieceKind.QUEEN);
+			board[4][6] = new Piece(Color.WHITE, PieceKind.BISHOP);
+			
+			board[7][0] = new Piece(Color.BLACK, PieceKind.ROOK);
+			board[7][1] = new Piece(Color.BLACK, PieceKind.KNIGHT);
+			board[7][3] = new Piece(Color.BLACK, PieceKind.QUEEN);
+			board[7][4] = new Piece(Color.BLACK, PieceKind.KING);
+			board[7][5] = new Piece(Color.BLACK, PieceKind.BISHOP);
+			board[7][6] = new Piece(Color.BLACK, PieceKind.KNIGHT);
+			board[7][7] = new Piece(Color.BLACK, PieceKind.ROOK);
+			board[3][6] = new Piece(Color.BLACK, PieceKind.BISHOP);
+		}
+		
+	    start = new State(Color.WHITE, board, canCastleKingSide, canCastleQueenSide, null, 0, null);
+	    stateChanger.makeMove(start, move);
+	  }
+	  
+	  /*
+	   * Test white queen side Castle when the third square is occupied by white
+	   */
+	  @Test(expected = IllegalMove.class)
+	  public void testCastleQueenSideThirdSquareOccupied() {
+	    Move move = new Move(new Position(0, 4), new Position(0, 2), null);
+	    boolean[] canCastleKingSide = new boolean[]{true, true};
+	    boolean[] canCastleQueenSide = new boolean[]{true, true};
+	    
+	    Piece[][] board = new Piece[8][8];
+		{
+			board[0][0] = new Piece(Color.WHITE, PieceKind.ROOK);
+			board[0][3] = new Piece(Color.WHITE, PieceKind.QUEEN);
+			board[0][4] = new Piece(Color.WHITE, PieceKind.KING);
+			board[0][5] = new Piece(Color.WHITE, PieceKind.BISHOP);
+			board[0][6] = new Piece(Color.WHITE, PieceKind.KNIGHT);
+			board[0][7] = new Piece(Color.WHITE, PieceKind.ROOK);
+			board[2][0] = new Piece(Color.WHITE, PieceKind.KNIGHT);
+			board[4][6] = new Piece(Color.WHITE, PieceKind.BISHOP);
+			
+			board[7][0] = new Piece(Color.BLACK, PieceKind.ROOK);
+			board[7][1] = new Piece(Color.BLACK, PieceKind.KNIGHT);
+			board[7][3] = new Piece(Color.BLACK, PieceKind.QUEEN);
+			board[7][4] = new Piece(Color.BLACK, PieceKind.KING);
+			board[7][5] = new Piece(Color.BLACK, PieceKind.BISHOP);
+			board[7][6] = new Piece(Color.BLACK, PieceKind.KNIGHT);
+			board[7][7] = new Piece(Color.BLACK, PieceKind.ROOK);
+			board[3][6] = new Piece(Color.BLACK, PieceKind.BISHOP);
+		}
+		
+	    start = new State(Color.WHITE, board, canCastleKingSide, canCastleQueenSide, null, 0, null);
+	    stateChanger.makeMove(start, move);
+	  }
+	  
+	  /*
+	   * Test white king side Castle when king is under check
+	   */
+	  @Test(expected = IllegalMove.class)
+	  public void testCastleKingSideBeingChecked() {
+	    Move move = new Move(new Position(0, 4), new Position(0, 6), null);
+	    boolean[] canCastleKingSide = new boolean[]{true, true};
+	    boolean[] canCastleQueenSide = new boolean[]{true, true};
+	    
+	    Piece[][] board = new Piece[8][8];
+		{
+			board[0][0] = new Piece(Color.WHITE, PieceKind.ROOK);
+			board[0][1] = new Piece(Color.WHITE, PieceKind.KNIGHT);
+			board[0][2] = new Piece(Color.WHITE, PieceKind.BISHOP);
+			board[0][3] = new Piece(Color.WHITE, PieceKind.QUEEN);
+			board[0][4] = new Piece(Color.WHITE, PieceKind.KING);
+			board[0][7] = new Piece(Color.WHITE, PieceKind.ROOK);
+			board[2][5] = new Piece(Color.WHITE, PieceKind.KNIGHT);
+			board[5][0] = new Piece(Color.WHITE, PieceKind.BISHOP);
+			
+			board[7][0] = new Piece(Color.BLACK, PieceKind.ROOK);
+			board[7][1] = new Piece(Color.BLACK, PieceKind.KNIGHT);
+			board[7][4] = new Piece(Color.BLACK, PieceKind.KING);
+			board[7][5] = new Piece(Color.BLACK, PieceKind.BISHOP);
+			board[7][7] = new Piece(Color.BLACK, PieceKind.ROOK);
+			board[6][4] = new Piece(Color.BLACK, PieceKind.KNIGHT);
+			board[4][2] = new Piece(Color.BLACK, PieceKind.BISHOP);
+			board[2][2] = new Piece(Color.BLACK, PieceKind.QUEEN);
+		}
+		
+	    start = new State(Color.WHITE, board, canCastleKingSide, canCastleQueenSide, null, 0, null);
+	    stateChanger.makeMove(start, move);
+	  }
+	  
+	  /*
+	   * Test white queen side Castle when king is under check
+	   */
+	  @Test(expected = IllegalMove.class)
+	  public void testCastleQueenSideBeingChecked() {
+	    Move move = new Move(new Position(0, 4), new Position(0, 2), null);
+	    boolean[] canCastleKingSide = new boolean[]{true, true};
+	    boolean[] canCastleQueenSide = new boolean[]{true, true};
+	    
+	    Piece[][] board = new Piece[8][8];
+		{
+			board[0][0] = new Piece(Color.WHITE, PieceKind.ROOK);
+			board[0][4] = new Piece(Color.WHITE, PieceKind.KING);
+			board[0][5] = new Piece(Color.WHITE, PieceKind.BISHOP);
+			board[0][6] = new Piece(Color.WHITE, PieceKind.KNIGHT);
+			board[0][7] = new Piece(Color.WHITE, PieceKind.ROOK);
+			board[2][0] = new Piece(Color.WHITE, PieceKind.KNIGHT);
+			board[2][1] = new Piece(Color.WHITE, PieceKind.QUEEN);
+			board[4][6] = new Piece(Color.WHITE, PieceKind.BISHOP);
+			
+			
+			board[7][0] = new Piece(Color.BLACK, PieceKind.ROOK);
+			board[7][1] = new Piece(Color.BLACK, PieceKind.KNIGHT);
+			board[7][4] = new Piece(Color.BLACK, PieceKind.KING);
+			board[7][5] = new Piece(Color.BLACK, PieceKind.BISHOP);
+			board[6][4] = new Piece(Color.BLACK, PieceKind.KNIGHT);
+			board[4][0] = new Piece(Color.BLACK, PieceKind.ROOK);
+			board[3][6] = new Piece(Color.BLACK, PieceKind.BISHOP);
+			board[2][2] = new Piece(Color.BLACK, PieceKind.QUEEN);
+		}
+		
+	    start = new State(Color.WHITE, board, canCastleKingSide, canCastleQueenSide, null, 0, null);
+	    stateChanger.makeMove(start, move);
+	  }
+	  
+	  /*
+	   * Test white king side Castle when the king will be under check if it castle
+	   */
+	  @Test(expected = IllegalMove.class)
+	  public void testCastleKingSideTargetChecked() {
+	    Move move = new Move(new Position(0, 4), new Position(0, 6), null);
+	    boolean[] canCastleKingSide = new boolean[]{true, true};
+	    boolean[] canCastleQueenSide = new boolean[]{true, true};
+	    
+	    Piece[][] board = new Piece[8][8];
+		{
+			board[0][0] = new Piece(Color.WHITE, PieceKind.ROOK);
+			board[0][1] = new Piece(Color.WHITE, PieceKind.KNIGHT);
+			board[0][2] = new Piece(Color.WHITE, PieceKind.BISHOP);
+			board[0][3] = new Piece(Color.WHITE, PieceKind.QUEEN);
+			board[0][4] = new Piece(Color.WHITE, PieceKind.KING);
+			board[0][7] = new Piece(Color.WHITE, PieceKind.ROOK);
+			board[5][0] = new Piece(Color.WHITE, PieceKind.BISHOP);
+			
+			board[7][0] = new Piece(Color.BLACK, PieceKind.ROOK);
+			board[7][1] = new Piece(Color.BLACK, PieceKind.KNIGHT);
+			board[7][4] = new Piece(Color.BLACK, PieceKind.KING);
+			board[7][5] = new Piece(Color.BLACK, PieceKind.BISHOP);
+			board[7][7] = new Piece(Color.BLACK, PieceKind.ROOK);
+			board[6][4] = new Piece(Color.BLACK, PieceKind.KNIGHT);
+			board[4][2] = new Piece(Color.BLACK, PieceKind.BISHOP);
+			board[3][3] = new Piece(Color.BLACK, PieceKind.QUEEN);
+		}
+		
+	    start = new State(Color.WHITE, board, canCastleKingSide, canCastleQueenSide, null, 0, null);
+	    stateChanger.makeMove(start, move);
+	  }
+	  
+	  /*
+	   * Test white queen side Castle when the king will be under check if it castle
+	   */
+	  @Test(expected = IllegalMove.class)
+	  public void testCastleQueenSideTargetChecked() {
+	    Move move = new Move(new Position(0, 4), new Position(0, 2), null);
+	    boolean[] canCastleKingSide = new boolean[]{true, true};
+	    boolean[] canCastleQueenSide = new boolean[]{true, true};
+	    
+	    Piece[][] board = new Piece[8][8];
+		{
+			board[0][0] = new Piece(Color.WHITE, PieceKind.ROOK);
+			board[0][4] = new Piece(Color.WHITE, PieceKind.KING);
+			board[0][7] = new Piece(Color.WHITE, PieceKind.ROOK);
+			board[1][4] = new Piece(Color.WHITE, PieceKind.BISHOP);
+			board[2][0] = new Piece(Color.WHITE, PieceKind.KNIGHT);
+			board[4][6] = new Piece(Color.WHITE, PieceKind.BISHOP);
+			
+			
+			board[7][0] = new Piece(Color.BLACK, PieceKind.ROOK);
+			board[7][1] = new Piece(Color.BLACK, PieceKind.KNIGHT);
+			board[7][4] = new Piece(Color.BLACK, PieceKind.KING);
+			board[7][5] = new Piece(Color.BLACK, PieceKind.BISHOP);
+			board[5][5] = new Piece(Color.BLACK, PieceKind.KNIGHT);
+			board[4][2] = new Piece(Color.BLACK, PieceKind.ROOK);
+			board[3][6] = new Piece(Color.BLACK, PieceKind.BISHOP);
+		}
+		
+	    start = new State(Color.WHITE, board, canCastleKingSide, canCastleQueenSide, null, 0, null);
+	    stateChanger.makeMove(start, move);
+	  }
+
+	  /*
+	   * Test white king side Castle when the square in the middle is under check
+	   */
+	  @Test(expected = IllegalMove.class)
+	  public void testCastleKingSideFifthSquareChecked() {
+	    Move move = new Move(new Position(0, 4), new Position(0, 6), null);
+	    boolean[] canCastleKingSide = new boolean[]{true, true};
+	    boolean[] canCastleQueenSide = new boolean[]{true, true};
+	    
+	    Piece[][] board = new Piece[8][8];
+		{
+			board[0][0] = new Piece(Color.WHITE, PieceKind.ROOK);
+			board[0][1] = new Piece(Color.WHITE, PieceKind.KNIGHT);
+			board[0][2] = new Piece(Color.WHITE, PieceKind.BISHOP);
+			board[0][3] = new Piece(Color.WHITE, PieceKind.QUEEN);
+			board[0][4] = new Piece(Color.WHITE, PieceKind.KING);
+			board[0][7] = new Piece(Color.WHITE, PieceKind.ROOK);
+			
+			board[7][0] = new Piece(Color.BLACK, PieceKind.ROOK);
+			board[7][1] = new Piece(Color.BLACK, PieceKind.KNIGHT);
+			board[7][4] = new Piece(Color.BLACK, PieceKind.KING);
+			board[7][5] = new Piece(Color.BLACK, PieceKind.BISHOP);
+			board[7][7] = new Piece(Color.BLACK, PieceKind.ROOK);
+			board[2][5] = new Piece(Color.BLACK, PieceKind.QUEEN);
+		}
+		
+	    start = new State(Color.WHITE, board, canCastleKingSide, canCastleQueenSide, null, 0, null);
+	    stateChanger.makeMove(start, move);
+	  }
+	  
+	  /*
+	   * Test white queen side Castle when the square in the middle is under check
+	   */	 
+	  @Test(expected = IllegalMove.class)
+	  public void testCastleQueenSideThirdSquareChecked() {
+	    Move move = new Move(new Position(0, 4), new Position(0, 2), null);
+	    boolean[] canCastleKingSide = new boolean[]{true, true};
+	    boolean[] canCastleQueenSide = new boolean[]{true, true};
+	    
+	    Piece[][] board = new Piece[8][8];
+		{
+			board[0][0] = new Piece(Color.WHITE, PieceKind.ROOK);
+			board[0][4] = new Piece(Color.WHITE, PieceKind.KING);
+			board[0][7] = new Piece(Color.WHITE, PieceKind.ROOK);
+			
+			board[7][0] = new Piece(Color.BLACK, PieceKind.ROOK);
+			board[7][1] = new Piece(Color.BLACK, PieceKind.KNIGHT);
+			board[7][4] = new Piece(Color.BLACK, PieceKind.KING);
+			board[7][5] = new Piece(Color.BLACK, PieceKind.BISHOP);
+			board[5][5] = new Piece(Color.BLACK, PieceKind.KNIGHT);
+			board[4][2] = new Piece(Color.BLACK, PieceKind.ROOK);
+			board[3][6] = new Piece(Color.BLACK, PieceKind.BISHOP);
+		}
+		
+	    start = new State(Color.WHITE, board, canCastleKingSide, canCastleQueenSide, null, 0, null);
+	    stateChanger.makeMove(start, move);
+	  }
+	  
+	  /*
+	   * Test white king side Castle when the fifth square is occupied by black
+	   */
+	  @Test(expected = IllegalMove.class)
+	  public void testCastleKingSideFifthSquareBlackOccupied() {
+	    Move move = new Move(new Position(0, 4), new Position(0, 6), null);
+	    boolean[] canCastleKingSide = new boolean[]{true, true};
+	    boolean[] canCastleQueenSide = new boolean[]{true, true};
+	    
+	    Piece[][] board = new Piece[8][8];
+		{
+			board[0][0] = new Piece(Color.WHITE, PieceKind.ROOK);
+			board[0][1] = new Piece(Color.WHITE, PieceKind.KNIGHT);
+			board[0][4] = new Piece(Color.WHITE, PieceKind.KING);
+			board[0][7] = new Piece(Color.WHITE, PieceKind.ROOK);
+			board[5][0] = new Piece(Color.WHITE, PieceKind.BISHOP);
+			
+			board[7][0] = new Piece(Color.BLACK, PieceKind.ROOK);
+			board[7][1] = new Piece(Color.BLACK, PieceKind.KNIGHT);
+			board[7][4] = new Piece(Color.BLACK, PieceKind.KING);
+			board[7][5] = new Piece(Color.BLACK, PieceKind.BISHOP);		
+			board[0][5] = new Piece(Color.BLACK, PieceKind.BISHOP);
+		}
+		
+	    start = new State(Color.WHITE, board, canCastleKingSide, canCastleQueenSide, null, 0, null);
+	    stateChanger.makeMove(start, move);
+	  }
+	  
+	  /*
+	   * Test white king side Castle when the fifth square is occupied by black
+	   */
+	  @Test(expected = IllegalMove.class)
+	  public void testCastleQueenSideThirdSquareBlackOccupied() {
+	    Move move = new Move(new Position(0, 4), new Position(0, 2), null);
+	    boolean[] canCastleKingSide = new boolean[]{true, true};
+	    boolean[] canCastleQueenSide = new boolean[]{true, true};
+	    
+	    Piece[][] board = new Piece[8][8];
+		{
+			board[0][0] = new Piece(Color.WHITE, PieceKind.ROOK);
+			board[0][4] = new Piece(Color.WHITE, PieceKind.KING);
+			board[0][7] = new Piece(Color.WHITE, PieceKind.ROOK);
+			board[5][0] = new Piece(Color.WHITE, PieceKind.BISHOP);
+			
+			board[7][0] = new Piece(Color.BLACK, PieceKind.ROOK);
+			board[7][1] = new Piece(Color.BLACK, PieceKind.KNIGHT);
+			board[7][4] = new Piece(Color.BLACK, PieceKind.KING);
+			board[7][5] = new Piece(Color.BLACK, PieceKind.BISHOP);		
+			board[0][3] = new Piece(Color.BLACK, PieceKind.BISHOP);
+		}
+		
+	    start = new State(Color.WHITE, board, canCastleKingSide, canCastleQueenSide, null, 0, null);
+	    stateChanger.makeMove(start, move);
+	  }
+	  
+	  /*
+	   * Test white king side Castle when the sixth square is occupied by black
+	   */
+	  @Test(expected = IllegalMove.class)
+	  public void testCastleKingSideSixthSquareBlackOccupied() {
+	    Move move = new Move(new Position(0, 4), new Position(0, 6), null);
+	    boolean[] canCastleKingSide = new boolean[]{true, true};
+	    boolean[] canCastleQueenSide = new boolean[]{true, true};
+	    
+	    Piece[][] board = new Piece[8][8];
+		{
+			board[0][0] = new Piece(Color.WHITE, PieceKind.ROOK);
+			board[0][1] = new Piece(Color.WHITE, PieceKind.KNIGHT);
+			board[0][4] = new Piece(Color.WHITE, PieceKind.KING);
+			board[0][7] = new Piece(Color.WHITE, PieceKind.ROOK);
+			board[5][0] = new Piece(Color.WHITE, PieceKind.BISHOP);
+			
+			board[7][0] = new Piece(Color.BLACK, PieceKind.ROOK);
+			board[7][1] = new Piece(Color.BLACK, PieceKind.KNIGHT);
+			board[7][4] = new Piece(Color.BLACK, PieceKind.KING);
+			board[7][5] = new Piece(Color.BLACK, PieceKind.BISHOP);		
+			board[0][6] = new Piece(Color.BLACK, PieceKind.BISHOP);
+		}
+		
+	    start = new State(Color.WHITE, board, canCastleKingSide, canCastleQueenSide, null, 0, null);
+	    stateChanger.makeMove(start, move);
+	  }
+	  
+	  /*
+	   * Test white queen side Castle when the second square is occupied by black
+	   */
+	  @Test(expected = IllegalMove.class)
+	  public void testCastleQueenSideSecondSquareBlackOccupied() {
+	    Move move = new Move(new Position(0, 4), new Position(0, 2), null);
+	    boolean[] canCastleKingSide = new boolean[]{true, true};
+	    boolean[] canCastleQueenSide = new boolean[]{true, true};
+	    
+	    Piece[][] board = new Piece[8][8];
+		{
+			board[0][0] = new Piece(Color.WHITE, PieceKind.ROOK);
+			board[0][4] = new Piece(Color.WHITE, PieceKind.KING);
+			board[0][7] = new Piece(Color.WHITE, PieceKind.ROOK);
+			board[5][0] = new Piece(Color.WHITE, PieceKind.BISHOP);
+			
+			board[7][0] = new Piece(Color.BLACK, PieceKind.ROOK);
+			board[7][1] = new Piece(Color.BLACK, PieceKind.KNIGHT);
+			board[7][4] = new Piece(Color.BLACK, PieceKind.KING);
+			board[7][5] = new Piece(Color.BLACK, PieceKind.BISHOP);		
+			board[0][2] = new Piece(Color.BLACK, PieceKind.BISHOP);
+		}
+		
+	    start = new State(Color.WHITE, board, canCastleKingSide, canCastleQueenSide, null, 0, null);
+	    stateChanger.makeMove(start, move);
+	  }
+	  
+	  /*
+	   * Test white queen side Castle when the first square is occupied by black
+	   */
+	  @Test(expected = IllegalMove.class)
+	  public void testCastleQueenSideFirstSquareBlackOccupied() {
+	    Move move = new Move(new Position(0, 4), new Position(0, 2), null);
+	    boolean[] canCastleKingSide = new boolean[]{true, true};
+	    boolean[] canCastleQueenSide = new boolean[]{true, true};
+	    
+	    Piece[][] board = new Piece[8][8];
+		{
+			board[0][0] = new Piece(Color.WHITE, PieceKind.ROOK);
+			board[0][4] = new Piece(Color.WHITE, PieceKind.KING);
+			board[0][7] = new Piece(Color.WHITE, PieceKind.ROOK);
+			board[5][0] = new Piece(Color.WHITE, PieceKind.BISHOP);
+			
+			board[7][0] = new Piece(Color.BLACK, PieceKind.ROOK);
+			board[7][1] = new Piece(Color.BLACK, PieceKind.KNIGHT);
+			board[7][4] = new Piece(Color.BLACK, PieceKind.KING);
+			board[7][5] = new Piece(Color.BLACK, PieceKind.BISHOP);		
+			board[0][1] = new Piece(Color.BLACK, PieceKind.BISHOP);
+		}
+		
+	    start = new State(Color.WHITE, board, canCastleKingSide, canCastleQueenSide, null, 0, null);
+	    stateChanger.makeMove(start, move);
+	  }
+}

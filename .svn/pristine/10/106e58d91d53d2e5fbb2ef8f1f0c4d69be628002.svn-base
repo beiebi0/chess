@@ -1,0 +1,102 @@
+package org.shihweihuang.hw5;
+
+import org.shared.chess.Piece;
+import org.shared.chess.Position;
+import org.shihweihuang.hw3.GameImages;
+
+import com.google.gwt.animation.client.Animation;
+import com.google.gwt.core.client.GWT;
+import com.google.gwt.user.client.ui.AbsolutePanel;
+import com.google.gwt.user.client.ui.Image;
+
+public class ChessAnimation extends Animation {
+	private final Position from;
+	private final Position to;
+	private final Piece piece;
+	AbsolutePanel ap;
+	Image img = new Image();
+	GameImages gameImages = GWT.create(GameImages.class);
+	int x1;
+	int y1;
+	int x2;
+	int y2;
+
+	public ChessAnimation(Position from, Position to, Piece piece,
+			AbsolutePanel ap) {
+		this.from = from;
+		this.to = to;
+		this.piece = piece;
+		this.ap = ap;
+
+	}
+
+	@Override
+	protected void onUpdate(double progress) {
+		img.setPixelSize(100, 300);
+		ap.setWidgetPosition(img, x1 + (int) (progress * (x2 - x1)), y1
+				+ (int) (progress * (y2 - y1)));
+
+	}
+
+	@Override
+	protected void onStart() {
+		if (piece == null) {
+			return;
+		} else {
+			if (piece.getColor().isBlack()) {
+				switch (piece.getKind()) {
+				case KING:
+					img.setResource(gameImages.bKing());
+					break;
+				case QUEEN:
+					img.setResource(gameImages.bQueen());
+					break;
+				case BISHOP:
+					img.setResource(gameImages.bBishop());
+					break;
+				case KNIGHT:
+					img.setResource(gameImages.bKnight());
+					break;
+				case ROOK:
+					img.setResource(gameImages.bRook());
+					break;
+				case PAWN:
+					img.setResource(gameImages.bPawn());
+					break;
+				}
+			} else {
+				switch (piece.getKind()) {
+				case KING:
+					img.setResource(gameImages.wKing());
+					break;
+				case QUEEN:
+					img.setResource(gameImages.wQueen());
+					break;
+				case BISHOP:
+					img.setResource(gameImages.wBishop());
+					break;
+				case KNIGHT:
+					img.setResource(gameImages.wKnight());
+					break;
+				case ROOK:
+					img.setResource(gameImages.wRook());
+					break;
+				case PAWN:
+					img.setResource(gameImages.wPawn());
+					break;
+				}
+			}
+		}
+		// img.setResource(gameImages.bBishop());
+		ap.add(img);
+		x1 = 50 * from.getCol();
+		y1 = 350 - 50 * from.getRow();
+		x2 = 50 * to.getCol();
+		y2 = 350 - 50 * to.getRow();
+	}
+
+	@Override
+	protected void onComplete() {
+		ap.remove(img);
+	}
+}

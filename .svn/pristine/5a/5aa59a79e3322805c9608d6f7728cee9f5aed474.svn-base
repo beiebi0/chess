@@ -1,0 +1,24 @@
+package org.peigenyou.hw3;
+
+import java.io.Serializable;
+import java.util.ArrayList;
+
+import com.googlecode.objectify.annotation.Entity;
+import com.googlecode.objectify.annotation.Id;
+import com.googlecode.objectify.annotation.Index;
+import com.googlecode.objectify.annotation.Serialize;
+
+@Entity
+public class Player implements Serializable{
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+	@Id 
+	public String Email;
+	public String Name;
+	public String Tokens=new String();
+	public int rank=1500;
+	public ArrayList<String> Matches=new ArrayList<String>();
+	
+}

@@ -1,0 +1,80 @@
+package org.zhaohuizhang.hw7;
+
+import java.util.HashSet;
+import java.util.Set;
+
+import com.googlecode.objectify.Key;
+import com.googlecode.objectify.annotation.Entity;
+import com.googlecode.objectify.annotation.Id;
+
+@Entity
+public class Player {
+	@Id
+	String email;
+	String name;
+	Set<String> tokens = new HashSet<String>();
+	Set<Key<Match>> matches = new HashSet<Key<Match>>();
+	double rank =  1500;
+
+
+	public Player() {
+	}
+
+	public Player(String email) {
+		this.email = email;
+	}
+
+	public Player(String email, String name) {
+		this.email = email;
+		this.name = name;
+	}
+
+	public String getEmail() {
+		return email;
+	}
+
+	public void setEmail(String email) {
+		this.email = email;
+	}
+
+	public String getName() {
+		return name;
+	}
+
+	public void setName(String name) {
+		this.name = name;
+	}
+
+	public Set<String> getTokens() {
+		return tokens;
+	}
+
+	public void setTokens(Set<String> tokens) {
+		this.tokens = tokens;
+	}
+
+	public Set<Key<Match>> getMatches() {
+		return matches;
+	}
+
+	public void setMatches(Set<Key<Match>> matches) {
+		this.matches = matches;
+	}
+	
+	public double getRank() {
+		return rank;
+	}
+
+	public void setRank(double rank) {
+		this.rank = rank;
+	}
+	
+	public void addToken(String newToken){
+		this.tokens.add(newToken);
+	}
+	
+	public void addMatch(Key<Match> newMatch){
+		this.matches.add(newMatch);
+	}
+
+}

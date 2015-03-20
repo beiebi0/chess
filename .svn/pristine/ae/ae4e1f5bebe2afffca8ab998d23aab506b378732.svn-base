@@ -1,0 +1,45 @@
+package org.paulsultan.hw3;
+
+import java.util.HashMap;
+
+import com.google.gwt.dom.client.AudioElement;
+import com.google.gwt.dom.client.MediaElement;
+import com.google.gwt.media.client.Audio;
+
+public class AudioControl {
+	//library and controller of available audio tracks
+	//http://www.google.com/events/io/2011/static/presofiles/gwt_html5_a_web_develops_dream.pdf
+	public HashMap<String, Audio> audioFiles;
+
+	public AudioControl() {
+		audioFiles = new HashMap<String, Audio>();
+	}
+
+	public void addTrack(String name){
+		Audio audio = Audio.createIfSupported();
+		if (audio!=null){
+			if (MediaElement.CAN_PLAY_PROBABLY.equals(audio.canPlayType(AudioElement.TYPE_OGG)))
+				audio.setSrc("paulsultan_audio/" + name + ".ogg");
+			else if (MediaElement.CAN_PLAY_PROBABLY.equals(audio.canPlayType(AudioElement.TYPE_MP3)))
+				audio.setSrc("paulsultan_audio/" + name + ".mp3");
+			else if (MediaElement.CAN_PLAY_PROBABLY.equals(audio.canPlayType(AudioElement.TYPE_WAV)))
+				audio.setSrc("paulsultan_audio/" + name + ".wav");
+			
+			else if (MediaElement.CAN_PLAY_MAYBE.equals(audio.canPlayType(AudioElement.TYPE_OGG)))
+				audio.setSrc("paulsultan_audio/" + name + ".ogg");
+			else if (MediaElement.CAN_PLAY_MAYBE.equals(audio.canPlayType(AudioElement.TYPE_MP3)))
+				audio.setSrc("paulsultan_audio/" + name + ".mp3");
+			else if (MediaElement.CAN_PLAY_MAYBE.equals(audio.canPlayType(AudioElement.TYPE_WAV)))
+				audio.setSrc("paulsultan_audio/" + name + ".wav");
+			audio.setPreload(MediaElement.PRELOAD_AUTO);
+			audio.setVolume(1.0f);
+			audioFiles.put(name, audio);
+		}
+	}
+	
+	public void playTrack(String name){
+		if(audioFiles.containsKey(name))
+			audioFiles.get(name).play();
+	}
+	
+}

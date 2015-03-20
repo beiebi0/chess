@@ -1,0 +1,67 @@
+<!DOCTYPE ui:UiBinder SYSTEM "http://dl.google.com/gwt/DTD/xhtml.ent">
+<ui:UiBinder xmlns:ui="urn:ui:com.google.gwt.uibinder" xmlns:g="urn:import:com.google.gwt.user.client.ui" xmlns:mgwt="urn:import:com.googlecode.mgwt.ui.client.widget">
+  <ui:style field="css" type="org.paulsultan.hw3.GameCss">
+    .highlighted {
+      outline: dotted green 2px;
+    }
+    td img {
+      display: block
+    }
+  
+    .gwt-SuggestBox{
+        border                      :    1px solid #666;
+        text-align                  :    left;
+        width                       :    400px;
+    }
+	.gwt-SuggestBoxPopup{
+	    text-align                   :    left;
+	    cursor                       :    pointer;
+	    cursor                       :    hand;
+	    border                       :    1px solid #666;
+	    border-top                   :    0;
+	    background-color             :    #fff;
+	
+	}
+	.gwt-SuggestBoxPopup .item{
+	    border                       :    1px dotted #aaa;
+	    width                        :    398px;
+	}
+	.gwt-SuggestBoxPopup .item-selected{
+	    background-color             :    #ffc;
+	}
+  
+  </ui:style>
+    <mgwt:LayoutPanel ui:field="gamePanel">
+	  <g:HTMLPanel>
+		<g:Grid ui:field="gameGrid"/>
+		<g:Grid ui:field="promotionGrid"/>
+		
+		<g:Label ui:field="email"/>
+		<g:Label ui:field="rank"/>
+		<g:Button ui:field="quickWin" text="Quick Win"/>
+		
+		<g:Label ui:field="gameStatus" text="Status"/>
+		<g:Label ui:field="matchStatus"/>
+		
+		<g:HorizontalPanel ui:field="startMatchHPanel"/>
+		<g:Button ui:field="startMatchWith" text="Start Match With"/>
+		<g:TextBox ui:field="startMatchWithTextBox" text="opponent@example.com"/>
+		
+		<g:HorizontalPanel ui:field="matchesHPanel"/>
+		<g:ListBox ui:field="matchesList"/>
+		<g:Button ui:field="loadMatch" text="Load Match"/>
+		<g:Button ui:field="deleteMatch" text="Delete Match"/>
+		
+		<g:ListBox ui:field="playersList"/>
+		<g:Button ui:field="autoMatch" text="Auto Match"/>
+		
+		<g:VerticalPanel ui:field="aiVPanel"/>
+		<g:Button ui:field="ai" text="1 Player Mode"/> 
+		
+		<g:HorizontalPanel ui:field="serverHPanel"/>
+		<g:CheckBox ui:field="serverStatus" text="Server Status" />
+		<g:Button ui:field="updateServer" text="Send Local Storage Test"/>
+		
+	  </g:HTMLPanel>
+    </mgwt:LayoutPanel>
+</ui:UiBinder> 

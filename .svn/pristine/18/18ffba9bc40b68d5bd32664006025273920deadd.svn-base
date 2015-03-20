@@ -1,0 +1,44 @@
+package org.ashishmanral.hw6.client;
+
+import java.io.Serializable;
+
+import org.shared.chess.Color;
+
+/**
+ * UpdateState.java
+ * @author Ashish
+ * This class contains the data that will be updated to the other
+ * user playing Chess.
+ */
+@SuppressWarnings("serial")
+public class UpdateState implements Serializable {
+
+  private int boardId;
+  private String state;
+  private Color turn;
+  
+  public int getBoardId() {
+    return boardId;
+  }
+  
+  public String getState() {
+    return state;
+  }
+  
+  public Color getTurn(){
+    return turn;
+  }
+  
+  public void setBoardId(int boardId) {
+    this.boardId = boardId;
+  }
+  
+  public void setState(String state) {
+    this.state = state;
+  }
+  
+  public void setTurn(Color turn){
+    this.turn = turn;
+  }
+
+}

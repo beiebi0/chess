@@ -1,0 +1,9 @@
+package org.wenjiechen.hw3;
+import java.util.TimerTask;
+
+public class WaitTask extends TimerTask{
+	@Override
+	public void run(){
+		System.out.println("wait 1000ms before AI");
+	}
+}

@@ -1,0 +1,501 @@
+package org.alexanderoskotsky.hw3;
+
+import java.util.Map;
+import java.util.Map.Entry;
+
+import org.alexanderoskotsky.hw10.PieceDragController;
+import org.alexanderoskotsky.hw3.Presenter.View;
+import org.alexanderoskotsky.hw5.Callback;
+import org.alexanderoskotsky.hw5.MoveAnimation;
+import org.alexanderoskotsky.hw8.GameMessages;
+import org.shared.chess.Color;
+import org.shared.chess.GameResult;
+import org.shared.chess.Move;
+import org.shared.chess.Piece;
+
+import com.allen_sauer.gwt.dnd.client.DragContext;
+import com.allen_sauer.gwt.dnd.client.DragHandler;
+import com.allen_sauer.gwt.dnd.client.PickupDragController;
+import com.allen_sauer.gwt.dnd.client.drop.SimpleDropController;
+import com.google.gwt.appengine.channel.client.Channel;
+import com.google.gwt.appengine.channel.client.ChannelFactory;
+import com.google.gwt.appengine.channel.client.ChannelFactoryImpl;
+import com.google.gwt.appengine.channel.client.SocketListener;
+import com.google.gwt.core.client.GWT;
+import com.google.gwt.event.dom.client.HasChangeHandlers;
+import com.google.gwt.event.dom.client.HasClickHandlers;
+import com.google.gwt.media.client.Audio;
+import com.google.gwt.resources.client.ImageResource;
+import com.google.gwt.uibinder.client.UiBinder;
+import com.google.gwt.uibinder.client.UiField;
+import com.google.gwt.user.client.Element;
+import com.google.gwt.user.client.ui.Button;
+import com.google.gwt.user.client.ui.Composite;
+import com.google.gwt.user.client.ui.FlowPanel;
+import com.google.gwt.user.client.ui.Grid;
+import com.google.gwt.user.client.ui.HTMLPanel;
+import com.google.gwt.user.client.ui.HasText;
+import com.google.gwt.user.client.ui.Image;
+import com.google.gwt.user.client.ui.Label;
+import com.google.gwt.user.client.ui.ListBox;
+import com.google.gwt.user.client.ui.MultiWordSuggestOracle;
+import com.google.gwt.user.client.ui.Panel;
+import com.google.gwt.user.client.ui.RootPanel;
+import com.google.gwt.user.client.ui.SourcesTableEvents;
+import com.google.gwt.user.client.ui.SuggestBox;
+import com.google.gwt.user.client.ui.Widget;
+import com.googlecode.gwtphonegap.client.PhoneGap;
+import com.googlecode.gwtphonegap.client.PhoneGapAvailableEvent;
+import com.googlecode.gwtphonegap.client.PhoneGapAvailableHandler;
+import com.googlecode.gwtphonegap.client.contacts.Contact;
+import com.googlecode.gwtphonegap.client.contacts.ContactError;
+import com.googlecode.gwtphonegap.client.contacts.ContactField;
+import com.googlecode.gwtphonegap.client.contacts.ContactFindCallback;
+import com.googlecode.gwtphonegap.client.contacts.ContactFindOptions;
+import com.googlecode.gwtphonegap.collection.shared.CollectionFactory;
+import com.googlecode.gwtphonegap.collection.shared.LightArray;
+
+public class Graphics extends Composite implements View {
+	private static GameImages gameImages = GWT.create(GameImages.class);
+	private static GraphicsUiBinder uiBinder = GWT.create(GraphicsUiBinder.class);
+
+	private static GameMessages messages = new GameMessages();
+
+	interface GraphicsUiBinder extends UiBinder<Widget, Graphics> {
+	}
+
+	@UiField
+	GameCss css;
+	@UiField
+	Label gameStatus;
+	@UiField
+	Label nameLabel;
+	@UiField
+	Grid gameGrid;
+	@UiField
+	Grid whitePromotion;
+	@UiField
+	Grid blackPromotion;
+
+	@UiField
+	HTMLPanel gamePanel;
+
+	@UiField
+	HTMLPanel matchingPanel;
+
+	@UiField
+	Button newGameButton;
+
+	@UiField
+	Button deleteGameButton;
+
+	@UiField
+	SuggestBox matchBox;
+
+	@UiField
+	Button matchButton;
+
+	@UiField
+	ListBox matchList;
+
+	@UiField
+	Image spinner;
+
+	@UiField
+	Button autoMatch;
+
+	@UiField
+	Button cancelAutoMatch;
+
+	@UiField
+	Button playWithAI;
+
+	private Image[][] board = new Image[8][8];
+
+	private FlowPanel[][] panels = new FlowPanel[8][8];
+
+	private PickupDragController[][] dragControllers = new PickupDragController[8][8];
+
+	private Audio moveSound;
+
+	private final PhoneGap phoneGap = GWT.create(PhoneGap.class);
+
+	public Graphics() {
+
+		initWidget(uiBinder.createAndBindUi(this));
+
+		gameGrid.resize(8, 8);
+		gameGrid.setCellPadding(0);
+		gameGrid.setCellSpacing(0);
+		gameGrid.setBorderWidth(1);
+		for (int row = 0; row < 8; row++) {
+			for (int col = 0; col < 8; col++) {
+				final Image image = new Image();
+				board[row][col] = image;
+				image.setWidth("100%");
+				image.setHeight("100%");
+				FlowPanel panel = new FlowPanel();
+				if (row % 2 == 0 && col % 2 == 1 || row % 2 == 1 && col % 2 == 0) {
+					panel.setStylePrimaryName("gray-square");
+				} else {
+					panel.setStylePrimaryName("white-square");
+				}
+
+				panel.add(image);
+
+				panels[row][col] = panel;
+
+				gameGrid.setWidget(row, col, panel);
+
+				PickupDragController dragController = new PieceDragController(RootPanel.get(),
+						false);
+
+				dragController.setBehaviorDragStartSensitivity(1);
+				dragController.setBehaviorDragProxy(true);
+				dragControllers[row][col] = dragController;
+			}
+		}
+
+		whitePromotion.resize(1, 4);
+		whitePromotion.setBorderWidth(1);
+		whitePromotion.setWidget(0, 0, new Image(gameImages.whiteKnight()));
+		whitePromotion.setWidget(0, 1, new Image(gameImages.whiteBishop()));
+		whitePromotion.setWidget(0, 2, new Image(gameImages.whiteRook()));
+		whitePromotion.setWidget(0, 3, new Image(gameImages.whiteQueen()));
+
+		blackPromotion.resize(1, 4);
+		blackPromotion.setBorderWidth(1);
+		blackPromotion.setWidget(0, 0, new Image(gameImages.blackKnight()));
+		blackPromotion.setWidget(0, 1, new Image(gameImages.blackBishop()));
+		blackPromotion.setWidget(0, 2, new Image(gameImages.blackRook()));
+		blackPromotion.setWidget(0, 3, new Image(gameImages.blackQueen()));
+
+		whitePromotion.setVisible(false);
+		blackPromotion.setVisible(false);
+
+		moveSound = Audio.createIfSupported();
+
+		if (moveSound != null) {
+			moveSound.addSource("alexanderoskotsky_audio/move.wav");
+		}
+
+		spinner.setResource(gameImages.spinner());
+		matchingPanel.setVisible(false);
+
+		phoneGap.addHandler(new PhoneGapAvailableHandler() {
+
+			@Override
+			public void onPhoneGapAvailable(PhoneGapAvailableEvent event) {
+				LightArray<String> fields = CollectionFactory.<String> constructArray();
+				fields.push("emails");
+				ContactFindOptions findOptions = new ContactFindOptions("gmail", true);
+
+				phoneGap.getContacts().find(fields, new ContactFindCallback() {
+
+					@Override
+					public void onSuccess(LightArray<Contact> contacts) {
+						MultiWordSuggestOracle oracle = (MultiWordSuggestOracle) matchBox
+								.getSuggestOracle();
+
+						for (int i = 0; i < contacts.length(); i++) {
+							Contact contact = contacts.get(i);
+							LightArray<ContactField> emails = contact.getEmails();
+							for (int j = 0; j < emails.length(); j++) {
+								ContactField email = emails.get(j);
+								oracle.add(email.getValue());
+							}
+						}
+					}
+
+					@Override
+					public void onFailure(ContactError error) {
+						// something went wrong, doh!
+
+					}
+				}, findOptions);
+			}
+		});
+
+		phoneGap.initializePhoneGap();
+
+	}
+
+	@Override
+	public void setPiece(int row, int col, Piece piece) {
+		ImageResource img = getImageForPiece(piece);
+		Panel panel = panels[row][col];
+		panel.clear();
+
+		Image image;
+		if (img == null) {
+			image = new Image();
+		} else {
+			image = new Image(getImageForPiece(piece));
+		}
+		image.setWidth("100%");
+		image.setHeight("100%");
+		panel.add(image);
+		board[row][col] = image;
+	}
+
+	private ImageResource getImageForPiece(Piece piece) {
+		if (piece == null) {
+			return null;
+		}
+		if (piece.getColor().equals(Color.WHITE)) {
+			switch (piece.getKind()) {
+			case BISHOP:
+				return gameImages.whiteBishop();
+			case KING:
+				return gameImages.whiteKing();
+			case KNIGHT:
+				return gameImages.whiteKnight();
+			case PAWN:
+				return gameImages.whitePawn();
+			case QUEEN:
+				return gameImages.whiteQueen();
+			case ROOK:
+				return gameImages.whiteRook();
+			}
+		} else {
+			switch (piece.getKind()) {
+			case BISHOP:
+				return gameImages.blackBishop();
+			case KING:
+				return gameImages.blackKing();
+			case KNIGHT:
+				return gameImages.blackKnight();
+			case PAWN:
+				return gameImages.blackPawn();
+			case QUEEN:
+				return gameImages.blackQueen();
+			case ROOK:
+				return gameImages.blackRook();
+			}
+		}
+
+		return null;
+	}
+
+	@Override
+	public void setHighlighted(int row, int col, boolean highlighted) {
+		Element element = board[row][col].getElement();
+		if (highlighted) {
+			element.addClassName(css.highlighted());
+		} else {
+			element.removeClassName(css.highlighted());
+		}
+	}
+
+	@Override
+	public void setWhoseTurn(Color color) {
+		if (color == null) {
+			setStatus("");
+			return;
+		}
+		if (color.equals(Color.WHITE)) {
+			setStatus(messages.whiteTurn());
+		} else {
+			setStatus(messages.blackTurn());
+		}
+	}
+
+	private void setStatus(String status) {
+		gameStatus.setText("Status: " + status);
+	}
+
+	@Override
+	public void setGameResult(GameResult gameResult) {
+		if (gameResult == null) {
+			return;
+		}
+
+		switch (gameResult.getGameResultReason()) {
+		case CHECKMATE:
+			if (gameResult.getWinner().equals(Color.WHITE)) {
+				setStatus(messages.whiteWins());
+			} else {
+				setStatus(messages.blackWins());
+			}
+			break;
+		case FIFTY_MOVE_RULE:
+			setStatus(messages.fiftyMoveRule());
+			break;
+		case STALEMATE:
+			setStatus(messages.stalemate());
+			break;
+		case THREEFOLD_REPETITION_RULE:
+			setStatus(messages.threeFoldRepetition());
+			break;
+		default:
+			break;
+		}
+	}
+
+	@Override
+	public SourcesTableEvents getGrid() {
+		return gameGrid;
+	}
+
+	@Override
+	public void toggleWhitePromotion(boolean show) {
+		whitePromotion.setVisible(show);
+
+	}
+
+	@Override
+	public void toggleBlackPromotion(boolean show) {
+		blackPromotion.setVisible(show);
+
+	}
+
+	@Override
+	public SourcesTableEvents getWhitePromotionGrid() {
+		return whitePromotion;
+	}
+
+	@Override
+	public SourcesTableEvents getBlackPromotionGrid() {
+		return blackPromotion;
+	}
+
+	/**
+	 * Animate a move and then execute a callback after the animation
+	 * 
+	 * @param move
+	 *            the move to animate
+	 * @param callback
+	 *            a callback function to run after the animation is finished
+	 * 
+	 */
+	@Override
+	public void animateMove(Move move, Callback callback) {
+		MoveAnimation anim = new MoveAnimation(board, move, callback);
+		anim.run(500);
+
+	}
+
+	@Override
+	public void playMoveSound() {
+		if (moveSound != null) {
+			moveSound.play();
+		}
+	}
+
+	@Override
+	public HasClickHandlers getNewGameButton() {
+		return newGameButton;
+	}
+
+	@Override
+	public void openChannel(String token, SocketListener listener) {
+		ChannelFactory fact = new ChannelFactoryImpl();
+		Channel channel = fact.createChannel(token);
+		channel.open(listener);
+	}
+
+	@Override
+	public void setNameLabel(String name, int rank, String email) {
+		nameLabel.setText(messages.hi() + ", " + name + "[" + rank + "]" + " <" + email + ">");
+	}
+
+	@Override
+	public HasClickHandlers getMatchButton() {
+		return matchButton;
+	}
+
+	@Override
+	public HasText getMatchBox() {
+		return matchBox;
+	}
+
+	@Override
+	public String getSelectedMatch() {
+		return matchList.getValue(matchList.getSelectedIndex());
+	}
+
+	@Override
+	public HasChangeHandlers getMatchList() {
+		return matchList;
+	}
+
+	@Override
+	public HasClickHandlers getDeleteGameButton() {
+		return deleteGameButton;
+	}
+
+	@Override
+	public void toggleAutoMatch(boolean show) {
+		if (show) {
+			gamePanel.setVisible(false);
+			matchingPanel.setVisible(true);
+		} else {
+			gamePanel.setVisible(true);
+			matchingPanel.setVisible(false);
+		}
+
+	}
+
+	@Override
+	public HasClickHandlers getAutoMatchButton() {
+		return autoMatch;
+	}
+
+	@Override
+	public HasClickHandlers getCancelAutoMatchButton() {
+		return cancelAutoMatch;
+	}
+
+	@Override
+	public void setMatchList(Map<String, String> items, String selectedMatchId) {
+		matchList.clear();
+
+		matchList.addItem("[" + messages.selectMatch() + "]", "");
+
+		int index = 1;
+		for (Entry<String, String> entry : items.entrySet()) {
+			matchList.addItem(entry.getValue(), entry.getKey());
+
+			if (entry.getKey().equals(selectedMatchId)) {
+				matchList.setSelectedIndex(index);
+			}
+
+			index++;
+		}
+
+	}
+
+	@Override
+	public HasClickHandlers getAiButton() {
+		return playWithAI;
+	}
+
+	@Override
+	public void makeDraggableFromTo(int fromRow, int fromCol, final int toRow, final int toCol,
+			final Callback callback) {
+		PickupDragController drag = dragControllers[fromRow][fromCol];
+		drag.makeDraggable(board[fromRow][fromCol]);
+
+		drag.registerDropController(new SimpleDropController(board[toRow][toCol]) {
+			@Override
+			public void onDrop(DragContext ctx) {
+				callback.execute();
+			}
+		});
+	}
+
+	@Override
+	public void clearDragDrop() {
+		for (int i = 0; i < 8; i++) {
+			for (int j = 0; j < 8; j++) {
+				PickupDragController drag = dragControllers[i][j];
+				drag.unregisterDropControllers();
+			}
+		}
+	}
+
+	@Override
+	public void addDragHandler(int row, int col, DragHandler dh) {
+		dragControllers[row][col].addDragHandler(dh);
+	}
+}

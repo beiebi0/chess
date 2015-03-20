@@ -1,0 +1,455 @@
+package org.sanjana.hw3;
+
+import org.sanjana.hw3.Presenter;
+import org.sanjana.hw3.Presenter.View;
+
+import org.shared.chess.Color;
+import org.shared.chess.GameResult;
+import org.shared.chess.Piece;
+import org.shared.chess.State;
+
+import static org.shared.chess.Color.BLACK;
+import static org.shared.chess.Color.WHITE;
+import static org.shared.chess.GameResultReason.STALEMATE;
+import static org.shared.chess.GameResultReason.CHECKMATE;
+import static org.shared.chess.GameResultReason.FIFTY_MOVE_RULE;
+
+import com.google.gwt.core.client.GWT;
+import com.google.gwt.event.dom.client.ClickEvent;
+import com.google.gwt.event.dom.client.ClickHandler;
+import com.google.gwt.event.dom.client.DragOverEvent;
+import com.google.gwt.event.dom.client.DragOverHandler;
+import com.google.gwt.event.dom.client.DragStartEvent;
+import com.google.gwt.event.dom.client.DragStartHandler;
+import com.google.gwt.event.dom.client.DropEvent;
+import com.google.gwt.event.dom.client.DropHandler;
+import com.google.gwt.event.dom.client.HasAllDragAndDropHandlers;
+import com.google.gwt.event.dom.client.HasClickHandlers;
+import com.google.gwt.event.logical.shared.ValueChangeEvent;
+import com.google.gwt.event.logical.shared.ValueChangeHandler;
+import com.google.gwt.storage.client.Storage;
+import com.google.gwt.uibinder.client.UiBinder;
+import com.google.gwt.uibinder.client.UiField;
+import com.google.gwt.user.client.Element;
+import com.google.gwt.user.client.History;
+import com.google.gwt.user.client.Window;
+import com.google.gwt.user.client.ui.Button;
+import com.google.gwt.user.client.ui.CheckBox;
+import com.google.gwt.user.client.ui.Composite;
+import com.google.gwt.user.client.ui.FlexTable;
+import com.google.gwt.user.client.ui.Grid;
+import com.google.gwt.user.client.ui.Image;
+import com.google.gwt.user.client.ui.Label;
+import com.google.gwt.user.client.ui.TextBox;
+import com.google.gwt.user.client.ui.Widget;
+
+public class Graphics extends Composite implements View, ValueChangeHandler<String> {
+	private static GameImages gameImages = GWT.create(GameImages.class);
+	private static GraphicsUiBinder uiBinder = GWT.create(GraphicsUiBinder.class);
+
+	interface GraphicsUiBinder extends UiBinder<Widget, Graphics> {	}
+
+	@UiField GameCss css;
+	@UiField Label gameStatus;
+	@UiField Grid gameGrid;
+	@UiField Grid whitepromotionGrid;
+	@UiField Grid blackpromotionGrid;
+	@UiField Grid controlGrid;
+	@UiField Button LoadButton;
+	@UiField Button ClearButton;
+	@UiField Button SaveButton;
+	@UiField TextBox saveStatus;
+	@UiField FlexTable flexTable;
+	public Presenter presenter;
+	State state;
+
+	//History
+	String historyToken;
+
+	private Image[][] board = new Image[8][8];
+	private Image[] whitepromotionImages = new Image[4];
+	private Image[] blackpromotionImages = new Image[4];
+
+	public Graphics(final Presenter presenter) {
+		initWidget(uiBinder.createAndBindUi(this));
+		gameGrid.resize(8, 8);
+		gameGrid.setCellPadding(0);
+		gameGrid.setCellSpacing(0);
+		gameGrid.setBorderWidth(0);
+
+		for (int row = 0; row < 8; row++) 
+		{
+			for (int col = 0; col < 8; col++) 
+			{
+				final Image image = new Image();
+				board[row][col] = image;
+				image.setWidth("100%");
+				image.setResource(gameImages.emptyTile());
+				gameGrid.setWidget(row, col, image);
+			}
+		}
+
+		this.presenter = presenter;
+		whitepromotionGrid.resize(1, 4);
+		blackpromotionGrid.resize(1, 4);
+		controlGrid.resize(1, 3);
+		controlGrid.setCellPadding(0);
+		controlGrid.setCellSpacing(0);
+		controlGrid.setBorderWidth(0);
+		setwhitePromotionGrid();
+		setblackPromotionGrid();
+		initBoardHandlers();
+		initPromotionHandlers();
+		initStorageHandlers();
+		initAnimationHandler();
+		initControlHandler();
+	}
+
+	@Override
+	public void setPiece(int row, int col, Piece piece)
+	{
+		if (piece != null)
+		{	
+			switch(piece.getKind())
+			{
+			case PAWN:
+				if(piece.getColor()==WHITE)
+					board[row][col].setResource(gameImages.whitePawn());
+				else
+					board[row][col].setResource(gameImages.blackPawn());
+				break;
+
+			case BISHOP:
+				if(piece.getColor()==WHITE)
+					board[row][col].setResource(gameImages.whiteBishop());
+				else
+					board[row][col].setResource(gameImages.blackBishop());
+				break;
+
+			case ROOK:
+				if(piece.getColor()==WHITE)
+					board[row][col].setResource(gameImages.whiteRook());
+				else
+					board[row][col].setResource(gameImages.blackRook());
+				break;
+
+			case KNIGHT:
+				if(piece.getColor()==WHITE)
+					board[row][col].setResource(gameImages.whiteKnight());
+				else
+					board[row][col].setResource(gameImages.blackKnight());
+				break;
+
+			case KING:
+				if(piece.getColor()==WHITE)
+					board[row][col].setResource(gameImages.whiteKing());
+				else
+					board[row][col].setResource(gameImages.blackKing());
+				break;
+
+			case QUEEN:
+				if(piece.getColor()==WHITE)
+					board[row][col].setResource(gameImages.whiteQueen());
+				else
+					board[row][col].setResource(gameImages.blackQueen());
+				break;
+
+			default:
+				break;
+			}
+			gameGrid.setWidget(row, col, board[row][col]);
+		}
+		else
+		{		
+			board[row][col].setResource(gameImages.emptyTile());
+			gameGrid.setWidget(row, col, board[row][col]);
+		}
+	}
+
+	@Override
+	public void setWhoseTurn(Color color) 
+	{
+		if (color == BLACK) 
+			gameStatus.setText("Black's Turn");
+		else if (color == WHITE) 
+			gameStatus.setText("White's Turn");
+	}
+
+	@Override
+	public void setHighlighted(int row, int col, boolean highlighted) 
+	{
+		Element element = board[row][col].getElement();
+		if (highlighted) 
+			element.setClassName(css.highlighted());
+		else 
+			element.removeClassName(css.highlighted());
+	}
+
+	@Override
+	public void setGameResult(GameResult gameResult) 
+	{
+		if (gameResult == null)
+			return;
+
+		if(gameResult.getGameResultReason()!=STALEMATE)
+		{
+			if(gameResult.getGameResultReason()==CHECKMATE)
+			{
+				if(gameResult.getWinner()==BLACK)
+					gameStatus.setText("Black Wins, White is CheckMated!");
+				else if(gameResult.getWinner()==WHITE)
+					gameStatus.setText("White Wins, Black is Checkmated!");
+			}
+
+			if(gameResult.getGameResultReason()==FIFTY_MOVE_RULE)
+			{
+				if(gameResult.getWinner()==BLACK)
+					gameStatus.setText("Black Wins, 50 MoveRule!");
+				else if(gameResult.getWinner()==WHITE)
+					gameStatus.setText("White Wins, 50 MoveRule!");
+			}
+		}
+		else if(gameResult.getGameResultReason()==STALEMATE)
+			gameStatus.setText("Stalemate, No One Wins.!");
+		else 			
+			gameStatus.setText("Unknown game over state!");
+	}
+
+	@Override
+	public void setPromotionGridVisible(Color c,boolean show) {
+		if(c==WHITE)
+			whitepromotionGrid.setVisible(show);
+		else
+			blackpromotionGrid.setVisible(show);
+	}
+
+	@Override
+	public void setwhitePromotionGrid() 
+	{
+		whitepromotionImages[0]=new Image(gameImages.whiteKnight());
+		whitepromotionImages[1]=new Image(gameImages.whiteBishop());
+		whitepromotionImages[2]=new Image(gameImages.whiteRook());
+		whitepromotionImages[3]=new Image(gameImages.whiteQueen());	
+		for(int i=0;i<4;i++)
+			whitepromotionGrid.setWidget(0, i, whitepromotionImages[i]);
+	}
+
+	@Override
+	public void setblackPromotionGrid() 
+	{
+		blackpromotionImages[0]=new Image(gameImages.blackKnight());
+		blackpromotionImages[1]=new Image(gameImages.blackBishop());
+		blackpromotionImages[2]=new Image(gameImages.blackRook());
+		blackpromotionImages[3]=new Image(gameImages.blackQueen());	
+		for(int i=0;i<4;i++)
+			blackpromotionGrid.setWidget(0, i, blackpromotionImages[i]);
+	}
+
+	@Override
+	public HasClickHandlers getImage(int row, int col) {
+		return board[row][col];
+	}
+
+	@Override
+	public HasAllDragAndDropHandlers getImageDrag(int row, int col) {
+		return board[row][col];
+	}
+
+	@Override
+	public Grid getGrid(){
+		return gameGrid;
+	}
+
+	@Override
+	public void setDisableStorageButtons() {
+		SaveButton.setVisible(false);
+		LoadButton.setVisible(false);
+	}
+
+	@Override
+	public HasClickHandlers getPromotionImage(Color c,int index) {
+		if(c==WHITE)
+			return whitepromotionImages[index];
+		else
+			return blackpromotionImages[index];
+	}
+
+	@Override
+	public void initPromotionHandlers() 
+	{
+		for (int i = 0; i < 4; i++) 
+		{
+			final int index = i;
+			getPromotionImage(WHITE,i).addClickHandler(new ClickHandler(){
+				@Override
+				public void onClick(ClickEvent event){
+					presenter.setPromotion(index);
+				}
+			});
+
+			getPromotionImage(BLACK,i).addClickHandler(new ClickHandler(){
+				@Override
+				public void onClick(ClickEvent event){
+					presenter.setPromotion(index);
+				}
+			});
+		}
+		setPromotionGridVisible(WHITE,false);
+		setPromotionGridVisible(BLACK,false);
+	}
+
+	/**
+	 * Setting handlers for board
+	 */
+	@Override
+	public void initBoardHandlers() 
+	{		
+		for (int row = 0; row < 8; row++) 
+		{
+			for (int col = 0; col < 8; col++) 
+			{
+				final int r = 7 - row;
+				final int c = col;
+				getImage(row, col).addClickHandler(new ClickHandler(){
+					@Override
+					public void onClick(ClickEvent event){
+						presenter.onClicked(r, c);
+					}
+				});
+			}
+		}
+		History.addValueChangeHandler(this);
+	}
+
+	@Override
+	public void onValueChange(ValueChangeEvent<String> event) {
+		String historyToken = event.getValue();
+		presenter.setState(historyToken);
+		initBoardHandlers();
+	}
+
+	public void manageHistory(String token) {
+		presenter.setState(state);
+		presenter.setHistory(token);
+	}
+
+	@Override
+	public void initStorageHandlers() 
+	{
+		flexTable.setWidget(0, 0, new Label("Name of saved Games"));
+		final Storage stockStore=Storage.getLocalStorageIfSupported();
+
+		if(stockStore==null)
+		{
+			setDisableStorageButtons();
+			Window.alert("Your browser does not support local storage!");
+		}
+
+		else
+		{
+			SaveButton.addClickHandler(new ClickHandler() {
+				@Override
+				public void onClick(ClickEvent event) {
+					if (stockStore.getItem(saveStatus.getText())==null)
+						flexTable.setWidget(flexTable.getRowCount(), 0, new Label(saveStatus.getText()));
+					presenter.addStorage(saveStatus.getText());
+					LoadButton.setVisible(true);
+
+				}
+			});
+
+			LoadButton.addClickHandler(new ClickHandler() {
+				@Override
+				public void onClick(ClickEvent event) {
+					final String value = stockStore.getItem(saveStatus.getText());
+					presenter.loadStorage(value);
+				}
+			});
+
+			ClearButton.addClickHandler(new ClickHandler() {
+				@Override
+				public void onClick(ClickEvent event) {
+					stockStore.clear();
+					flexTable.clear();
+					flexTable.setWidget(flexTable.getRowCount(), 0, new Label("Saved Games"));
+				}
+			});
+
+			LoadButton.setVisible(false);
+		}
+	}
+
+	@Override
+	public void initAnimationHandler()
+	{
+		for (int row = 0; row < 8; row++) 
+		{
+			for (int col = 0; col < 8; col++) 
+			{
+				final int r = 7 - row;
+				final int c = col;
+				gameGrid.getElement().setDraggable(Element.DRAGGABLE_TRUE);
+				gameGrid.addDragStartHandler(new DragStartHandler(){
+					@Override
+					public void onDragStart(DragStartEvent event)
+					{
+						event.setData("text", "Hello World");
+						presenter.onClicked(r,c);
+					}
+				});
+
+
+				gameGrid.addDragOverHandler(new DragOverHandler(){
+					@Override
+					public void onDragOver(DragOverEvent event) {
+						// TODO Auto-generated method stub						
+					}
+				});
+
+				gameGrid.addDropHandler(new DropHandler(){
+
+					@Override
+					public void onDrop(DropEvent event) {
+						event.preventDefault();
+						presenter.onClicked(r,c);
+					}
+				});
+			}
+		}	
+	}
+
+	@Override
+	public void initControlHandler()
+	{
+		CheckBox animationFlag = new CheckBox("Disable Animation");
+		CheckBox soundFlag = new CheckBox("Disable Sound");
+
+		Button restartButton=new Button();
+		restartButton.setText("Start New Game");
+		restartButton.addClickHandler(new ClickHandler() {
+			@Override
+			public void onClick(ClickEvent event) {
+				presenter.restartClicked();
+			}
+		});
+		controlGrid.setWidget(0, 0, restartButton);
+
+//		animationFlag.addClickHandler(new ClickHandler(){
+//			@Override
+//			public void onClick(ClickEvent event){
+//				boolean checked = ((CheckBox) event.getSource()).getValue();
+//				presenter.animationDisable(checked);
+//			}
+//		});
+//
+//		controlGrid.setWidget(0, 1, animationFlag);
+//		soundFlag.addClickHandler(new ClickHandler(){
+//			@Override
+//			public void onClick(ClickEvent event){
+//				boolean checked =((CheckBox) event.getSource()).getValue();
+//				presenter.soundDisable(checked);
+//			}
+//		});
+//		controlGrid.setWidget(0,2, soundFlag);
+	}
+}

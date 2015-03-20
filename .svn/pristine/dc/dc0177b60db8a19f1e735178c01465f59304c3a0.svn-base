@@ -1,0 +1,78 @@
+package org.harshmehta.hw3;
+
+import org.harshmehta.hw6.client.LoginInfo;
+import org.harshmehta.hw6.client.LoginService;
+import org.harshmehta.hw6.client.LoginServiceAsync;
+import org.harshmehta.hw7.client.MultiplayerChessService;
+import org.harshmehta.hw7.client.MultiplayerChessServiceAsync;
+import org.harshmehta.hw8.ChessMessages;
+
+import com.google.gwt.core.client.EntryPoint;
+import com.google.gwt.core.client.GWT;
+import com.google.gwt.user.client.Window;
+import com.google.gwt.user.client.rpc.AsyncCallback;
+import com.google.gwt.user.client.ui.Anchor;
+import com.google.gwt.user.client.ui.Label;
+import com.google.gwt.user.client.ui.RootPanel;
+import com.google.gwt.user.client.ui.VerticalPanel;
+
+public class ChessEntryPoint implements EntryPoint {
+  
+  private LoginInfo loginInfo = null;
+  private VerticalPanel loginPanel = new VerticalPanel();
+  private Label loginLabel = new Label("Please sign in to your Google Account " +
+  		"to access the Chess application.");
+  private static ChessMessages messages = GWT.create(ChessMessages.class);
+  private Anchor signInLink = new Anchor("Sign In");
+  private Anchor signOutLink = new Anchor(messages.signOut());
+
+  public void onModuleLoad() {
+    // Check login status using login service.
+    LoginServiceAsync loginService = GWT.create(LoginService.class);
+    loginService.login(Window.Location.getHref(), new AsyncCallback<LoginInfo>() {
+      public void onFailure(Throwable error) {
+      }
+      
+      public void onSuccess(LoginInfo result) {
+        loginInfo = result;
+        if(loginInfo.isLoggedIn()) {
+          MultiplayerChessServiceAsync chessService = GWT.create(MultiplayerChessService.class);
+          chessService.connectPlayer(new AsyncCallback<String>() {
+
+            @Override
+            public void onFailure(Throwable caught) {
+              Window.alert("Error retrieving token! Please try again later.");
+            }
+
+            @Override
+            public void onSuccess(String result) {
+              loadChessGame(result);
+            }
+            
+          });
+        } else {
+          loadLogin();
+        }
+      }
+    });
+  }
+  
+  private void loadChessGame(String token) {
+    String state = null;
+    final Graphics graphics = new Graphics(state, token, loginInfo.getEmailAddress());
+    signOutLink.setHref(loginInfo.getLogoutUrl());
+    RootPanel.get().add(new Label(messages.userInfo(loginInfo.getNickname(), 
+        loginInfo.getEmailAddress())));
+    RootPanel.get().add(new Label());
+    RootPanel.get().add(signOutLink);
+    RootPanel.get().add(graphics);
+  }
+  
+  private void loadLogin() {
+    // Assemble login panel.
+    signInLink.setHref(loginInfo.getLoginUrl());
+    loginPanel.add(loginLabel);
+    loginPanel.add(signInLink);
+    RootPanel.get().add(loginPanel);
+  }
+}

@@ -1,0 +1,98 @@
+package org.shihweihuang.hw3;
+
+import org.shared.chess.Color;
+import org.shared.chess.GameResult;
+import org.shared.chess.GameResultReason;
+import org.shared.chess.Piece;
+import org.shared.chess.PieceKind;
+import org.shared.chess.Position;
+import org.shared.chess.State;
+
+public class StateParser {
+	public static State parse(String token) {
+		// Parse history token to get relative state
+		Color newTurn = Color.WHITE;
+		Piece newBoard[][] = new Piece[8][8];
+		boolean newCanCastleKingSide[] = new boolean[] { true, true };
+		boolean newCanCastleQueenSide[] = new boolean[] { true, true };
+		Position newEnpassantPosition = null;
+		int newNumberOfMovesWithoutCaptureNorPawnMoved = 0;
+		GameResult newGameResult = null;
+		String[] tokens = token.split(",");
+		String turn = tokens[0].substring(tokens[0].indexOf("=") + 1);
+		if (turn.contains("B")) {
+			// Parse turn
+			newTurn = Color.BLACK;
+		}
+		for (int i = 1; i < 65; i++) {
+			// Parse board
+			Piece piece = null;
+			if (tokens[i].contains("null")) {
+				piece = null;
+			} else if (tokens[i].contains("(")) {
+				Color color = Color.WHITE;
+				PieceKind pieceKind = null;
+				String pieceInfo = tokens[i].substring(tokens[i].indexOf("(") + 1,
+						tokens[i].indexOf(")"));
+				String[] splitInfo = pieceInfo.split(" ");
+				color = (splitInfo[0].contains("B")) ? Color.BLACK : Color.WHITE;
+				if (splitInfo[1].contains("KING")) {
+					pieceKind = PieceKind.KING;
+				} else if (splitInfo[1].contains("QUEEN")) {
+					pieceKind = PieceKind.QUEEN;
+				} else if (splitInfo[1].contains("BISHOP")) {
+					pieceKind = PieceKind.BISHOP;
+				} else if (splitInfo[1].contains("KNIGHT")) {
+					pieceKind = PieceKind.KNIGHT;
+				} else if (splitInfo[1].contains("ROOK")) {
+					pieceKind = PieceKind.ROOK;
+				} else if (splitInfo[1].contains("PAWN")) {
+					pieceKind = PieceKind.PAWN;
+				}
+				piece = new Piece(color, pieceKind);
+			}
+			int row = (i - 1) / 8;
+			int col = (i - 1) % 8;
+			newBoard[row][col] = piece;
+		}
+		// Parse castling flags
+		newCanCastleKingSide[0] = tokens[65].contains("true") ? true : false;
+		newCanCastleKingSide[1] = tokens[66].contains("true") ? true : false;
+		newCanCastleQueenSide[0] = tokens[67].contains("true") ? true : false;
+		newCanCastleQueenSide[1] = tokens[68].contains("true") ? true : false;
+		// Parse other stuff
+		for (int i = 69; i < tokens.length; i++) {
+			if (tokens[i].contains("enpassantPosition")) {
+				int r = Integer.parseInt(tokens[i].substring(tokens[i].length() - 1));
+				int c = Integer.parseInt(tokens[i + 1].substring(0, 1));
+				newEnpassantPosition = new Position(r, c);
+			} else if (tokens[i].contains("numberOfMovesWithoutCaptureNorPawnMoved")) {
+				int s = tokens[i].indexOf("=") + 1;
+				newNumberOfMovesWithoutCaptureNorPawnMoved = Integer.parseInt(tokens[i]
+						.substring(s, tokens[i].length() - 1));
+			}
+			if (tokens[i].contains("winner")) {
+				GameResultReason gameResultReason = null;
+				Color color = null;
+				if (tokens[i].contains("B")) {
+					color = Color.BLACK;
+				} else if (tokens[i].contains("W")) {
+					color = Color.WHITE;
+				}
+				if (tokens[i + 1].contains("CHECKMATE")) {
+					gameResultReason = GameResultReason.CHECKMATE;
+				} else if (tokens[i + 1].contains("FIFTY_MOVE_RULE")) {
+					gameResultReason = GameResultReason.FIFTY_MOVE_RULE;
+				} else if (tokens[i + 1].contains("STALEMATE")) {
+					gameResultReason = GameResultReason.STALEMATE;
+				} else if (tokens[i + 1].contains("THREEFOLD_REPETITION_RULE")) {
+					gameResultReason = GameResultReason.THREEFOLD_REPETITION_RULE;
+				}
+				newGameResult = new GameResult(color, gameResultReason);
+			}
+		}
+		return new State(newTurn, newBoard, newCanCastleKingSide,
+				newCanCastleQueenSide, newEnpassantPosition,
+				newNumberOfMovesWithoutCaptureNorPawnMoved, newGameResult);
+	}
+}

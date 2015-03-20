@@ -1,0 +1,37 @@
+<!DOCTYPE ui:UiBinder SYSTEM "http://dl.google.com/gwt/DTD/xhtml.ent">
+<ui:UiBinder xmlns:ui="urn:ui:com.google.gwt.uibinder"
+  xmlns:g="urn:import:com.google.gwt.user.client.ui">
+  <ui:style field="css" type="org.yuehlinchung.hw6.client.GameCss">
+    .highlighted {
+      outline: solid green 2px;
+    }
+    .statusText {
+      font-size: 20px;
+      font-weight: bold;
+      color: black;
+      text-shadow: 5px 5px 5px #CDE5FF;
+    }
+    .bigger {
+	    transform: scale(1.1,1.1);
+      -ms-transform: scale(1.1,1.1); /* IE 9 */
+      -webkit-transform: scale(1.1,1.1); /* Safari and Chrome */
+      -o-transform: scale(1.1,1.1); /* Opera */
+      -moz-transform: scale(1.1,1.1); /* Firefox */
+	  }
+    td img {
+      display: block
+    }
+  </ui:style>
+  <g:HTMLPanel>
+    <g:Label ui:field="gameStatus" styleName="{css.statusText}" text="Game Status"/>
+    <br/>
+    <g:AbsolutePanel ui:field="aP"/>
+    <br/>
+    <g:Label ui:field="test" visible = "false" text="test"/>
+    <g:Label visible="false" ui:field="promote" text="Promate"/>
+    <g:Button visible="false" ui:field="queen">Queen</g:Button>
+    <g:Button visible="false" ui:field="knight">Knight</g:Button>
+    <g:Button visible="false" ui:field="rook">Rook</g:Button>
+    <g:Button visible="false" ui:field="bishop">Bishop</g:Button>
+  </g:HTMLPanel>
+</ui:UiBinder> 

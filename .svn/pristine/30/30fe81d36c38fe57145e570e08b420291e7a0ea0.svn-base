@@ -1,0 +1,32 @@
+package org.yuanjia.hw11;
+
+import com.google.gwt.user.client.ui.MultiWordSuggestOracle;
+import com.google.gwt.user.client.ui.SuggestOracle;
+
+public class Contact {
+	public static SuggestOracle contactOracle() {
+		MultiWordSuggestOracle oracle = new MultiWordSuggestOracle();
+
+	    oracle.add("jiayuan6311@gmail.com");
+	    oracle.add("aimeehwang90@gmail.com");
+	    oracle.add("yj515@nyu.edu");
+	    oracle.add("Samoa@gmail.com");
+	    oracle.add("Andorra@gmail.com");
+	    oracle.add("aks309@nyu.edu");
+	    oracle.add("alg489@nyu.edu");
+	    oracle.add("amy@cs.ucr.edu");
+	    oracle.add("antai500@yahoo.cn");
+	    oracle.add("Dan@danbamberger.com");
+	    oracle.add("gregg@liveramp.com");
+	    oracle.add("zhu-hj@cs.sjtu.edu.cn");
+	    oracle.add("jvarela@yahoo-inc.com");
+	    oracle.add("conlan@cs.nyu.edu");
+	    oracle.add("jyots.bits@gmail.com");
+	    oracle.add("khnelson@amazon.com");
+	    oracle.add("ys1024@nyu.edu");
+	    oracle.add("xc90ber@gmail.com");
+	    oracle.add("hellowenniu@gmail.com");
+	    oracle.add("laughinggu@gmail.com");
+	    return oracle;
+	}
+}

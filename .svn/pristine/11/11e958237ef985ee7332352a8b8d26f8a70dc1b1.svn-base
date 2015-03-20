@@ -1,0 +1,7 @@
+package org.ashishmanral.hw6.client;
+
+import com.google.gwt.user.client.rpc.AsyncCallback;
+
+public interface UpdateStateServiceAsync {
+  void getUpdate(UpdateState update, AsyncCallback<Integer> callback);
+}

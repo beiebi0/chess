@@ -1,0 +1,30 @@
+package org.vorasahil.hw7.client;
+
+import com.google.gwt.user.client.rpc.AsyncCallback;
+
+public interface RegisterServiceAsync {
+
+	void registerPlayer(String input, boolean createChannel,
+			AsyncCallback<Register> callback);
+
+	void autoMatchMe(String input,String state, AsyncCallback<Register> callback);
+
+	void challenge(String myEmail, String opponentEmail, String state,
+			AsyncCallback<Register> callback);
+
+	void deleteGame(String myEmail, long gameId, AsyncCallback<Boolean> callback);
+
+	void myMove(String myEmail, String newState, long gameId,int winner,
+			AsyncCallback<Boolean> callback);
+
+	void reloadGames(String myEmail, AsyncCallback<Register> callback);
+
+	void getRank(String Email, AsyncCallback<Integer> callback);
+
+	void RegisterAIGame(String myEmail, String newState, int playerTurn,
+			AsyncCallback<Register> callback);
+
+	void updateAIGameMove(String myEmail, long gameId, String state,
+			AsyncCallback<Boolean> callback);
+
+}

@@ -1,0 +1,518 @@
+package org.zhihanli.hw1;
+
+import static org.shared.chess.Color.WHITE;
+import static org.shared.chess.Color.BLACK;
+import static org.shared.chess.PieceKind.*;
+import static org.junit.Assert.assertEquals;
+
+import org.shared.chess.*;
+import org.junit.Test;
+
+public abstract class AbstractStateChangerEndOfGameForBlackTest extends
+		AbstractStateChangerTest {
+
+	public void init() {
+		Piece[][] board = new Piece[State.ROWS][State.COLS];
+		start = new State(BLACK, board, new boolean[2], new boolean[2], null,
+				0, null);
+	}
+
+	@Test
+	public void testEndOfGameEndByCheckMateByOneRookOneBishopOnePawn() {
+
+		init();
+		
+		start.setPiece(7, 3, new Piece(BLACK, KING));
+		start.setPiece(2, 4, new Piece(BLACK, BISHOP));
+		start.setPiece(2, 5, new Piece(BLACK, PAWN));
+		start.setPiece(3, 6, new Piece(BLACK, ROOK));
+		start.setPiece(0, 7, new Piece(WHITE, KING));
+
+		State expected = start.copy();
+
+		Move move = new Move(new Position(3, 6), new Position(3, 7), null);
+
+		expected.setPiece(3, 6, null);
+		expected.setPiece(3, 7, new Piece(BLACK, ROOK));
+		expected.setTurn(WHITE);
+		expected.setNumberOfMovesWithoutCaptureNorPawnMoved(1);
+		expected.setGameResult(new GameResult(BLACK, GameResultReason.CHECKMATE));
+
+		stateChanger.makeMove(start, move);
+		assertEquals(expected, start);
+	}
+
+	@Test
+	public void testEndOfGameEndByCheckMateByTwoBishop() {
+		init();
+		start.setPiece(4, 7, new Piece(BLACK, BISHOP));
+		start.setPiece(2, 4, new Piece(BLACK, BISHOP));
+		start.setPiece(2, 7, new Piece(BLACK, KING));
+		start.setPiece(0, 7, new Piece(WHITE, KING));
+
+		State expected = start.copy();
+
+		Move move = new Move(new Position(4, 7), new Position(2, 5), null);
+
+		expected.setPiece(4, 7, null);
+		expected.setPiece(2, 5, new Piece(BLACK, BISHOP));
+		expected.setTurn(WHITE);
+		expected.setNumberOfMovesWithoutCaptureNorPawnMoved(1);
+		expected.setGameResult(new GameResult(BLACK, GameResultReason.CHECKMATE));
+
+		stateChanger.makeMove(start, move);
+		assertEquals(expected, start);
+	}
+
+	@Test
+	public void testEndOfGameEndByCheckMateByTwoRook() {
+		init();
+		start.setPiece(7, 0, new Piece(BLACK, ROOK));
+		start.setPiece(7, 3, new Piece(BLACK, KING));
+		start.setPiece(1, 7, new Piece(BLACK, ROOK));
+		start.setPiece(0, 3, new Piece(WHITE, KING));
+
+		State expected = start.copy();
+
+		Move move = new Move(new Position(7, 0), new Position(0, 0), null);
+
+		expected.setPiece(7, 0, null);
+		expected.setPiece(0, 0, new Piece(BLACK, ROOK));
+		expected.setTurn(WHITE);
+		expected.setNumberOfMovesWithoutCaptureNorPawnMoved(1);
+		expected.setGameResult(new GameResult(BLACK, GameResultReason.CHECKMATE));
+
+		stateChanger.makeMove(start, move);
+		assertEquals(expected, start);
+	}
+
+	@Test
+	public void testEndOfGameEndByCheckMateByFivePawn() {
+		init();
+		start.setPiece(1, 1, new Piece(BLACK, PAWN));
+		start.setPiece(2, 2, new Piece(BLACK, PAWN));
+		start.setPiece(2, 3, new Piece(BLACK, PAWN));
+		start.setPiece(2, 4, new Piece(BLACK, PAWN));
+		start.setPiece(1, 5, new Piece(BLACK, PAWN));
+		start.setPiece(0, 3, new Piece(WHITE, KING));
+		start.setPiece(7, 3, new Piece(BLACK, KING));
+
+		State expected = start.copy();
+
+		Move move = new Move(new Position(2, 4), new Position(1, 4), null);
+
+		expected.setPiece(2, 4, null);
+		expected.setPiece(1, 4, new Piece(BLACK, PAWN));
+		expected.setTurn(WHITE);
+		expected.setNumberOfMovesWithoutCaptureNorPawnMoved(0);
+		expected.setGameResult(new GameResult(BLACK, GameResultReason.CHECKMATE));
+
+		stateChanger.makeMove(start, move);
+		assertEquals(expected, start);
+	}
+
+	@Test
+	public void testEndOfGameEndByCheckMateByRookVsThreePawn() {
+		init();
+		start.setPiece(1, 2, new Piece(WHITE, PAWN));
+		start.setPiece(1, 3, new Piece(WHITE, PAWN));
+		start.setPiece(1, 4, new Piece(WHITE, PAWN));
+		start.setPiece(0, 3, new Piece(WHITE, KING));
+		start.setPiece(7, 3, new Piece(BLACK, KING));
+		start.setPiece(7, 0, new Piece(BLACK, ROOK));
+
+		State expected = start.copy();
+
+		Move move = new Move(new Position(7, 0), new Position(0, 0), null);
+
+		expected.setPiece(7, 0, null);
+		expected.setPiece(0, 0, new Piece(BLACK, ROOK));
+		expected.setTurn(WHITE);
+		expected.setNumberOfMovesWithoutCaptureNorPawnMoved(1);
+		expected.setGameResult(new GameResult(BLACK, GameResultReason.CHECKMATE));
+
+		stateChanger.makeMove(start, move);
+		assertEquals(expected, start);
+	}
+
+	@Test
+	public void testEndOfGameEndByCheckMateByOneRook() {
+		init();
+		start.setPiece(2, 3, new Piece(BLACK, KING));
+		start.setPiece(7, 6, new Piece(BLACK, ROOK));
+		start.setPiece(0, 3, new Piece(WHITE, KING));
+
+		State expected = start.copy();
+
+		Move move = new Move(new Position(7, 6), new Position(0, 6), null);
+
+		expected.setPiece(7, 6, null);
+		expected.setPiece(0, 6, new Piece(BLACK, ROOK));
+		expected.setTurn(WHITE);
+		expected.setNumberOfMovesWithoutCaptureNorPawnMoved(1);
+		expected.setGameResult(new GameResult(BLACK, GameResultReason.CHECKMATE));
+
+		stateChanger.makeMove(start, move);
+		assertEquals(expected, start);
+	}
+
+	@Test
+	public void testEndOfGameEndByCheckMateByRookAndQueen() {
+		init();
+		start.setPiece(0, 7, new Piece(BLACK, KING));
+		start.setPiece(1, 5, new Piece(BLACK, ROOK));
+		start.setPiece(1, 6, new Piece(BLACK, QUEEN));
+		start.setPiece(0, 3, new Piece(WHITE, KING));
+
+		State expected = start.copy();
+
+		Move move = new Move(new Position(1, 6), new Position(0, 6), null);
+
+		expected.setPiece(1, 6, null);
+		expected.setPiece(0, 6, new Piece(BLACK, QUEEN));
+		expected.setTurn(WHITE);
+		expected.setNumberOfMovesWithoutCaptureNorPawnMoved(1);
+		expected.setGameResult(new GameResult(BLACK, GameResultReason.CHECKMATE));
+
+		stateChanger.makeMove(start, move);
+		assertEquals(expected, start);
+	}
+
+	@Test
+	public void testEndOfGameEndByCheckMateByTwoQueen() {
+		init();
+		start.setPiece(3, 5, new Piece(BLACK, KING));
+		start.setPiece(2, 4, new Piece(BLACK, QUEEN));
+		start.setPiece(1, 1, new Piece(BLACK, QUEEN));
+		start.setPiece(0, 3, new Piece(WHITE, KING));
+
+		State expected = start.copy();
+
+		Move move = new Move(new Position(2, 4), new Position(1, 3), null);
+
+		expected.setPiece(2, 4, null);
+		expected.setPiece(1, 3, new Piece(BLACK, QUEEN));
+		expected.setTurn(WHITE);
+		expected.setNumberOfMovesWithoutCaptureNorPawnMoved(1);
+		expected.setGameResult(new GameResult(BLACK, GameResultReason.CHECKMATE));
+
+		stateChanger.makeMove(start, move);
+		assertEquals(expected, start);
+	}
+
+	@Test
+	public void testEndOfGameEndByFiftyMoveRuleBishopAndKnightVsBishop() {
+		init();
+		start.setNumberOfMovesWithoutCaptureNorPawnMoved(99);
+		start.setPiece(6, 4, new Piece(BLACK, KNIGHT));
+		start.setPiece(6, 2, new Piece(BLACK, KING));
+		start.setPiece(7, 4, new Piece(BLACK, BISHOP));
+		start.setPiece(1, 5, new Piece(WHITE, KING));
+		start.setPiece(1, 6, new Piece(WHITE, BISHOP));
+
+		State expected = start.copy();
+		Move move = new Move(new Position(7, 4), new Position(4, 7), null);
+
+		expected.setTurn(WHITE);
+		expected.setPiece(7, 4, null);
+		expected.setPiece(4, 7, new Piece(BLACK, BISHOP));
+		expected.setNumberOfMovesWithoutCaptureNorPawnMoved(100);
+		expected.setGameResult(new GameResult(null,
+				GameResultReason.FIFTY_MOVE_RULE));
+
+		stateChanger.makeMove(start, move);
+		assertEquals(expected, start);
+	}
+
+	@Test
+	public void testEndOfGameEndByFiftyMoveRuleRookAndBishopVsRook() {
+		init();
+
+		start.setNumberOfMovesWithoutCaptureNorPawnMoved(99);
+		start.setPiece(2, 1, new Piece(BLACK, ROOK));
+		start.setPiece(4, 1, new Piece(BLACK, KING));
+		start.setPiece(4, 2, new Piece(BLACK, BISHOP));
+		start.setPiece(5, 4, new Piece(WHITE, KING));
+		start.setPiece(3, 7, new Piece(WHITE, ROOK));
+
+		State expected = start.copy();
+		Move move = new Move(new Position(2, 1), new Position(2, 5), null);
+
+		expected.setTurn(WHITE);
+		expected.setPiece(2, 1, null);
+		expected.setPiece(2, 5, new Piece(BLACK, ROOK));
+		expected.setNumberOfMovesWithoutCaptureNorPawnMoved(100);
+		expected.setGameResult(new GameResult(null,
+				GameResultReason.FIFTY_MOVE_RULE));
+
+		stateChanger.makeMove(start, move);
+		assertEquals(expected, start);
+	}
+
+	@Test
+	public void testEndOfGameEndByFiftyMoveRuleRookVsRook() {
+		init();
+
+		start.setNumberOfMovesWithoutCaptureNorPawnMoved(99);
+		start.setPiece(4, 0, new Piece(BLACK, ROOK));
+		start.setPiece(4, 1, new Piece(BLACK, KING));
+		start.setPiece(5, 4, new Piece(WHITE, KING));
+		start.setPiece(3, 7, new Piece(WHITE, ROOK));
+
+		State expected = start.copy();
+		Move move = new Move(new Position(4, 0), new Position(2, 0), null);
+
+		expected.setTurn(WHITE);
+		expected.setPiece(4, 0, null);
+		expected.setPiece(2, 0, new Piece(BLACK, ROOK));
+		expected.setNumberOfMovesWithoutCaptureNorPawnMoved(100);
+		expected.setGameResult(new GameResult(null,
+				GameResultReason.FIFTY_MOVE_RULE));
+
+		stateChanger.makeMove(start, move);
+		assertEquals(expected, start);
+	}
+
+	@Test
+	public void testEndOfGameEndByFiftyMoveRuleRookVsRookAndBishop() {
+		init();
+
+		start.setNumberOfMovesWithoutCaptureNorPawnMoved(99);
+		start.setPiece(2, 1, new Piece(BLACK, ROOK));
+		start.setPiece(4, 1, new Piece(BLACK, KING));
+		start.setPiece(4, 4, new Piece(WHITE, BISHOP));
+		start.setPiece(5, 4, new Piece(WHITE, KING));
+		start.setPiece(3, 7, new Piece(WHITE, ROOK));
+
+		State expected = start.copy();
+
+		Move move = new Move(new Position(2, 1), new Position(2, 4), null);
+		expected.setTurn(WHITE);
+		expected.setPiece(2, 1, null);
+		expected.setPiece(2, 4, new Piece(BLACK, ROOK));
+		expected.setNumberOfMovesWithoutCaptureNorPawnMoved(100);
+		expected.setGameResult(new GameResult(null,
+				GameResultReason.FIFTY_MOVE_RULE));
+
+		stateChanger.makeMove(start, move);
+		assertEquals(expected, start);
+	}
+
+	@Test
+	public void testEndOfGameEndByFiftyMoveRuleRookVsTwoKnight() {
+		init();
+
+		start.setNumberOfMovesWithoutCaptureNorPawnMoved(99);
+		start.setPiece(7, 4, new Piece(BLACK, ROOK));
+		start.setPiece(4, 5, new Piece(BLACK, KING));
+		start.setPiece(2, 5, new Piece(WHITE, KNIGHT));
+		start.setPiece(2, 3, new Piece(WHITE, KNIGHT));
+		start.setPiece(3, 7, new Piece(WHITE, KING));
+
+		State expected = start.copy();
+		Move move = new Move(new Position(7, 4), new Position(7, 3), null);
+
+		expected.setTurn(WHITE);
+		expected.setPiece(7, 4, null);
+		expected.setPiece(7, 3, new Piece(BLACK, ROOK));
+		expected.setNumberOfMovesWithoutCaptureNorPawnMoved(100);
+		expected.setGameResult(new GameResult(null,
+				GameResultReason.FIFTY_MOVE_RULE));
+
+		stateChanger.makeMove(start, move);
+		assertEquals(expected, start);
+	}
+
+	@Test
+	public void testEndOfGameEndByFiftyMoveRuleQueenAndBishopVsTwoKnight() {
+		init();
+
+		start.setNumberOfMovesWithoutCaptureNorPawnMoved(99);
+		start.setPiece(4, 2, new Piece(BLACK, BISHOP));
+		start.setPiece(5, 5, new Piece(BLACK, KING));
+		start.setPiece(5, 1, new Piece(BLACK, QUEEN));
+		start.setPiece(2, 3, new Piece(WHITE, KNIGHT));
+		start.setPiece(3, 7, new Piece(WHITE, KNIGHT));
+		start.setPiece(2, 7, new Piece(WHITE, KING));
+
+		State expected = start.copy();
+
+		Move move = new Move(new Position(5, 1), new Position(3, 1), null);
+		expected.setTurn(WHITE);
+		expected.setPiece(5, 1, null);
+		expected.setPiece(3, 1, new Piece(BLACK, QUEEN));
+		expected.setNumberOfMovesWithoutCaptureNorPawnMoved(100);
+		expected.setGameResult(new GameResult(null,
+				GameResultReason.FIFTY_MOVE_RULE));
+
+		stateChanger.makeMove(start, move);
+		assertEquals(expected, start);
+	}
+
+	@Test
+	public void testEndOfGameEndByFiftyMoveRuleBishopVsTwoKnight() {
+		init();
+		start.setNumberOfMovesWithoutCaptureNorPawnMoved(99);
+		start.setPiece(7, 2, new Piece(BLACK, BISHOP));
+		start.setPiece(4, 5, new Piece(BLACK, KING));
+		start.setPiece(2, 3, new Piece(WHITE, KNIGHT));
+		start.setPiece(2, 7, new Piece(WHITE, KING));
+		start.setPiece(1, 7, new Piece(WHITE, KNIGHT));
+
+		State expected = start.copy();
+
+		Move move = new Move(new Position(7, 2), new Position(5, 4), null);
+		expected.setTurn(WHITE);
+		expected.setPiece(7, 2, null);
+		expected.setPiece(5, 4, new Piece(BLACK, BISHOP));
+		expected.setNumberOfMovesWithoutCaptureNorPawnMoved(100);
+		expected.setGameResult(new GameResult(null,
+				GameResultReason.FIFTY_MOVE_RULE));
+
+		stateChanger.makeMove(start, move);
+		assertEquals(expected, start);
+	}
+
+	@Test
+	public void testEndOfGameEndByFiftyMoveRuleKnightVsTwoKnight() {
+		init();
+		start.setNumberOfMovesWithoutCaptureNorPawnMoved(99);
+		start.setPiece(6, 4, new Piece(BLACK, KNIGHT));
+		start.setPiece(4, 5, new Piece(BLACK, KING));
+		start.setPiece(2, 3, new Piece(WHITE, KNIGHT));
+		start.setPiece(2, 7, new Piece(WHITE, KNIGHT));
+		start.setPiece(1, 5, new Piece(WHITE, KING));
+
+		State expected = start.copy();
+
+		Move move = new Move(new Position(6, 4), new Position(5, 6), null);
+		expected.setTurn(WHITE);
+		expected.setPiece(6, 4, null);
+		expected.setPiece(5, 6, new Piece(BLACK, KNIGHT));
+		expected.setNumberOfMovesWithoutCaptureNorPawnMoved(100);
+		expected.setGameResult(new GameResult(null,
+				GameResultReason.FIFTY_MOVE_RULE));
+
+		stateChanger.makeMove(start, move);
+		assertEquals(expected, start);
+	}
+
+	@Test
+	public void testEndOfGameEndByFiftyMoveRuleTwoKingLeft() {
+		init();
+		start.setNumberOfMovesWithoutCaptureNorPawnMoved(99);
+		start.setPiece(0, 0, new Piece(BLACK, KING));
+		start.setPiece(7, 7, new Piece(WHITE, KING));
+
+		Move move = new Move(new Position(0, 0), new Position(0, 1), null);
+		State expected = start.copy();
+
+		expected.setTurn(WHITE);
+		expected.setPiece(0, 0, null);
+		expected.setPiece(0, 1, new Piece(BLACK, KING));
+		expected.setNumberOfMovesWithoutCaptureNorPawnMoved(100);
+		expected.setGameResult(new GameResult(null,
+				GameResultReason.FIFTY_MOVE_RULE));
+
+		stateChanger.makeMove(start, move);
+		assertEquals(expected, start);
+	}
+
+	@Test
+	public void testEndOfGameEndByStalemateOneQueen() {
+		init();
+
+		start.setPiece(7, 7, new Piece(WHITE, KING));
+		start.setPiece(5, 6, new Piece(BLACK, QUEEN));
+		start.setPiece(6, 4, new Piece(BLACK, KING));
+
+		Move move = new Move(new Position(6, 4), new Position(6, 5), null);
+		State expected = start.copy();
+
+		expected.setTurn(WHITE);
+		expected.setPiece(6, 4, null);
+		expected.setPiece(6, 5, new Piece(BLACK, KING));
+		expected.setGameResult(new GameResult(null, GameResultReason.STALEMATE));
+		expected.setNumberOfMovesWithoutCaptureNorPawnMoved(1);
+		stateChanger.makeMove(start, move);
+		assertEquals(expected, start);
+
+	}
+
+	@Test
+	public void testEndOfGameEndByStalemateTwoRook() {
+		init();
+		start.setPiece(7, 4, new Piece(WHITE, KING));
+		start.setPiece(5, 5, new Piece(BLACK, ROOK));
+		start.setPiece(6, 3, new Piece(BLACK, ROOK));
+		start.setPiece(5, 4, new Piece(BLACK, KING));
+
+		Move move = new Move(new Position(5, 5), new Position(6, 5), null);
+		State expected = start.copy();
+		expected.setTurn(WHITE);
+		expected.setPiece(5, 5, null);
+		expected.setPiece(6, 5, new Piece(BLACK, ROOK));
+		expected.setGameResult(new GameResult(null, GameResultReason.STALEMATE));
+		expected.setNumberOfMovesWithoutCaptureNorPawnMoved(1);
+		stateChanger.makeMove(start, move);
+		assertEquals(expected, start);
+	}
+
+	@Test
+	public void testEndOfGameEndByStalemateRookVsBishop() {
+		init();
+		start.setPiece(7, 0, new Piece(WHITE, KING));
+		start.setPiece(7, 1, new Piece(WHITE, BISHOP));
+		start.setPiece(0, 7, new Piece(BLACK, ROOK));
+		start.setPiece(5, 1, new Piece(BLACK, KING));
+
+		Move move = new Move(new Position(0, 7), new Position(7, 7), null);
+		State expected = start.copy();
+
+		expected.setTurn(WHITE);
+		expected.setPiece(0, 7, null);
+		expected.setPiece(7, 7, new Piece(BLACK, ROOK));
+		expected.setGameResult(new GameResult(null, GameResultReason.STALEMATE));
+		expected.setNumberOfMovesWithoutCaptureNorPawnMoved(1);
+		stateChanger.makeMove(start, move);
+		assertEquals(expected, start);
+	}
+
+	@Test
+	public void testEndOfGameEndByStalemateOneRook() {
+		init();
+		start.setPiece(0, 0, new Piece(WHITE, KING));
+		start.setPiece(1, 1, new Piece(BLACK, ROOK));
+		start.setPiece(3, 2, new Piece(BLACK, KING));
+
+		Move move = new Move(new Position(3, 2), new Position(2, 2), null);
+		State expected = start.copy();
+		expected.setTurn(WHITE);
+		expected.setPiece(3, 2, null);
+		expected.setPiece(2, 2, new Piece(BLACK, KING));
+		expected.setGameResult(new GameResult(null, GameResultReason.STALEMATE));
+		expected.setNumberOfMovesWithoutCaptureNorPawnMoved(1);
+		stateChanger.makeMove(start, move);
+		assertEquals(expected, start);
+	}
+
+	@Test
+	public void testEndOfGameEndByStalemateOneKnight() {
+		init();
+		start.setPiece(7, 0, new Piece(WHITE, KING));
+		start.setPiece(5, 2, new Piece(BLACK, KNIGHT));
+		start.setPiece(4, 1, new Piece(BLACK, KING));
+
+		Move move = new Move(new Position(4, 1), new Position(5, 1), null);
+		State expected = start.copy();
+
+		expected.setTurn(WHITE);
+		expected.setPiece(4, 1, null);
+		expected.setPiece(5, 1, new Piece(BLACK, KING));
+		expected.setGameResult(new GameResult(null, GameResultReason.STALEMATE));
+		expected.setNumberOfMovesWithoutCaptureNorPawnMoved(1);
+		stateChanger.makeMove(start, move);
+		assertEquals(expected, start);
+	}
+
+}

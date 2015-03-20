@@ -1,0 +1,535 @@
+package org.peigenyou.hw3;
+
+import java.util.ArrayList;
+import java.util.Set;
+
+import org.shared.chess.GameResult;
+import org.shared.chess.GameResultReason;
+import org.shared.chess.Piece;
+import org.shared.chess.Position;
+import org.peigenyou.hw3.Presenter.View;
+import org.peigenyou.hw8.ChessMessages;
+
+
+
+import com.google.gwt.animation.client.Animation;
+import com.google.gwt.core.client.GWT;
+import com.google.gwt.dom.client.AudioElement;
+import com.google.gwt.dom.client.MediaElement;
+import com.google.gwt.event.dom.client.ClickEvent;
+import com.google.gwt.event.dom.client.ClickHandler;
+import com.google.gwt.event.dom.client.KeyUpEvent;
+import com.google.gwt.event.dom.client.KeyUpHandler;
+import com.google.gwt.media.client.Audio;
+import com.google.gwt.storage.client.Storage;
+import com.google.gwt.uibinder.client.UiBinder;
+import com.google.gwt.uibinder.client.UiField;
+import com.google.gwt.user.client.Element;
+import com.google.gwt.user.client.Window;
+import com.google.gwt.user.client.ui.AbsolutePanel;
+import com.google.gwt.user.client.ui.Button;
+import com.google.gwt.user.client.ui.Composite;
+import com.google.gwt.user.client.ui.Grid;
+import com.google.gwt.user.client.ui.Image;
+import com.google.gwt.user.client.ui.Label;
+import com.google.gwt.user.client.ui.ListBox;
+import com.google.gwt.user.client.ui.RootPanel;
+import com.google.gwt.user.client.ui.SuggestBox;
+import com.google.gwt.user.client.ui.TextBox;
+import com.google.gwt.user.client.ui.Widget;
+import com.googlecode.gwtphonegap.client.PhoneGap;
+import com.googlecode.gwtphonegap.client.contacts.Contact;
+import com.googlecode.gwtphonegap.client.contacts.ContactError;
+import com.googlecode.gwtphonegap.client.contacts.ContactFindCallback;
+import com.googlecode.gwtphonegap.client.contacts.ContactFindOptions;
+import com.googlecode.gwtphonegap.collection.shared.CollectionFactory;
+import com.googlecode.gwtphonegap.collection.shared.LightArray;
+import com.googlecode.mgwt.dom.client.event.tap.TapEvent;
+import com.googlecode.mgwt.dom.client.event.tap.TapHandler;
+import com.googlecode.mgwt.dom.client.event.touch.TouchEndEvent;
+import com.googlecode.mgwt.dom.client.event.touch.TouchEndHandler;
+import com.googlecode.mgwt.dom.client.event.touch.TouchMoveEvent;
+import com.googlecode.mgwt.dom.client.event.touch.TouchMoveHandler;
+import com.googlecode.mgwt.dom.client.event.touch.TouchStartEvent;
+import com.googlecode.mgwt.dom.client.event.touch.TouchStartHandler;
+import com.googlecode.mgwt.dom.client.recognizer.swipe.SwipeEndEvent;
+import com.googlecode.mgwt.dom.client.recognizer.swipe.SwipeEndHandler;
+import com.googlecode.mgwt.dom.client.recognizer.swipe.SwipeMoveEvent;
+import com.googlecode.mgwt.dom.client.recognizer.swipe.SwipeMoveHandler;
+import com.googlecode.mgwt.dom.client.recognizer.swipe.SwipeStartEvent;
+import com.googlecode.mgwt.dom.client.recognizer.swipe.SwipeStartHandler;
+import com.googlecode.mgwt.ui.client.widget.HeaderPanel;
+import com.googlecode.mgwt.ui.client.widget.LayoutPanel;
+import com.googlecode.mgwt.ui.client.widget.touch.TouchDelegate;
+import com.googlecode.mgwt.ui.client.widget.touch.TouchPanel;
+import com.google.gwt.user.client.ui.MultiWordSuggestOracle;
+public class Graphics extends Composite implements View {
+  private static GameImages gameImages = GWT.create(GameImages.class);
+  private static GraphicsUiBinder uiBinder = GWT.create(GraphicsUiBinder.class);
+  private static ChessMessages msg = GWT.create(ChessMessages.class);
+  private static PhoneGap pg=GWT.create(PhoneGap.class);
+  interface GraphicsUiBinder extends UiBinder<Widget, Graphics> {
+  }
+  @UiField HeaderPanel header;
+  @UiField LayoutPanel UserInfo;
+  @UiField LayoutPanel MatchWith;
+  @UiField GameCss css;
+  @UiField Label gameStatus;
+  @UiField Label matchInfo;
+  @UiField AbsolutePanel container;
+  @UiField LayoutPanel ControlPanel;
+  private Image[][] board = new Image[8][8];
+  private Presenter presenter;
+  Grid controlPanel=new Grid();
+  Grid gameGrid=new Grid();
+  ListBox saveList=new ListBox();
+  TextBox textBox=new TextBox();
+  Audio clickAudio = Audio.createIfSupported();
+  Audio dragAudio = Audio.createIfSupported();
+  Audio endAudio = Audio.createIfSupported();
+  Storage storage = Storage.getLocalStorageIfSupported();
+  Label userInfo=new Label();
+  SuggestBox sgbox=new SuggestBox();
+  MultiWordSuggestOracle oracle = new MultiWordSuggestOracle();
+	
+  public void setOracle(LightArray<String> contacts){
+  	for(int i=0;i<contacts.length();++i)	oracle.add(contacts.get(i));
+  	sgbox=new SuggestBox(oracle);
+  }
+  private void initControlPanel(){
+  	LightArray<String> fields = CollectionFactory.<String> constructArray();
+		fields.push("emails"); //search in displayname 
+		fields.push("Eamil"); //search in name as well
+		fields.push("mail");
+		ContactFindOptions findOptions = new ContactFindOptions("", true);
+		oracle.add("fusubacon@gmail.com");
+  	oracle.add("fuc8@hotmail.com");
+  	sgbox=new SuggestBox(oracle);
+
+  	final Button automatch=new Button(msg.AutoMatchButton());
+    automatch.addClickHandler(new ClickHandler(){
+    	@Override
+    	public void onClick(ClickEvent event){
+    		presenter.autoMatch();
+    	}
+    });
+    Button matchButton=new Button(msg.MatchWithButton());
+    matchButton.addClickHandler(new ClickHandler(){
+    	@Override
+    	public void onClick(ClickEvent event){
+    		System.out.println(sgbox.getValue());
+    		System.out.println("1");
+    		System.out.println(sgbox.getText());
+    		System.out.println("2");
+    		
+    		presenter.createMatch(sgbox.getValue());
+    	}
+    });
+    Button login=new Button("Login");
+    login.addClickHandler(new ClickHandler(){
+
+			@Override
+			public void onClick(ClickEvent event) {
+				presenter.popupLogin();
+				header.setRightWidget(automatch);
+			}
+    	
+    });
+    Button loadButton=new Button(msg.LoadMatchButton());
+    loadButton.addClickHandler(new ClickHandler(){
+    	@Override
+    	public void onClick(ClickEvent event){
+    		if(saveList.getItemText(saveList.getSelectedIndex())==""||saveList.getItemText(saveList.getSelectedIndex())==null) return;
+    		presenter.loadMatch(saveList.getItemText(saveList.getSelectedIndex()));
+    	}
+    });
+    Button delButton=new Button(msg.DelMatchButton());
+    delButton.addClickHandler(new ClickHandler(){
+    	@Override
+    	public void onClick(ClickEvent event){
+    		presenter.delMatch(saveList.getItemText(saveList.getSelectedIndex()));
+    		saveList.removeItem(saveList.getSelectedIndex());
+    	}
+    });
+    Button singlePlay=new Button(msg.playwithai());
+    singlePlay.addClickHandler(new ClickHandler(){
+
+			@Override
+			public void onClick(ClickEvent event) {
+				if(presenter.getAIMatch()==null)	presenter.startAIGame();
+				else {
+					System.out.println("AI game already exist.");
+					presenter.loadAIMatch();
+				}
+			}
+    	
+    });
+    Button restartSinglePlay=new Button("Start a new AI game");
+    restartSinglePlay.addClickHandler(new ClickHandler(){
+
+			@Override
+			public void onClick(ClickEvent event) {
+				presenter.startAIGame();				
+			}
+    	
+    });
+    
+    controlPanel.setWidget(0, 0, saveList);
+    controlPanel.setWidget(0, 1, loadButton);
+    controlPanel.setWidget(0,2,delButton);
+    header.setRightWidget(login);
+    header.setLeftWidget(restartSinglePlay);
+    header.setCenter("Chess");
+    UserInfo.add(userInfo);
+  	MatchWith.add(sgbox);
+  	MatchWith.add(matchButton);
+  	ControlPanel.add(controlPanel);
+  	
+  }
+ 
+  @Override
+  public void setMatchInfo(String string) {
+    matchInfo.setText(string);
+  }
+  @Override
+  public void setUserInfo(String string) {
+    userInfo.setText(string);
+  }
+  @Override
+  public void setGameStatus(String string){
+  	gameStatus.setText(string);
+  }
+  @Override
+  public void setGameResult(GameResult gameResult) {
+  	if(gameResult!=null){
+		  String s = "";
+		  if(gameResult.getWinner().isWhite())  s = s + msg.whiteWin();
+		  else if(gameResult.getWinner().isBlack()) s = s + msg.blackWin();
+		 	
+		  if(gameResult.getGameResultReason().equals(GameResultReason.CHECKMATE))  s = s + msg.checkMate();
+		  else if(gameResult.getGameResultReason().equals(GameResultReason.STALEMATE)) s = s + msg.stalemate();
+		  else if(gameResult.getGameResultReason().equals(GameResultReason.FIFTY_MOVE_RULE)) s = s + msg.fiftyMoveRule();
+		  gameStatus.setText(s);
+		  endAudio.play();
+  	}
+  }
+  @Override
+  public void setListBox(ArrayList<String> list){
+  	saveList.clear();
+  	if (list.size()==0) list.clear();
+  	for(String matchID:list){
+  		saveList.addItem(matchID);
+  	}
+  }
+  
+  public Graphics(final Presenter presenter) {
+  	this.presenter=presenter;
+  	initUI();
+    for (int row = 0; row < 8; row++) {
+      for (int col = 0; col < 8; col++) {
+    	  row=7-row;
+    	  final TouchPanel a=new TouchPanel();
+        final Image image = new Image();
+        image.setSize("50px", "50px");
+        board[row][col] = image;
+        image.setWidth("100%");
+        if (row % 2 == 0 && col % 2 == 1 || row % 2 == 1 && col % 2 == 0) {
+        	board[row][col].setResource(gameImages.blackTile());
+        } else {
+        	board[row][col].setResource(gameImages.whiteTile()); 
+        }
+        final int i=row;
+        final int j=col;
+        a.getElement().setDraggable(Element.DRAGGABLE_TRUE);
+        a.addTapHandler(new TapHandler(){
+
+    			@Override
+    			public void onTap(TapEvent event) {
+    				
+    				System.out.println("Tap");
+    				presenter.selectCell(7-i, j,true);          
+          	if(clickAudio!=null)clickAudio.play();
+    			}
+        	
+        });
+        a.addTouchStartHandler(new TouchStartHandler(){
+
+					@Override
+					public void onTouchStart(TouchStartEvent event) {
+						event.preventDefault();
+						System.out.println("Touch start  "+(7-i)+"  "+j);
+					presenter.selectCell(7-i, j,false);
+					if(dragAudio!=null)dragAudio.play();
+					
+					}
+        	
+        });
+        a.addTouchMoveHandler(new TouchMoveHandler(){
+					@Override
+					public void onTouchMove(TouchMoveEvent event) {
+						event.preventDefault();
+						System.out.println("Touch Move  "+(7-i)+"    he    "+j);
+					}
+        	
+        });
+        
+        a.addTouchEndHandler(new TouchEndHandler(){
+					@Override
+					public void onTouchEnd(TouchEndEvent event) {
+						//event.preventDefault();
+						
+						System.out.println("Touch End  "+(7-i)+"  "+j);
+						presenter.selectCell(7-i, j,false);
+						if(clickAudio!=null)clickAudio.play();
+						
+					}
+        	
+        });
+//        a.addSwipeStartHandler(new SwipeStartHandler(){
+//
+//					@Override
+//					public void onSwipeStart(SwipeStartEvent event) {
+//						System.out.println("Touch start  "+(7-i)+"  "+j);
+//						presenter.selectCell(7-i, j,false);
+//						if(dragAudio!=null)dragAudio.play();
+//						
+//					}
+//        	
+//        });
+//        a.addSwipeMoveHandler(new SwipeMoveHandler(){
+//
+//					@Override
+//					public void onSwipeMove(SwipeMoveEvent event) {
+//						
+//						
+//					}
+//        	
+//        });
+//        a.addSwipeEndHandler(new SwipeEndHandler(){
+//
+//					@Override
+//					public void onSwipeEnd(SwipeEndEvent event) {
+//						System.out.println("Touch start  "+(7-i)+"  "+j);
+//						presenter.selectCell(7-i, j,false);
+//						if(clickAudio!=null)clickAudio.play();
+//						
+//					}
+//        	
+//        });
+        
+        //image.getElement().setDraggable(Element.DRAGGABLE_TRUE);
+        
+//        image.addClickHandler(new ClickHandler() {
+//          @Override
+//          public void onClick(ClickEvent event) {
+//          	presenter.selectCell(7-i, j,true);          
+//          	if(clickAudio!=null)clickAudio.play();
+//          }
+//        });
+//        
+//
+//        image.getElement().setDraggable(Element.DRAGGABLE_TRUE);
+//        image.addDragStartHandler(new DragStartHandler(){
+//					@Override
+//					public void onDragStart(DragStartEvent event) {
+//						event.setData("a", "a");
+//						presenter.selectCell(7-i, j,false);
+//						if(dragAudio!=null)dragAudio.play();
+//					}        	
+//        });
+//        image.addDragOverHandler(new DragOverHandler(){
+//					@Override
+//					public void onDragOver(DragOverEvent event) {
+//						
+//					}        	
+//        });
+//        image.addDropHandler(new DropHandler(){
+//					@Override
+//					public void onDrop(DropEvent event) {
+//						event.setData("a", "a");
+//						event.preventDefault();
+//						presenter.selectCell(7-i, j,false);
+//						if(clickAudio!=null)clickAudio.play();
+//					}
+//        });
+        a.add(image);
+        
+       gameGrid.setWidget(i, j, a);  
+      }
+    }    
+    initControlPanel();
+    container.add(gameGrid);
+  }
+  private void initUI(){
+  	
+  	createAudio();
+  	initWidget(uiBinder.createAndBindUi(this));
+    gameGrid.resize(8, 8);
+    gameGrid.setCellPadding(0);
+    gameGrid.setCellSpacing(0);
+    gameGrid.setBorderWidth(0);
+    controlPanel.resize(1, 3);
+    controlPanel.setCellPadding(0);
+    controlPanel.setCellSpacing(0);
+    controlPanel.setBorderWidth(0);
+    gameGrid.setStyleName(css.myBoard());
+    
+    saveList.setWidth("150px");
+    gameStatus.getElement().setClassName(css.fontSize());
+  }  
+  @Override
+  public void setHighlighted(int row, int col, boolean highlighted) {
+	  row=7-row;
+    Element element = board[row][col].getElement();
+    if (highlighted) {
+      element.setClassName(css.highlighted());
+    } else {
+      element.removeClassName(css.highlighted());
+    }
+  }
+
+  @Override
+  public void setPresenter(Presenter presenter)
+  {
+  	this.presenter=presenter;
+  }
+  @Override
+  public void setPiece(int row, int col, Piece piece) {
+	  row=7-row;
+  	if (piece == null) {
+  		if (row % 2 == 0 && col % 2 == 1 || row % 2 == 1 && col % 2 == 0) {
+  			board[row][col].setResource(gameImages.blackTile());
+      } else {
+      	board[row][col].setResource(gameImages.whiteTile()); 
+      }
+  		return;
+    }
+    switch (piece.getKind()) {
+      case PAWN:
+        if (piece.getColor().isWhite()) {
+          board[row][col].setResource(gameImages.whitePawn());
+        } else {
+          board[row][col].setResource(gameImages.blackPawn());
+        }
+        break;
+      case KING:
+        if (piece.getColor().isWhite()) {
+          board[row][col].setResource(gameImages.whiteKing());
+        } else {
+          board[row][col].setResource(gameImages.blackKing());
+        }
+        break;
+      case QUEEN:
+        if (piece.getColor().isWhite()) {
+          board[row][col].setResource(gameImages.whiteQueen());
+        } else {
+          board[row][col].setResource(gameImages.blackQueen());
+        }
+        break;
+      case KNIGHT:
+        if (piece.getColor().isWhite()) {
+          board[row][col].setResource(gameImages.whiteKnight());
+        } else {
+          board[row][col].setResource(gameImages.blackKnight());
+        }
+        break;
+      case BISHOP:
+        if (piece.getColor().isWhite()) {
+          board[row][col].setResource(gameImages.whiteBishop());
+        } else {
+          board[row][col].setResource(gameImages.blackBishop());
+        }
+        break;
+      case ROOK:
+        if (piece.getColor().isWhite()) {
+          board[row][col].setResource(gameImages.whiteRook());
+        } else {
+          board[row][col].setResource(gameImages.blackRook());
+        }
+        break;
+      default:
+        break;
+    }
+  }
+  public void createAudio() {
+  	Audio audio = Audio.createIfSupported();
+  	 if (audio == null) {
+  	 return;
+  	 }
+  	 if (MediaElement.CAN_PLAY_PROBABLY.equals(audio.canPlayType(AudioElement.TYPE_OGG))) {
+  	 clickAudio.setSrc("peigenyou_audio/click.ogg");
+  	 dragAudio.setSrc("peigenyou_audio/drag.ogg");
+  	 endAudio.setSrc("peigenyou_audio/end.ogg");
+  	 }else if (MediaElement.CAN_PLAY_PROBABLY.equals(audio.canPlayType(AudioElement.TYPE_WAV))) {
+  		 clickAudio.setSrc("peigenyou_audio/click.wav");
+    	dragAudio.setSrc("peigenyou_audio/drag.wav");
+    	endAudio.setSrc("peigenyou_audio/end.wav");
+    	} else if (MediaElement.CAN_PLAY_PROBABLY.equals(audio.canPlayType(AudioElement.TYPE_MP3))) {
+    	 clickAudio.setSrc("peigenyou_audio/click.mp3");
+       dragAudio.setSrc("peigenyou_audio/drag.mp3");
+       endAudio.setSrc("peigenyou_audio/end.mp3");
+  	 } else if (MediaElement.CAN_PLAY_MAYBE.equals( audio.canPlayType(AudioElement.TYPE_OGG))) {
+  		 clickAudio.setSrc("peigenyou_audio/click.ogg");
+    	 dragAudio.setSrc("peigenyou_audio/drag.ogg");
+    	 endAudio.setSrc("peigenyou_audio/end.ogg");
+  	 } else if (MediaElement.CAN_PLAY_MAYBE.equals( audio.canPlayType(AudioElement.TYPE_WAV))) {
+  		 clickAudio.setSrc("peigenyou_audio/click.wav");
+    	 dragAudio.setSrc("peigenyou_audio/drag.wav");
+    	 endAudio.setSrc("peigenyou_audio/end.wav");
+     } else if (MediaElement.CAN_PLAY_MAYBE.equals(audio.canPlayType(AudioElement.TYPE_MP3))) {
+    	 clickAudio.setSrc("peigenyou_audio/click.mp3");
+    	 dragAudio.setSrc("peigenyou_audio/drag.mp3");
+    	 endAudio.setSrc("peigenyou_audio/end.mp3");
+  	 }
+  	 clickAudio.load();
+  }
+  @Override
+  public void animate(int iniR,int iniC, int tarR,int tarC){
+
+		
+		Animation ani=new MoveAnimation(container,iniR,iniC,tarR,tarC);
+		ani.run(200);
+  }
+  class MoveAnimation extends Animation {
+    protected final AbsolutePanel widget;
+    private final int targetX;
+    private final int targetY;
+    private int initialX;
+    private int initialY;
+    private Image cache;
+    private int tarR,tarC;
+    
+    public MoveAnimation(AbsolutePanel widget,int iniR,int iniC, int tarR,int tarC) {
+        this.widget = widget;
+        this.targetX = gameGrid.getWidget(7-tarR,tarC).getAbsoluteLeft()-gameGrid.getAbsoluteLeft();
+        this.targetY = gameGrid.getWidget(7-tarR,tarC).getAbsoluteTop()-gameGrid.getAbsoluteTop();
+        this.initialX=gameGrid.getWidget(7-iniR, iniC).getAbsoluteLeft()-gameGrid.getAbsoluteLeft();
+        this.initialY=gameGrid.getWidget(7-iniR,iniC).getAbsoluteTop()-gameGrid.getAbsoluteTop();
+        cache=new Image();
+        cache.setWidth(board[0][0].getWidth()+"");
+        
+        cache.setUrl(board[7-iniR][iniC].getUrl());
+        container.add(cache);
+        this.tarR=tarR;
+        this.tarC=tarC;
+        
+    }
+    @Override
+		protected void onUpdate(double progress) {
+    	      int x = (int) Math.round(initialX + ((targetX - initialX) * progress));
+            int y = (int) Math.round(initialY + ((targetY - initialY) * progress));
+            widget.setWidgetPosition(cache, x, y);
+    }
+		
+    @Override
+    protected void onStart(){
+    	board[7-tarR][tarC].setVisible(false);
+    }
+    @Override
+    protected void onComplete(){
+    	widget.remove(cache);
+    	board[7-tarR][tarC].setVisible(true);
+    }
+    
+}
+}

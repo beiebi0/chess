@@ -1,0 +1,17 @@
+package org.ashishmanral.hw11;
+
+import java.util.ArrayList;
+
+import com.google.gwt.user.client.rpc.AsyncCallback;
+
+public interface MultiplayerChessServiceAsync {
+  void initializePlayer(String playerEmailId, AsyncCallback<String> callback);
+  void autoMatch(String userEmail, String opponentEmail, Long matchId, String stateString, Boolean myTurn, AsyncCallback<Message> callback);
+  void opponentEmailMatch(String currentPlayerEmail, String opponentEmail, String currentState, Long matchId, Boolean yourTurn, AsyncCallback<Message> callback);
+  void deleteMatch(String userEmail, Long matchId, AsyncCallback<Void> callback);
+  void changeMatch(String userEmail, Long matchId, Long newMatchId, String currentState, String turn, AsyncCallback<Message> callback);
+  void makeMove(String userEmail, String opponentEmail, Long matchId, String stateString, String winner, AsyncCallback<Void> callback);
+  void loadMatchList(String userId, AsyncCallback<ArrayList<Message>> callback); 
+  void AIGame(String userEmail, String currentState, Long matchId, boolean yourTurn, boolean isAIWhite, AsyncCallback<String> callback);
+  void saveAIState(String userEmail, Long matchId, String stateString, String winner, boolean isUserTurn, AsyncCallback<Void> callback);
+}

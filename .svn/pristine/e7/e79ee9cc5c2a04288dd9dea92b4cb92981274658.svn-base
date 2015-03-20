@@ -1,0 +1,43 @@
+package org.mengyanhuang.hw6.client;
+
+import java.util.ArrayList;
+import java.util.LinkedList;
+
+import org.mengyanhuang.hw7.Match;
+import org.mengyanhuang.hw7.Player;
+
+import com.google.gwt.user.client.rpc.RemoteService;
+import com.google.gwt.user.client.rpc.RemoteServiceRelativePath;
+
+@RemoteServiceRelativePath("LoginService")
+public interface UserLoginService extends RemoteService {
+	
+	public LoginInfo login(String requestUri);
+	
+	public LoginInfo fakelogin(String userId);
+	
+	public LinkedList<Match> LoadGame(String userId);
+	
+	public Match AutoMatch(String userId);
+	
+	public Match MatchbyEmail(String userId, String opponentId);
+	
+	public Match getMatch(long matchId);
+	
+	public String getCurrentState(String state, String Uid, long matchid);
+	
+	public String Delete(String userId, long matchid);
+	
+	public Match loadMatch(String userId, long matchid);
+	
+	public void setPlayerLastPlayedTime(String userId, long date);
+	
+	public void setPlayerRD(String userId, int RD);
+	
+	public void setPlayerRank(String userId, int rank);
+	
+	public Player getPlayer(String userId);
+	
+	public void setContactsEmail(ArrayList<String> emails);
+	
+}

@@ -1,0 +1,286 @@
+package org.sanjana.hw2_5;
+
+import java.util.HashSet;
+import java.util.Set;
+
+import org.sanjana.hw2.StateChangerImpl;
+import org.shared.chess.Color;
+import org.shared.chess.GameResult;
+import org.shared.chess.GameResultReason;
+import org.shared.chess.Move;
+import org.shared.chess.Piece;
+import org.shared.chess.Position;
+import org.shared.chess.State;
+import org.shared.chess.StateExplorer;
+import static org.shared.chess.State.COLS;
+import static org.shared.chess.State.ROWS;
+import static org.shared.chess.Color.WHITE;
+import static org.shared.chess.PieceKind.BISHOP;
+import static org.shared.chess.PieceKind.KNIGHT;
+import static org.shared.chess.PieceKind.QUEEN;
+import static org.shared.chess.PieceKind.ROOK;
+
+import com.google.common.collect.Sets;
+
+public class StateExplorerImpl implements StateExplorer {
+
+	StateChangerImpl statechanger = new StateChangerImpl();
+
+	@Override
+	public Set<Move> getPossibleMoves(State state) {
+		Set<Move> moves = Sets.newHashSet();
+		Color turn= state.getTurn();
+		State original=state.copy();
+		for(int i=0;i<ROWS;i++)
+			for(int j=0;j<COLS;j++)
+			{
+				Position current=new Position(i,j);
+				Piece checking =state.getPiece(current);
+				if(checking!=null && checking.getColor()==turn)
+				{
+					moves.addAll(getPossibleMovesFromPosition(original, current));
+				}
+			}	  
+		return moves;
+	}
+
+	@Override
+	public Set<Move> getPossibleMovesFromPosition(State state, Position start) {
+
+		Set<Move> possibleMoves = Sets.newHashSet();
+		if (start == null) 
+		{
+			return possibleMoves;
+		}
+		if (state.getPiece(start) == null) 
+		{
+			return possibleMoves;
+		}
+
+		if (state.getNumberOfMovesWithoutCaptureNorPawnMoved() >= 100)
+		{
+			state.setGameResult(new GameResult(null, GameResultReason.FIFTY_MOVE_RULE));// check fifty moves rule
+			return possibleMoves;
+		}
+
+		Piece FromPiece = state.getPiece(start);
+		Color FromColor=FromPiece.getColor();
+		State original=state.copy();
+		int x= start.getRow();
+		int y=start.getCol();
+		Move move;
+		Position pos;
+		int promotionRow= (FromColor==WHITE) ? 6:1;
+		int dirX=(FromColor==WHITE) ? 1:-1;
+		Position kingpos=statechanger.WhereIsKing(original, FromColor);
+
+		switch(FromPiece.getKind())
+		{
+		case PAWN:	
+			for(int i=0;i<ROWS;i++)
+			{
+				for(int j=0;j<COLS;j++)
+				{
+					pos=new Position(i,j);
+					move=new Move(start,pos,null);
+					if(statechanger.isLegalPawnMove(original, move))
+						if(!isKingInCheck(original,FromColor,kingpos,pos,start))
+							possibleMoves.add(move);
+				}
+			}
+
+			if(x==promotionRow)
+			{				
+				if(statechanger.withinboard(new Position(x+dirX,y)))
+				{
+					pos=new Position(x+dirX,y);
+					move = new Move(start, pos, QUEEN);
+					if(statechanger.isLegalPawnMove(original, move))
+						if(!isKingInCheck(original,FromColor,kingpos,pos,start))
+							possibleMoves.add(move);
+
+					move = new Move(start,pos, ROOK);
+					if(statechanger.isLegalPawnMove(original,move))
+						if(!isKingInCheck(original,FromColor,kingpos,pos,start))
+							possibleMoves.add(move);
+
+					move = new Move(start,pos, BISHOP);
+					if(statechanger.isLegalPawnMove(original, move))
+						if(!isKingInCheck(original,FromColor,kingpos,pos,start))
+							possibleMoves.add(move);
+
+					move = new Move(start,pos, KNIGHT);
+					if(statechanger.isLegalPawnMove(original, move))
+						if(!isKingInCheck(original,FromColor,kingpos,pos,start))
+							possibleMoves.add(move);
+				}
+
+				if(statechanger.withinboard(new Position(x+dirX, y+1)) && state.getPiece(new Position(x+dirX, y+1))!=null)
+				{
+					pos=new Position(x+dirX, y+1);
+					move = new Move(start,pos, QUEEN);
+					if(statechanger.isLegalPawnMove(original, move))
+						if(!isKingInCheck(original,FromColor,kingpos,pos,start))
+							possibleMoves.add(move);
+
+					move = new Move(start,pos, ROOK);
+					if(statechanger.isLegalPawnMove(original,move))
+						if(!isKingInCheck(original,FromColor,kingpos,pos,start))
+							possibleMoves.add(move);
+
+					move = new Move(start, pos, BISHOP);
+					if(statechanger.isLegalPawnMove(original, move))
+						if(!isKingInCheck(original,FromColor,kingpos,pos,start))
+							possibleMoves.add(move);
+					move = new Move(start,pos, KNIGHT);
+					if(statechanger.isLegalPawnMove(original, move))
+						if(!isKingInCheck(original,FromColor,kingpos,pos,start))
+							possibleMoves.add(move);
+				}
+
+				if(statechanger.withinboard(new Position(x+dirX, y-1)) && state.getPiece(new Position(x+dirX, y-1))!=null)
+				{
+					pos=new Position(x+dirX, y-1);
+					move = new Move(start, pos, QUEEN);
+					if(statechanger.isLegalPawnMove(original, move))
+						if(!isKingInCheck(original,FromColor,kingpos,pos,start))
+							possibleMoves.add(move);
+
+					move = new Move(start,pos, ROOK);
+					if(statechanger.isLegalPawnMove(original,move))
+						if(!isKingInCheck(original,FromColor,kingpos,pos,start))
+							possibleMoves.add(move);
+
+					move = new Move(start, pos, BISHOP);
+					if(statechanger.isLegalPawnMove(original, move))
+						if(!isKingInCheck(original,FromColor,kingpos,pos,start))
+							possibleMoves.add(move);
+
+					move = new Move(start,pos, KNIGHT);
+					if(statechanger.isLegalPawnMove(original, move))
+						if(!isKingInCheck(original,FromColor,kingpos,pos,start))
+							possibleMoves.add(move);
+				}
+			}
+			break;
+
+		case ROOK:
+			for(int i=0;i<ROWS;i++)
+			{
+				for(int j=0;j<COLS;j++)
+				{
+					pos=new Position(i,j);
+					move=new Move(start,pos,null);
+					if(statechanger.isLegalRookMove(original, start, pos))
+						if(!isKingInCheck(original,FromColor,kingpos,pos,start))
+							possibleMoves.add(move);
+				}
+			}
+			break;	
+
+		case BISHOP:
+
+			for(int i=0;i<ROWS;i++)
+			{
+				for(int j=0;j<COLS;j++)
+				{
+					pos=new Position(i,j);
+					move=new Move(start,pos,null);
+					if(statechanger.isLegalBishopMove(original, start, pos))				
+						if(!isKingInCheck(original,FromColor,kingpos,pos,start))
+							possibleMoves.add(move);
+				}
+			}
+			break;
+
+		case KNIGHT:
+
+			for(int i=0;i<ROWS;i++)
+			{
+				for(int j=0;j<COLS;j++)
+				{
+					pos=new Position(i,j);
+					move=new Move(start,pos,null);
+					if(statechanger.isLegalKnightMove(original, start, pos))
+						if(!isKingInCheck(original,FromColor,kingpos,pos,start))
+							possibleMoves.add(move);
+				}
+			}
+			break;
+
+		case QUEEN:
+
+			for(int i=0;i<ROWS;i++)
+			{
+				for(int j=0;j<COLS;j++)
+				{
+					pos=new Position(i,j);
+					move=new Move(start,pos,null);
+					if(statechanger.isLegalRookMove(original, start, pos) || 
+							statechanger.isLegalBishopMove(original, start, pos))
+						if(!isKingInCheck(original,FromColor,kingpos,pos,start))
+							possibleMoves.add(move);
+				}
+			}
+			break;
+
+		case KING:
+
+			for(int i=0;i<ROWS;i++)
+			{
+				for(int j=0;j<COLS;j++)
+				{
+					pos=new Position(i,j);
+					move=new Move(start,pos,null);
+					if(statechanger.IsLegalKingMove(original, start, pos))
+						if(!isKingInCheck(original,FromColor,kingpos,pos,start))
+							possibleMoves.add(move);
+				}
+			}
+
+			//QUEEN-SIDE
+			move = new Move(start, new Position(x,y-2), null); 
+			if(statechanger.withinboard( new Position(x,y-2)))
+				if(statechanger.IsLegalKingMove(original, start, new Position(x,y-2)))
+					if(!isKingInCheck(original,FromColor,kingpos,new Position(x,y-2),start))
+						possibleMoves.add(move);
+
+			//KING-SIDE
+			move = new Move(start, new Position(x,y+2), null);  
+			if(statechanger.withinboard( new Position(x,y+2)))
+				if(statechanger.IsLegalKingMove(original, start, new Position(x,y+2)))
+					if(!isKingInCheck(original,FromColor,kingpos, new Position(x,y+2),start))
+						possibleMoves.add(move);
+			break;
+
+		default: 
+		}
+		return possibleMoves;
+	}
+
+	public boolean isKingInCheck(State state, Color FromColor,Position kingpos,Position New,Position Old)
+	{
+		State testState=state.copy();
+		testState.setPiece(New,state.getPiece(Old));
+		testState.setPiece(Old,null);
+		kingpos=statechanger.WhereIsKing(testState, FromColor);
+		if(statechanger.IsKingInCheck(testState, FromColor, kingpos))
+			return true;
+		return false;
+	}
+
+	@Override
+	public Set<Position> getPossibleStartPositions(State state) 
+	{
+		if (state.getGameResult() != null) 
+			return new HashSet<Position>();
+	
+		Set<Position> startPositions = Sets.newHashSet();
+		Set<Move> possibleMoves = getPossibleMoves(state);
+
+		for (Move m : possibleMoves) 
+			startPositions.add(m.getFrom());
+
+		return startPositions;
+	}
+}

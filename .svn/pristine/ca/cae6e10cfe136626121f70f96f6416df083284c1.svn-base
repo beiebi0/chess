@@ -1,0 +1,56 @@
+package org.zhaohuizhang.hw6.server;
+
+import static com.googlecode.objectify.ObjectifyService.ofy;
+
+import org.zhaohuizhang.hw6.client.LoginInfo;
+import org.zhaohuizhang.hw6.client.LoginService;
+import org.zhaohuizhang.hw7.Player;
+
+import com.google.appengine.api.users.User;
+import com.google.appengine.api.users.UserService;
+import com.google.appengine.api.users.UserServiceFactory;
+import com.google.gwt.user.server.rpc.RemoteServiceServlet;
+import com.googlecode.objectify.ObjectifyService;
+
+public class LoginServiceImpl extends RemoteServiceServlet implements LoginService{
+
+	private static final long serialVersionUID = 4249895694865287045L;
+
+	private final UserService userService;
+	
+	static {
+        ObjectifyService.register(Player.class);
+    }
+	
+	public LoginServiceImpl(){
+		this(UserServiceFactory.getUserService());
+	}
+	
+	public LoginServiceImpl(UserService userService){
+		this.userService = userService;
+	}
+	
+	@Override
+	public LoginInfo login(String requestUri) {
+		User user = userService.getCurrentUser();
+		if(user == null){
+			LoginInfo info = new LoginInfo();
+			info.setLoginUrl(userService.createLoginURL(requestUri));
+			return info;
+		}
+		
+		if(ofy().load().type(Player.class).id(user.getEmail()).get() == null){
+			Player player = new Player(user.getEmail(), user.getNickname());
+			ofy().save().entity(player).now();
+		}else{
+			Player player = ofy().load().type(Player.class).id(user.getEmail()).get();
+			player.setName(user.getNickname());
+			ofy().save().entity(player).now();
+		}
+		
+		LoginInfo info = new LoginInfo(user.getEmail(), user.getNickname());
+		info.setLogoutUrl(userService.createLogoutURL(requestUri));
+		return info;
+	}
+
+}

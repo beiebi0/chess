@@ -1,0 +1,483 @@
+package org.ashishmanral.hw1;
+
+import static org.junit.Assert.*;
+import static org.shared.chess.Color.BLACK;
+import static org.shared.chess.Color.WHITE;
+
+import org.junit.Test;
+import org.shared.chess.AbstractStateChangerTest;
+import org.shared.chess.GameResult;
+import org.shared.chess.GameResultReason;
+import org.shared.chess.IllegalMove;
+import org.shared.chess.Move;
+import org.shared.chess.Piece;
+import org.shared.chess.Position;
+import org.shared.chess.State;
+
+public abstract class AbstractStateChangerOtherPiecesMovementTest extends AbstractStateChangerTest {
+  @Test(expected = IllegalMove.class)
+  public void testIllegalRookMovement() {
+	start.setPiece(1,1,null);
+	Move move = new Move(new Position(0, 0), new Position(1, 1), null);
+    stateChanger.makeMove(start, move);  
+  }
+  
+  @Test(expected = IllegalMove.class)
+  public void testIllegalRookJumpingOverOtherPiece() {
+		Move move = new Move(new Position(0, 0), new Position(3, 0), null);
+	    stateChanger.makeMove(start, move);  
+  }
+  
+  @Test(expected = IllegalMove.class)
+  public void testRookMovesToSquareOccupiedBySameColor() {
+		Move move = new Move(new Position(0, 0), new Position(1, 0), null);
+	    stateChanger.makeMove(start, move);  
+  }
+  
+  @Test(expected = IllegalMove.class)
+  public void testRookMovesAfterGameAlreadyOver() {
+	start.setPiece(1, 0, null);
+    start.setGameResult(new GameResult(WHITE, GameResultReason.CHECKMATE));
+    Move move = new Move(new Position(0, 0), new Position(3, 0), null);
+    stateChanger.makeMove(start, move);
+  }
+  
+  @Test(expected = IllegalMove.class)
+  public void testIllegalRookMoveOnCheck() {
+	Piece whiteRook=start.getPiece(0, 0);
+	Piece blackRook=start.getPiece(7, 0);
+	start.setPiece(0, 0, null);
+	start.setPiece(0, 1, null);
+	start.setPiece(0, 2, null);
+	start.setPiece(0, 3, null);
+	start.setPiece(1, 0, null);
+	start.setPiece(1, 2, null);
+	start.setPiece(7, 0, null);
+	start.setPiece(6, 0, null);
+	start.setPiece(0, 0, blackRook);
+	start.setPiece(1, 2, whiteRook);
+    Move move = new Move(new Position(1, 2), new Position(2, 2), null);
+    stateChanger.makeMove(start, move);
+  }
+  
+  @Test
+  public void testRookCapturesPiece() {
+	State someState=start.copy();
+	someState.setPiece(1,0,null);
+	Piece whiteRook=someState.getPiece(0, 0);
+	State expected=someState.copy();
+	expected.setPiece(6,0,whiteRook);
+	expected.setPiece(0,0,null);
+	expected.setTurn(BLACK);
+	expected.setCanCastleQueenSide(WHITE, false);
+	Move move = new Move(new Position(0, 0), new Position(6, 0), null);
+    stateChanger.makeMove(someState, move);
+    assertEquals(expected,someState);
+  }
+  
+  @Test
+  public void testRookMovement() {
+	State someState=start.copy();
+	Piece whiteRook=someState.getPiece(0, 0);
+	someState.setPiece(1,0,null);
+	State expected=someState.copy();
+	expected.setPiece(0,0,null);
+	expected.setPiece(4,0,whiteRook);
+	expected.setNumberOfMovesWithoutCaptureNorPawnMoved(1);
+	expected.setTurn(BLACK);
+	expected.setCanCastleQueenSide(WHITE, false);
+	Move move = new Move(new Position(0, 0), new Position(4, 0), null);
+    stateChanger.makeMove(someState, move);
+    assertEquals(expected,someState);
+  }
+  
+  @Test
+  public void testRookMovesAndGameDraws() {
+	State someState=start.copy();
+	Piece whiteRook=someState.getPiece(0, 0);
+	someState.setPiece(1,0,null);
+	someState.setNumberOfMovesWithoutCaptureNorPawnMoved(99);
+	State expected=someState.copy();
+	expected.setPiece(0,0,null);
+	expected.setPiece(4,0,whiteRook);
+	expected.setCanCastleQueenSide(WHITE, false);
+	expected.setNumberOfMovesWithoutCaptureNorPawnMoved(100);
+	expected.setGameResult(new GameResult(null,GameResultReason.FIFTY_MOVE_RULE));
+	expected.setTurn(BLACK);
+	Move move = new Move(new Position(0, 0), new Position(4, 0), null);
+    stateChanger.makeMove(someState, move);
+    assertEquals(expected,someState);
+  }
+  
+  @Test
+  public void testRookShortCastling() {
+	State someState=start.copy();
+	Piece whiteRook=someState.getPiece(0,7);
+	Piece whiteKing=someState.getPiece(0,4);
+	someState.setPiece(0,5,null);
+	someState.setPiece(0,6,null);
+	State expected=someState.copy();
+	expected.setPiece(0,6,whiteKing);
+	expected.setPiece(0,5,whiteRook);
+	expected.setTurn(BLACK);
+	expected.setNumberOfMovesWithoutCaptureNorPawnMoved(1);
+	expected.setCanCastleKingSide(WHITE, false);
+	expected.setCanCastleQueenSide(WHITE, false);
+    Move move = new Move(new Position(0, 4), new Position(0, 6), null);
+    stateChanger.makeMove(someState, move);
+    assertEquals(expected, someState);
+  }
+  
+  @Test
+  public void testRookLongCastling() {
+	State someState=start.copy();
+	Piece whiteRook=someState.getPiece(0,0);
+	Piece whiteKing=someState.getPiece(0,4);
+	someState.setPiece(0,1,null);
+	someState.setPiece(0,2,null);
+	someState.setPiece(0,3,null);
+	State expected=someState.copy();
+	expected.setPiece(0,2,whiteKing);
+	expected.setPiece(0,3,whiteRook);
+	expected.setTurn(BLACK);
+	expected.setNumberOfMovesWithoutCaptureNorPawnMoved(1);
+	expected.setCanCastleKingSide(WHITE, false);
+	expected.setCanCastleQueenSide(WHITE, false);
+    Move move = new Move(new Position(0, 4), new Position(0, 2), null);
+    stateChanger.makeMove(someState, move);
+    assertEquals(expected, someState);
+  }
+  
+  @Test(expected = IllegalMove.class)
+  public void testIllegalKnightMovement() {
+	Move move = new Move(new Position(0, 1), new Position(3, 1), null);
+    stateChanger.makeMove(start, move);  
+  }
+  
+  @Test(expected = IllegalMove.class)
+  public void testKnightMovesToSquareOccupiedBySameColor() {
+		Move move = new Move(new Position(0, 1), new Position(1, 3), null);
+	    stateChanger.makeMove(start, move);  
+  }
+  
+  @Test(expected = IllegalMove.class)
+  public void testKnightMovesAfterGameAlreadyOver() {
+    start.setGameResult(new GameResult(WHITE, GameResultReason.CHECKMATE));
+    Move move = new Move(new Position(0, 1), new Position(2, 2), null);
+    stateChanger.makeMove(start, move);
+  }
+  
+  @Test(expected = IllegalMove.class)
+  public void testIllegalKnightMoveOnCheck() {
+	Piece whiteKnight=start.getPiece(0, 1);
+	Piece blackRook=start.getPiece(7, 0);
+	start.setPiece(0, 0, null);
+	start.setPiece(0, 1, null);
+	start.setPiece(0, 2, null);
+	start.setPiece(0, 3, null);
+	start.setPiece(1, 0, null);
+	start.setPiece(7, 0, null);
+	start.setPiece(6, 0, null);
+	start.setPiece(0, 0, blackRook);
+	start.setPiece(1, 1, whiteKnight);
+    Move move = new Move(new Position(1, 1), new Position(3, 2), null);
+    stateChanger.makeMove(start, move);
+  }
+  
+  @Test
+  public void testKnightCapturesPiece() {
+	State someState=start.copy();
+	Piece whiteKnight=someState.getPiece(0, 1);
+	Piece blackPawn=someState.getPiece(6, 3);
+	someState.setPiece(0,1,null);
+	someState.setPiece(6,3,null);
+	someState.setPiece(2,2,whiteKnight);
+	someState.setPiece(4,3,blackPawn);
+	State expected=someState.copy();
+	expected.setPiece(2,2,null);
+	expected.setPiece(4,3,whiteKnight);
+	expected.setTurn(BLACK);
+	Move move = new Move(new Position(2, 2), new Position(4, 3), null);
+    stateChanger.makeMove(someState, move);
+    assertEquals(expected,someState);
+  }
+  
+  @Test
+  public void testKnightMovement() {
+	State someState=start.copy();
+	Piece whiteKnight=someState.getPiece(0, 1);
+	State expected=someState.copy();
+	expected.setPiece(0,1,null);
+	expected.setPiece(2,0,whiteKnight);
+	expected.setNumberOfMovesWithoutCaptureNorPawnMoved(1);
+	expected.setTurn(BLACK);
+	Move move = new Move(new Position(0, 1), new Position(2, 0), null);
+    stateChanger.makeMove(someState, move);
+    assertEquals(expected,someState);
+  }
+  
+  @Test
+  public void testKnightMovesAndGameDraws() {
+	State someState=start.copy();
+	Piece whiteKnight=someState.getPiece(0, 1);
+	someState.setNumberOfMovesWithoutCaptureNorPawnMoved(99);
+	State expected=someState.copy();
+	expected.setPiece(0,1,null);
+	expected.setPiece(2,0,whiteKnight);
+	expected.setNumberOfMovesWithoutCaptureNorPawnMoved(100);
+	expected.setGameResult(new GameResult(null,GameResultReason.FIFTY_MOVE_RULE));
+	expected.setTurn(BLACK);
+	Move move = new Move(new Position(0, 1), new Position(2, 0), null);
+    stateChanger.makeMove(someState, move);
+    assertEquals(expected,someState);
+  }
+  
+  @Test(expected = IllegalMove.class)
+  public void testIllegalBishopMovement() {
+	start.setPiece(1,3,null);
+	Move move = new Move(new Position(0, 2), new Position(3, 2), null);
+    stateChanger.makeMove(start, move);  
+  }
+  
+  @Test(expected = IllegalMove.class)
+  public void testBishopMovesToSquareOccupiedBySameColor() {
+		Move move = new Move(new Position(0, 2), new Position(1, 1), null);
+	    stateChanger.makeMove(start, move);  
+  }
+  
+  @Test(expected = IllegalMove.class)
+  public void testBishopMovesAfterGameAlreadyOver() {
+    start.setGameResult(new GameResult(WHITE, GameResultReason.CHECKMATE));
+    start.setPiece(1,3,null);
+    Move move = new Move(new Position(0, 2), new Position(1, 3), null);
+    stateChanger.makeMove(start, move);
+  }
+  
+  @Test(expected = IllegalMove.class)
+  public void testIllegalBishopMoveOnCheck() {
+	Piece whiteBishop=start.getPiece(0, 2);
+	Piece blackRook=start.getPiece(7, 0);
+	start.setPiece(0, 0, null);
+	start.setPiece(0, 1, null);
+	start.setPiece(0, 2, null);
+	start.setPiece(0, 3, null);
+	start.setPiece(1, 0, null);
+	start.setPiece(7, 0, null);
+	start.setPiece(6, 0, null);
+	start.setPiece(0, 0, blackRook);
+	start.setPiece(1, 1, whiteBishop);
+    Move move = new Move(new Position(1, 1), new Position(2, 2), null);
+    stateChanger.makeMove(start, move);
+  }
+  
+  @Test
+  public void testBishopCapturesPiece() {
+	State someState=start.copy();
+	Piece whiteBishop=someState.getPiece(0, 2);
+	Piece blackPawn=someState.getPiece(6, 3);
+	someState.setPiece(1,1,null);
+	someState.setPiece(6,3,null);
+	someState.setPiece(0,2,null);
+	someState.setPiece(5,3,blackPawn);
+	someState.setPiece(2,0,whiteBishop);
+	State expected=someState.copy();
+	expected.setPiece(2,0,null);
+	expected.setPiece(5,3,whiteBishop);
+	expected.setTurn(BLACK);
+	Move move = new Move(new Position(2, 0), new Position(5, 3), null);
+    stateChanger.makeMove(someState, move);
+    assertEquals(expected,someState);
+  }
+  
+  @Test
+  public void testBishopMovement() {
+	State someState=start.copy();
+	Piece whiteBishop=someState.getPiece(0, 2);
+	someState.setPiece(1,1,null);
+	State expected=someState.copy();
+	expected.setPiece(0,2,null);
+	expected.setPiece(2,0,whiteBishop);
+	expected.setNumberOfMovesWithoutCaptureNorPawnMoved(1);
+	expected.setTurn(BLACK);
+	Move move = new Move(new Position(0, 2), new Position(2, 0), null);
+    stateChanger.makeMove(someState, move);
+    assertEquals(expected,someState);
+  }
+  
+  @Test
+  public void testBishopMovesAndGameDraws() {
+	State someState=start.copy();
+	Piece whiteBishop=someState.getPiece(0, 2);
+	someState.setPiece(1,1,null);
+	someState.setNumberOfMovesWithoutCaptureNorPawnMoved(99);
+	State expected=someState.copy();
+	expected.setPiece(0,2,null);
+	expected.setPiece(2,0,whiteBishop);
+	expected.setNumberOfMovesWithoutCaptureNorPawnMoved(100);
+	expected.setGameResult(new GameResult(null, GameResultReason.FIFTY_MOVE_RULE));
+	expected.setTurn(BLACK);
+	Move move = new Move(new Position(0, 2), new Position(2, 0), null);
+    stateChanger.makeMove(someState, move);
+    assertEquals(expected,someState);
+  }
+  
+  @Test(expected = IllegalMove.class)
+  public void testIllegalQueenMovement() {
+	start.setPiece(1,3,null);
+	Move move = new Move(new Position(0, 3), new Position(3, 2), null);
+    stateChanger.makeMove(start, move);  
+  }
+  
+  @Test(expected = IllegalMove.class)
+  public void testQueenMovesToSquareOccupiedBySameColor() {
+		Move move = new Move(new Position(0, 3), new Position(1, 3), null);
+	    stateChanger.makeMove(start, move);  
+  }
+  
+  @Test(expected = IllegalMove.class)
+  public void testQueenMovesAfterGameAlreadyOver() {
+    start.setGameResult(new GameResult(WHITE, GameResultReason.CHECKMATE));
+    start.setPiece(1,3,null);
+    Move move = new Move(new Position(0, 3), new Position(1, 3), null);
+    stateChanger.makeMove(start, move);
+  }
+  
+  @Test(expected = IllegalMove.class)
+  public void testIllegalQueenMoveOnCheck() {
+	Piece whiteQueen=start.getPiece(0, 3);
+	Piece blackRook=start.getPiece(7, 0);
+	start.setPiece(0, 0, null);
+	start.setPiece(0, 1, null);
+	start.setPiece(0, 2, null);
+	start.setPiece(0, 3, null);
+	start.setPiece(1, 0, null);
+	start.setPiece(7, 0, null);
+	start.setPiece(6, 0, null);
+	start.setPiece(0, 0, blackRook);
+	start.setPiece(1, 3, whiteQueen);
+    Move move = new Move(new Position(1, 3), new Position(2, 3), null);
+    stateChanger.makeMove(start, move);
+  }
+  
+  @Test
+  public void testQueenCapturesPiece() {
+	State someState=start.copy();
+	Piece whiteQueen=someState.getPiece(0, 3);
+	someState.setPiece(1,3,null);
+	State expected=someState.copy();
+	expected.setPiece(0,3,null);
+	expected.setPiece(6,3,whiteQueen);
+	expected.setTurn(BLACK);
+	Move move = new Move(new Position(0, 3), new Position(6, 3), null);
+    stateChanger.makeMove(someState, move);
+    assertEquals(expected,someState);
+  }
+  
+  @Test
+  public void testQueenMovement() {
+	State someState=start.copy();
+	Piece whiteQueen=someState.getPiece(0, 3);
+	someState.setPiece(1,3,null);
+	State expected=someState.copy();
+	expected.setPiece(0,3,null);
+	expected.setPiece(2,3,whiteQueen);
+	expected.setNumberOfMovesWithoutCaptureNorPawnMoved(1);
+	expected.setTurn(BLACK);
+	Move move = new Move(new Position(0, 3), new Position(2, 3), null);
+    stateChanger.makeMove(someState, move);
+    assertEquals(expected,someState);
+  }
+  
+  @Test
+  public void testQueenMovesAndGameEnds() {
+	State someState=start.copy();
+	Piece whiteQueen=someState.getPiece(0, 3);
+	someState.setPiece(1,3,null);
+	someState.setNumberOfMovesWithoutCaptureNorPawnMoved(99);
+	State expected=someState.copy();
+	expected.setPiece(0,3,null);
+	expected.setPiece(2,3,whiteQueen);
+	expected.setNumberOfMovesWithoutCaptureNorPawnMoved(100);
+	expected.setGameResult(new GameResult(null,GameResultReason.FIFTY_MOVE_RULE));
+	expected.setTurn(BLACK);
+	Move move = new Move(new Position(0, 3), new Position(2, 3), null);
+    stateChanger.makeMove(someState, move);
+    assertEquals(expected,someState);
+  }
+  
+  @Test(expected = IllegalMove.class)
+  public void testIllegalKingMovement() {
+	start.setPiece(1,4,null);
+	Move move = new Move(new Position(0, 4), new Position(2, 2), null);
+    stateChanger.makeMove(start, move);  
+  }
+  
+  @Test(expected = IllegalMove.class)
+  public void testKingMovesToSquareOccupiedBySameColor() {
+		Move move = new Move(new Position(0, 4), new Position(1, 4), null);
+	    stateChanger.makeMove(start, move);  
+  }
+  
+  @Test(expected = IllegalMove.class)
+  public void testKingMovesAfterGameAlreadyOver() {
+    start.setGameResult(new GameResult(WHITE, GameResultReason.CHECKMATE));
+    start.setPiece(1,4,null);
+    Move move = new Move(new Position(0, 4), new Position(1, 4), null);
+    stateChanger.makeMove(start, move);
+  }
+      
+  @Test
+  public void testKingCapturesPiece() {
+	State someState=start.copy();
+	Piece whiteKing=someState.getPiece(0, 4);
+	Piece blackPawn=someState.getPiece(6, 4);
+	someState.setPiece(6,4,null);
+	someState.setPiece(1,4,blackPawn);
+	State expected=someState.copy();
+	expected.setPiece(0,4,null);
+	expected.setPiece(1,4,whiteKing);
+	expected.setTurn(BLACK);
+	expected.setCanCastleKingSide(WHITE, false);
+	expected.setCanCastleQueenSide(WHITE, false);
+	Move move = new Move(new Position(0, 4), new Position(1, 4), null);
+    stateChanger.makeMove(someState, move);
+    assertEquals(expected,someState);
+  }
+  
+  @Test
+  public void testKingMovement() {
+	State someState=start.copy();
+	Piece whiteKing=someState.getPiece(0, 4);
+	someState.setPiece(1,4,null);
+	State expected=someState.copy();
+	expected.setPiece(0,4,null);
+	expected.setPiece(1,4,whiteKing);
+	expected.setNumberOfMovesWithoutCaptureNorPawnMoved(1);
+	expected.setTurn(BLACK);
+	expected.setCanCastleKingSide(WHITE, false);
+	expected.setCanCastleQueenSide(WHITE, false);
+	Move move = new Move(new Position(0, 4), new Position(1, 4), null);
+    stateChanger.makeMove(someState, move);
+    assertEquals(expected,someState);
+  }
+  
+  @Test
+  public void testKingMovesAndGameEnds() {
+	State someState=start.copy();
+	Piece whiteKing=someState.getPiece(0, 4);
+	someState.setPiece(1,4,null);
+	someState.setNumberOfMovesWithoutCaptureNorPawnMoved(99);
+	State expected=someState.copy();
+	expected.setPiece(0,4,null);
+	expected.setPiece(1,4,whiteKing);
+	expected.setNumberOfMovesWithoutCaptureNorPawnMoved(100);
+	expected.setGameResult(new GameResult(null,GameResultReason.FIFTY_MOVE_RULE));
+	expected.setTurn(BLACK);
+	expected.setCanCastleKingSide(WHITE, false);
+	expected.setCanCastleQueenSide(WHITE, false);
+	Move move = new Move(new Position(0, 4), new Position(1, 4), null);
+    stateChanger.makeMove(someState, move);
+    assertEquals(expected,someState);
+  }
+}
+

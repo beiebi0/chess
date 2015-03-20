@@ -1,0 +1,19 @@
+package org.alishah.hw6.client;
+
+import com.google.gwt.user.client.rpc.RemoteService;
+import com.google.gwt.user.client.rpc.RemoteServiceRelativePath;
+
+@RemoteServiceRelativePath("multiplayer")
+public interface ChessGameService extends RemoteService {
+	public String userConnect();
+	public String beginMatchWithId(Long match);
+	public String getCurrentLoginStatus(String user);
+	public Boolean findMatchByEmail(String email);
+	public void removeMatch(Long match);
+	public String[] getMatchNames();
+	public void matchmakeAuto();
+	public void cancelMatchmaking();
+	
+	public String makeMoveInMatch(Long match, String move);
+
+}

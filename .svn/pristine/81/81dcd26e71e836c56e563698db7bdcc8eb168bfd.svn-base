@@ -1,0 +1,283 @@
+package org.mengyanhuang.hw3;
+
+import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.Date;
+
+import org.mengyanhuang.hw3.Presenter;
+import org.mengyanhuang.hw6.client.LoginInfo;
+import org.mengyanhuang.hw6.client.UserLoginService;
+import org.mengyanhuang.hw6.client.UserLoginServiceAsync;
+import org.mengyanhuang.hw7.Match;
+import org.mengyanhuang.hw8.MyMessages;
+import org.shared.chess.Color;
+import org.shared.chess.State;
+
+import com.google.gwt.appengine.channel.client.ChannelError;
+import com.google.gwt.appengine.channel.client.ChannelFactoryImpl;
+import com.google.gwt.appengine.channel.client.Socket;
+import com.google.gwt.appengine.channel.client.SocketListener;
+import com.google.gwt.core.client.EntryPoint;
+import com.google.gwt.core.client.GWT;
+import com.google.gwt.event.dom.client.ClickEvent;
+import com.google.gwt.event.dom.client.ClickHandler;
+import com.google.gwt.user.client.Window;
+import com.google.gwt.user.client.rpc.AsyncCallback;
+import com.google.gwt.user.client.rpc.ServiceDefTarget;
+import com.google.gwt.user.client.ui.Anchor;
+import com.google.gwt.user.client.ui.Button;
+import com.google.gwt.user.client.ui.Label;
+import com.google.gwt.user.client.ui.RootPanel;
+import com.google.gwt.user.client.ui.TextBox;
+import com.google.gwt.user.client.ui.VerticalPanel;
+
+import com.googlecode.gwtphonegap.client.PhoneGap;
+import com.googlecode.gwtphonegap.client.PhoneGapAvailableEvent;
+import com.googlecode.gwtphonegap.client.PhoneGapAvailableHandler;
+import com.googlecode.gwtphonegap.client.PhoneGapTimeoutEvent;
+import com.googlecode.gwtphonegap.client.PhoneGapTimeoutHandler;
+import com.googlecode.gwtphonegap.client.contacts.Contact;
+import com.googlecode.gwtphonegap.client.contacts.ContactError;
+import com.googlecode.gwtphonegap.client.contacts.ContactField;
+import com.googlecode.gwtphonegap.client.contacts.ContactFindCallback;
+import com.googlecode.gwtphonegap.client.contacts.ContactFindOptions;
+import com.googlecode.gwtphonegap.collection.shared.CollectionFactory;
+import com.googlecode.gwtphonegap.collection.shared.LightArray;
+
+
+public class ChessEntryPoint implements EntryPoint {
+
+	public static LoginInfo loginInfo = null;
+	public static String userId = "";
+	private VerticalPanel loginPanel = new VerticalPanel();
+	private Anchor signOutLink = new Anchor("Sign Out");
+	private final UserLoginServiceAsync loginService = GWT.create(UserLoginService.class);
+	private final MyMessages mymessage = GWT.create(MyMessages.class);
+	static ArrayList<String> emaillist = new ArrayList<String>();
+	final PhoneGap phoneGap = GWT.create(PhoneGap.class);
+
+	@Override
+	public void onModuleLoad() {
+		// Check login status using login service.
+		((ServiceDefTarget) loginService).setServiceEntryPoint("http://mengyanhuangchesshw11.appspot.com/mengyanhuang/LoginService");
+		 
+		AsyncCallback<LoginInfo> callback = new AsyncCallback<LoginInfo>() {
+					public void onFailure(Throwable error) {
+						Window.alert(mymessage.loginfail());
+					}
+
+					public void onSuccess(LoginInfo result) {
+						loginInfo = result;
+						if (loginInfo.isLoggedIn()) {	
+							//Window.alert("Login Succeed! "+ loginInfo.getEmailAddress()+ loginInfo.getToken());
+							loadGameUI();
+						} else {
+							loadLoginUI();
+						}
+					}
+				};
+				//Window.alert("loginInfo"+loginInfo.getEmailAddress());
+		loginService.fakelogin(userId, callback);
+	}
+	
+	private void loadContacts() {
+		// TODO Auto-generated method stub
+		LightArray<String> fields = CollectionFactory.<String> constructArray();
+		//fields.push("displayName"); //search in displayname 
+		fields.push("email"); //search in name as well
+		ContactFindOptions findOptions = new ContactFindOptions("@gmail.com", true);
+
+		phoneGap.getContacts().find(fields, new ContactFindCallback() {
+
+		        @Override
+		        public void onSuccess(LightArray<Contact> contacts) {
+		                //read contacts here..
+		        	for(int i=0;i<contacts.length();i++){
+                        LightArray<ContactField> emails=contacts.get(i).getEmails();
+                        for(int j=0;j<emails.length();j++){
+                                ContactField email=emails.get(j);
+                                emaillist.add(email.getValue());
+                                Graphics.oracle.add(email.getValue());
+                        }                      
+		        	}
+		        }
+
+		        @Override
+		        public void onFailure(ContactError error) {
+		                //something went wrong, doh!
+
+		        }
+		}, findOptions);
+	}
+	
+
+	private void loadLoginUI() {
+		Label signinlabel = new Label();
+        signinlabel.setText("please enter your google email here then click sign in button");
+        final TextBox textbox = new TextBox();
+        textbox.setWidth("200px");
+        Button signinbutton = new Button();
+        signinbutton.setText("Sign in");
+        loginPanel.add(signinlabel);
+        loginPanel.add(textbox);
+		loginPanel.add(signinbutton);
+		RootPanel.get().add(loginPanel);
+		
+        signinbutton.addClickHandler(new ClickHandler() {
+			@Override
+			public void onClick(ClickEvent event) {
+				userId = textbox.getText();
+				loginInfo.setEmailAddress(userId);
+				onModuleLoad();
+					}
+        });  
+	}
+	
+
+	private void loadGameUI() {
+		RootPanel.get().clear();
+		
+		final Graphics graphics = new Graphics();
+		final Presenter presenter = new Presenter();
+		State state = new State();
+		
+		loadphonegap();
+
+		presenter.setView(graphics);
+		presenter.setState(state);
+		presenter.setUserId(loginInfo.getEmailAddress());
+	
+		RootPanel.get().add(
+				new Label(mymessage.hello() + loginInfo.getNickname()));
+		RootPanel.get().add(signOutLink);
+		RootPanel.get().add(graphics);
+		
+		/**
+		 *  use RPC to save phonegap contacts to server entity
+		 */
+		loginService.setContactsEmail(emaillist, new AsyncCallback<Void>(){
+			 public void onFailure(Throwable error){
+                 Window.alert("Failed save contacts' emails");
+			 }
+             public void onSuccess(Void v){
+                     //Window.alert("Success to save emails");
+             }
+		});
+
+		@SuppressWarnings("unused")
+		Socket socket = new ChannelFactoryImpl().createChannel(
+				loginInfo.getToken()).open(new SocketListener() {
+			
+			@Override
+			public void onOpen() {
+				Window.alert(mymessage.channelopen());
+				graphics.setGameStatus(mymessage.waiting());
+				
+				AsyncCallback<LinkedList<Match>> callback =new AsyncCallback<LinkedList<Match>>(){
+				    @SuppressWarnings("deprecation")
+					public void onSuccess(LinkedList<Match> result) {
+				    	    //Window.alert("Load Match List Succeed!");
+						    for(Match match:result){
+						    	if(match.getBlack() == loginInfo.getEmailAddress()) 
+						    		graphics.addtoListBox(match.getWhite()+" "+match.getMatchid()+" "+match.getStartDate().getMonth()
+						    				+"/"+match.getStartDate().getDate()+"/"+match.getStartDate().getYear()+" "
+						    				+match.getStartDate().getHours()+":"+match.getStartDate().getMinutes()+":"+match.getStartDate().getSeconds());
+						    	else if(match.getWhite() == loginInfo.getEmailAddress()) 
+						    		graphics.addtoListBox(match.getBlack()+" "+match.getMatchid()+" "+match.getStartDate().getMonth()
+						    				+"/"+match.getStartDate().getDate()+"/"+match.getStartDate().getYear()+" "
+						    				+match.getStartDate().getHours()+":"+match.getStartDate().getMinutes()+":"+match.getStartDate().getSeconds());
+						     }
+						    }
+
+						    public void onFailure(Throwable caught) {
+						     Window.alert(mymessage.loadmatchlistfail());
+						    }
+						};
+		    	 loginService.LoadGame(loginInfo.getEmailAddress(), callback);
+		    	 
+			}
+
+			@Override
+			public void onMessage(String message) {
+				//Window.alert("Received: " + message);
+				String[] temp = message.split("#");
+				if(temp[0]=="begin"){
+					//Window.alert(message);
+					if(temp[1].equals("white")) loginInfo.setUserColor(Color.WHITE);
+					else loginInfo.setUserColor(Color.BLACK);
+					
+					presenter.setUserColor(loginInfo.getUserColor());
+					State state = new State();
+					presenter.setState(state);
+					if(loginInfo.getUserColor() == Color.WHITE)
+						graphics.setGameStatus(mymessage.yourturnis(mymessage.white())+mymessage.itsyourturn());
+					else graphics.setGameStatus(mymessage.yourturnis(mymessage.black())+mymessage.its()+ "("+temp[2]+")"+mymessage.turn());
+					presenter.setId(Long.valueOf(temp[3]).longValue());
+					
+					Date date = new Date();
+					presenter.setGameDate(date);
+					graphics.addtoListBox(temp[2]+" "+temp[3]+" "+temp[4]);
+					graphics.setGameDate(mymessage.startdate()+temp[4]);
+					graphics.setGameRank(mymessage.yourrank()+temp[5]);
+					Graphics.gameGrid.setVisible(true);
+					
+					Presenter.isAI = false;
+				}else if(temp[0]=="makemove") {
+					//Window.alert(message);
+					
+					State state= Presenter.deserialize(temp[1]);
+					presenter.setCurrentState(state);
+					presenter.setState(state);
+					Graphics.gameGrid.setVisible(true);
+					
+					if(state.getGameResult()==null){
+						if(Presenter.userColor.equals(Color.WHITE))
+							graphics.setGameStatus(mymessage.yourturnis(mymessage.white())+mymessage.its()+ "("+temp[2]+") ");
+						else graphics.setGameStatus(mymessage.yourturnis(mymessage.black())+mymessage.its()+ "("+temp[2]+") ");
+						if(temp[3].equals("Black"))
+							graphics.setGameStatus(graphics.getGameStatus()+mymessage.black()+mymessage.turn()+mymessage.matchidis()+temp[4]);
+						else graphics.setGameStatus(graphics.getGameStatus()+mymessage.white()+mymessage.turn()+mymessage.matchidis()+temp[4]);
+					}
+							
+				}
+			}
+
+			@Override
+			public void onError(ChannelError error) {
+				Window.alert(mymessage.channelerror() + error.getCode() + " : "
+						+ error.getDescription());
+			}
+
+			@Override
+			public void onClose() {
+				Window.alert(mymessage.channelclose());
+			}
+		});
+
+		
+		//RootPanel.get().add(new Label("Your turn is " + loginInfo.getUserColor().toString() + "2 !"));
+		// socket.close();
+	}
+
+	
+	private void loadphonegap(){
+		
+		phoneGap.addHandler(new PhoneGapAvailableHandler() {
+	        @Override
+	        public void onPhoneGapAvailable(PhoneGapAvailableEvent event) {
+	                //start your app - phonegap is ready
+	        		loadContacts();
+	        		Window.alert("loadcontacts");
+	        }
+		});
+
+		phoneGap.addHandler(new PhoneGapTimeoutHandler() {
+	        @Override
+	        public void onPhoneGapTimeout(PhoneGapTimeoutEvent event) {
+	                //can not start phonegap - something is for with your setup
+	        }
+		});
+
+		phoneGap.initializePhoneGap();
+	}
+}

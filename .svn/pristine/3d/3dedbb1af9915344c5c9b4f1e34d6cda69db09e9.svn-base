@@ -1,0 +1,597 @@
+package org.yuehlinchung.hw6.client;
+
+import java.util.ArrayList;
+import java.util.List;
+import org.shared.chess.State;
+import org.yuehlinchung.hw6.shared.Cell;
+import org.yuehlinchung.hw6.shared.LoginInfo;
+import org.yuehlinchung.hw6.shared.Mail;
+import org.yuehlinchung.hw6.shared.Match;
+
+import com.google.gwt.safehtml.shared.SafeHtmlBuilder;
+import com.google.gwt.storage.client.Storage;
+import com.google.gwt.user.cellview.client.CellList;
+import com.google.gwt.user.cellview.client.HasKeyboardPagingPolicy.KeyboardPagingPolicy;
+import com.google.gwt.user.cellview.client.HasKeyboardSelectionPolicy.KeyboardSelectionPolicy;
+import com.google.gwt.cell.client.AbstractCell;
+import com.google.gwt.core.client.EntryPoint;
+import com.google.gwt.core.client.GWT;
+import com.google.gwt.event.dom.client.ClickEvent;
+import com.google.gwt.event.dom.client.ClickHandler;
+import com.google.gwt.i18n.client.DateTimeFormat;
+import com.google.gwt.user.client.Timer;
+import com.google.gwt.user.client.Window;
+import com.google.gwt.user.client.rpc.AsyncCallback;
+import com.google.gwt.user.client.ui.Anchor;
+import com.google.gwt.user.client.ui.Button;
+import com.google.gwt.user.client.ui.HorizontalPanel;
+import com.google.gwt.user.client.ui.Label;
+import com.google.gwt.user.client.ui.MultiWordSuggestOracle;
+import com.google.gwt.user.client.ui.RootPanel;
+import com.google.gwt.user.client.ui.ScrollPanel;
+import com.google.gwt.user.client.ui.SuggestBox;
+import com.google.gwt.user.client.ui.TextArea;
+import com.google.gwt.user.client.ui.VerticalPanel;
+import com.google.gwt.view.client.SelectionChangeEvent;
+import com.google.gwt.view.client.SingleSelectionModel;
+import com.google.gwt.appengine.channel.client.Channel;
+import com.google.gwt.appengine.channel.client.ChannelError;
+import com.google.gwt.appengine.channel.client.ChannelFactoryImpl;
+import com.google.gwt.appengine.channel.client.Socket;
+import com.google.gwt.appengine.channel.client.SocketListener;
+
+public class ChessEntryPoint implements EntryPoint {
+	
+  private static ChessMessages messages = GWT.create(ChessMessages.class);
+  private LoginInfo loginInfo = null;
+  VerticalPanel loginPanel = new VerticalPanel();
+  Label rankLabel = new Label();
+  Label loginLabel = new Label(messages.autoSignIn());
+  Anchor signInLink = new Anchor(messages.signIn());
+  Anchor signOutLink = new Anchor(messages.signOut());
+  Anchor englishLabel = new Anchor(messages.english());
+  Anchor chineseLabel = new Anchor(messages.chinese());
+  Label nameLabel = new Label();
+  Label emailLabel = new Label();
+  HorizontalPanel languageRow = new HorizontalPanel();
+  HorizontalPanel firstRow = new HorizontalPanel();
+  HorizontalPanel secondRow = new HorizontalPanel();
+  HorizontalPanel thirdRow = new HorizontalPanel();
+  HorizontalPanel mainRow = new HorizontalPanel();
+  VerticalPanel list = new VerticalPanel();
+  Button findGameButton = new Button(messages.autoMatchingGame());
+  Button cancelButton = new Button(messages.cancelMatchingGame());
+  Button deleteButton = new Button(messages.delete());
+  Label statusText  = new Label();
+  SuggestBox emailBox;
+  MultiWordSuggestOracle oracle = new MultiWordSuggestOracle();
+  Button sendButton = new Button(messages.startMatchGame());
+  Button aiButton = new Button(messages.playWithAI());
+  TextArea notification = new TextArea();
+  Label listLabel = new Label(messages.friendsMatching());
+  Graphics graphics = new Graphics();
+  GameServiceAsync chessService;
+  Socket socket;
+  State emptyState;  //Empty State
+  private CellList<Cell> matchList;
+  private List<Cell> playerList;
+  private Long selectId;
+  // For Testing HW10
+  Button clearStorage = new Button("Clear");
+  Label test = new Label();
+  int count = 0;
+    	
+  public void onModuleLoad() {
+	graphics.presenter.checkFunction();
+	chessService = (GameServiceAsync) GWT.create(GameService.class);
+	chessService.login(GWT.getHostPageBaseURL() + "yuehlinchung.html", new AsyncCallback<LoginInfo>() {
+		public void onFailure(Throwable error) {
+		}
+			
+		public void onSuccess(LoginInfo result) {
+			loginInfo = result;
+			if (loginInfo.isLoggedIn()) {
+				chessService.getContact(new AsyncCallback<Mail>() {
+					public void onFailure(Throwable error) {
+						Window.alert("Get Contact Failed");
+					}
+					public void onSuccess(Mail mails) {
+						// Setting Whole Game
+						RootPanel.get().add(languageRow);
+						languageRow.setSpacing(5);
+						englishLabel.setHref("http://ylcchesshw11.appspot.com/yuehlinchung.html");
+						languageRow.add(englishLabel);
+						// Player Information
+						RootPanel.get().add(nameLabel);
+					    RootPanel.get().add(emailLabel);
+					    RootPanel.get().add(rankLabel);
+					    RootPanel.get().add(signOutLink);
+						nameLabel.setText(messages.name(loginInfo.getEmailAddress()));
+						emailLabel.setText(messages.email(loginInfo.getNickname()));
+						rankLabel.setText(messages.rank((int) loginInfo.getRank()));
+						signOutLink.setHref(loginInfo.getLogoutUrl());
+					    // Find Game
+						RootPanel.get().add(firstRow);
+						findGameButton.addClickHandler(new ClickHandler() {
+							public void onClick(ClickEvent event) {
+								findGame();
+								findGameButton.setEnabled(false);
+								cancelButton.setEnabled(true);
+							}
+						});
+						cancelButton.addClickHandler(new ClickHandler() {
+							public void onClick(ClickEvent event) {
+								cancelFindGame();
+								findGameButton.setEnabled(true);
+								cancelButton.setEnabled(false);
+							}
+						});
+						cancelButton.setEnabled(false);
+						firstRow.add(findGameButton);
+						firstRow.add(cancelButton);
+						// Find Game Status
+						RootPanel.get().add(secondRow);
+						statusText.setText(messages.or());
+						secondRow.add(statusText);
+						// Email Matching Game
+						RootPanel.get().add(thirdRow);
+						// Email SuggestBox
+						if (mails != null) {
+							for(int i = 0; i < mails.getContact().size(); i++) {
+								oracle.add(mails.getContact().get(i));
+							}
+						}
+						final SuggestBox emailBox = new SuggestBox(oracle);
+						emailBox.setWidth("270px");
+						sendButton.setEnabled(true);
+						sendButton.addClickHandler(new ClickHandler() {
+							public void onClick(ClickEvent event) {
+								if (!loginInfo.getEmailAddress().equals(emailBox.getText()) && 
+										!emailBox.getText().equals("")) {
+									graphics.presenter.setAi(false);
+									graphics.presenter.setId(null);
+									graphics.presenter.setKey(loginInfo.getEmailAddress(), emailBox.getText());
+									graphics.presenter.setSide('W');
+									graphics.presenter.setState(new State());
+									graphics.presenter.setGameService(chessService);
+									graphics.presenter.uploadState(StateHistory.encode(new State()));
+									
+								} else {
+									Window.alert(messages.error());
+								}
+							}
+						});
+						thirdRow.setHeight("50px");
+						thirdRow.add(emailBox);
+						thirdRow.add(sendButton);
+						// AI
+						aiButton.addClickHandler(new ClickHandler() {
+							public void onClick(ClickEvent event) {
+								graphics.presenter.setAi(true);
+								graphics.presenter.setId(null);
+								graphics.presenter.setKey("Player", "Computer");
+								graphics.presenter.setSide('W');
+								graphics.presenter.setState(new State());
+								updateLoginInfo();
+							}
+						});
+						RootPanel.get().add(aiButton);
+						// Main Game
+						RootPanel.get().add(mainRow);
+						// Match List
+						notification.setCharacterWidth(30);
+						notification.setVisibleLines(5);
+						notification.setReadOnly(true);
+						list.setWidth("200px");
+						updateLoginInfo();
+						deleteButton.setEnabled(false);
+						deleteButton.addClickHandler(new ClickHandler() {
+							public void onClick(ClickEvent event) {
+								deleteButton.setEnabled(false);
+								graphics.presenter.setState(emptyState);
+								graphics.setGameResult(messages.gr());
+								chessService.deleteState(selectId, loginInfo.getEmailAddress(), new AsyncCallback<Object>() {
+									public void onFailure(Throwable error) {
+										//Window.alert("Delete Game Error: " + error.getMessage());
+									}
+									public void onSuccess(Object result) {
+										updateLoginInfo();
+										Presenter.storage.removeItem(selectId+"");
+										Presenter.storage.removeItem(selectId+"_opponent");
+										Presenter.storage.removeItem(selectId+"_side");
+										Presenter.storage.removeItem(selectId+"_turn");
+										Presenter.storage.removeItem(selectId+"_over");
+										Presenter.storage.removeItem(selectId+"_gameResult");
+									}
+								});
+							}
+						});
+						// Set Graphics
+						emptyState();
+						graphics.presenter.setView(graphics);
+						//graphics.presenter.setState(emptyState);
+						graphics.setGameResult(messages.gr());
+						mainRow.add(list);
+						mainRow.add(graphics);
+						// For Testing HW10
+						/*mainRow.add(test);
+						clearStorage.addClickHandler(new ClickHandler() {
+							public void onClick(ClickEvent event) {
+								Presenter.storage.clear();
+							}
+						});
+						mainRow.add(clearStorage);*/
+						//
+						listenToChannel();			
+						// Upload Timer
+						Timer uploadTimer = new Timer() {
+							  @Override
+							  public void run() {
+								  test.setText("Round: " + count + " Storage: " + Presenter.storage.getLength() + 
+										  " waitList: " + Presenter.storage.getItem("list"));
+								  count++;
+								  if (Storage.isLocalStorageSupported()) {
+									  final String list = Presenter.storage.getItem("list");
+									  if (!list.equals(";")) {
+									  String keyValueArr[] = list.split(";");
+									  final String id = keyValueArr[1];
+
+									  Long l;
+									  l = Long.parseLong(id);
+									  final String opponent = Presenter.storage.getItem(id+"_opponent");
+									  final String state = Presenter.storage.getItem(id+"");
+									  final String turn = Presenter.storage.getItem(id+"_turn");
+									  final boolean over = (Presenter.storage.getItem(id+"_over") == "true") ? true : false;
+									  final String gameResult = Presenter.storage.getItem(id+"_gameResult");
+									  chessService.getGame(l, new AsyncCallback<Match>() {
+										  public void onFailure(Throwable error) {
+											  //Window.alert("Get Game Error: " + error.getMessage());
+										  }
+										  public void onSuccess(Match result) {
+											  if (result.getPlayer1().equals(opponent)) {
+												  chessService.saveState(result.getId(), result.getPlayer2(), result.getPlayer1(), 
+														  state, turn, over, gameResult, new AsyncCallback<Long>() {
+													  public void onFailure(Throwable caught) {
+														  //Window.alert("Saving State Error: " + caught.getMessage());
+													  }
+													  public void onSuccess(Long result) { 
+														  Presenter.storage.removeItem(result+"");
+														  Presenter.storage.removeItem(result+"_opponent");
+														  Presenter.storage.removeItem(result+"_side");
+														  Presenter.storage.removeItem(result+"_turn");
+														  Presenter.storage.removeItem(result+"_over");
+														  Presenter.storage.removeItem(result+"_gameResult");
+														  Presenter.storage.removeItem("list");
+														  Presenter.storage.setItem("list", list.substring(id.length()+1));
+													  }
+												  });
+											  } else if (result.getPlayer2().equals(opponent)) {
+												  chessService.saveState(result.getId(), result.getPlayer1(), result.getPlayer2(), 
+														  state, turn, over, gameResult, new AsyncCallback<Long>() {
+													  public void onFailure(Throwable caught) {
+														  //Window.alert("Saving State Error: " + caught.getMessage());
+													  }
+													  public void onSuccess(Long result) { 
+														  Presenter.storage.removeItem(result+"");
+														  Presenter.storage.removeItem(result+"_opponent");
+														  Presenter.storage.removeItem(result+"_side");
+														  Presenter.storage.removeItem(result+"_turn");
+														  Presenter.storage.removeItem(result+"_over");
+														  Presenter.storage.removeItem(result+"_gameResult");
+														  Presenter.storage.removeItem("list");
+														  Presenter.storage.setItem("list", list.substring(id.length()+1));
+													  }
+												  });
+											  }
+										  }
+									  });
+									  }
+								  }
+							  }
+						};
+						uploadTimer.scheduleRepeating(10000);
+					}
+				});
+			} else {
+				loadLogin();
+			}
+		}
+	});
+  }
+  
+  public void emptyState() {
+	  emptyState = new State();
+	  for (int i = 0; i < 8; i++)
+			for (int j = 0; j < 8; j++)
+				emptyState.setPiece(i, j, null);
+  }
+	
+  private void loadLogin() {
+	// Assemble login panel.
+	signInLink.setHref(loginInfo.getLoginUrl());
+	loginPanel.add(loginLabel);
+	loginPanel.add(signInLink);
+	RootPanel.get().add(loginPanel);
+  }
+  
+  private void listenToChannel() {
+	  String channelId = loginInfo.getChannelId();
+	  Channel channel = new ChannelFactoryImpl().createChannel(channelId);
+	  socket = channel.open(new SocketListener() {
+	    @Override
+	    public void onOpen() {
+	      //Window.alert("Channel opened!");
+	    }
+	    @Override
+	    public void onMessage(String message) {
+	      //Window.alert("Received: " + message);
+	      handleMessage(message);
+	    }
+	    @Override
+	    public void onError(ChannelError error) {
+	      //Window.alert("Channel error: " + error.getCode() + " : " + error.getDescription());
+	    }
+	    @Override
+	    public void onClose() {
+	      //Window.alert("Channel closed!");
+	    }
+	  });
+  }
+    
+  private void handleMessage(String msg) {
+	  String[] keyValueArr = msg.split(":");
+	  String operation = keyValueArr[0];
+	  String detail = keyValueArr[1];
+	  String[] tmpArr;
+	  String id;
+	  String opponent;
+	  String tmpText;
+	  Long l;
+	  int type = 0;
+	  if (operation.equals("State")) {
+		  type = 1;
+	  } else if (operation.equals("Auto")) {
+		  type = 2;
+	  } else if (operation.equals("Refresh")) {
+		  type = 3;
+	  } else if (operation.equals("Update")) {
+		  type = 4;
+	  } else {
+		  type = 0;
+	  }
+	  switch(type) {
+	  case 1:
+		  stepOccurred(detail);
+		  break;
+	  case 2:
+		  statusText.setText(messages.or());
+		  findGameButton.setEnabled(true);
+		  cancelButton.setEnabled(false);
+		  tmpArr = detail.split(",");
+		  id = tmpArr[0];
+		  opponent = tmpArr[1];
+		  tmpText = notification.getText();
+		  notification.setText(messages.notificationMatchText(opponent, tmpText));
+		  updateLoginInfo();
+		  l = Long.parseLong(id);
+		  graphics.presenter.setId(l);
+		  chessService.getGame(l, new AsyncCallback<Match>() {
+			  public void onFailure(Throwable error) {
+				  //Window.alert("Get Game Error: " + error.getMessage());
+			  }
+			  public void onSuccess(Match result) {
+				  setGetState(result);
+			  }
+		  });
+		  break;
+	  case 3:
+		  updateLoginInfo();
+		  break;
+	  case 4:
+		  tmpArr = detail.split(",");
+		  id = tmpArr[0];
+		  opponent = tmpArr[1];
+		  tmpText = notification.getText();
+		  updateLoginInfo();
+		  rankLabel.setText(messages.rank((int) loginInfo.getRank()));
+		  l = Long.parseLong(id);
+		  if (loginInfo.getMatch().contains(l)) {
+			  notification.setText(messages.notificationUpdateText(opponent, id, tmpText));
+			  graphics.presenter.setId(l);
+			  chessService.getGame(l, new AsyncCallback<Match>() {
+				  public void onFailure(Throwable error) {
+					  //Window.alert("Get Game Error: " + error.getMessage());
+				  }
+				  public void onSuccess(Match result) {
+					  setGetState(result);
+				  }
+			  });
+		  }
+		  break;
+	  case 0:
+		  startGame(msg);
+		  break;
+	  }
+  }
+    
+  private void startGame(String msg) {
+	  graphics.setVisible(true);
+	  statusText.setText(messages.or());
+	  findGameButton.setEnabled(true);
+	  cancelButton.setEnabled(false);
+	  sendButton.setEnabled(false);
+	  char side = msg.charAt(0);
+	  String value = msg.substring(1);
+	  graphics.presenter.setAi(false);
+	  graphics.presenter.setKey(loginInfo.getEmailAddress(), value);
+	  graphics.presenter.setSide(side);
+	  graphics.presenter.setState(new State());
+	  graphics.presenter.setGameService(chessService);
+  }
+  
+  private void stepOccurred(String msg) {
+	  graphics.presenter.setState(StateHistory.decode(msg));
+  }
+  
+  private void findGame() {
+	  statusText.setText(messages.lookinForGame());
+	  chessService.findGame(loginInfo, StateHistory.encode(new State()), new AsyncCallback<Object>() {
+		  public void onFailure(Throwable error) {
+			  //Window.alert("Finding Game Error: " + error.getMessage());
+		  }
+		  public void onSuccess(Object result) {
+		  }
+	  });
+  }
+  private void cancelFindGame() {
+	  statusText.setText(messages.or());
+	  chessService.cancelFindGame(loginInfo, new AsyncCallback<Object>() {
+		  public void onFailure(Throwable error) {
+			  //Window.alert("Cancel Game Error: " + error.getMessage());
+		  }
+		  public void onSuccess(Object result) {
+		  }
+	  });
+  }
+  
+  private void setMatchList() {
+	  list.clear();
+	  playerList = new ArrayList<Cell>();
+	  //test.setText(loginInfo.getMatch().size() + " List: " + loginInfo.getMatch());
+	  for (int i = 0; i < loginInfo.getMatch().size() ; i++) {
+		  chessService.getGame(loginInfo.getMatch().get(i), new AsyncCallback<Match>() {
+			  public void onFailure(Throwable error) {
+				  //Window.alert("Get Game Error: " + error.getMessage());
+			  }
+			  public void onSuccess(Match result) {
+				  Cell tmpCell = new Cell(result.getId(), result.getPlayer1(), result.getPlayer2(), 
+						  result.turn, loginInfo.getEmailAddress(), result.over, result.getStartDate());
+				  playerList.add(tmpCell);
+				  matchList.setRowData(0, playerList);
+				  // If match is Player's turn then put in the local storage
+				  if (Storage.isLocalStorageSupported()) {
+					  // Save opponent & side
+					  if (result.getPlayer1().equals(loginInfo.getEmailAddress())) {
+						  Presenter.storage.setItem(result.getId()+"_opponent", result.getPlayer2());
+						  Presenter.storage.setItem(result.getId()+"_side", "W");
+					  } else {
+						  Presenter.storage.setItem(result.getId()+"_opponent", result.getPlayer1());
+						  Presenter.storage.setItem(result.getId()+"_side", "B");
+					  }
+					  // Save State
+					  Presenter.storage.setItem(result.getId()+"", result.state);
+					  // Save Turn
+					  Presenter.storage.setItem(result.getId()+"_turn", result.turn);
+					  // Save Over
+					  Presenter.storage.setItem(result.getId()+"_over", result.over+"");
+					  // Save GameResult
+					  Presenter.storage.setItem(result.getId()+"_gameResult", result.getResult());
+				  }
+			  }
+		  });
+	  }
+	  ContentCell contentCell = new ContentCell();
+	  matchList = new CellList<Cell>(contentCell);
+	  VerticalPanel verticalPanel = new VerticalPanel();
+	  matchList.setHeight("300px");
+	  matchList.setWidth("210px");
+	  ScrollPanel scrollPanel = new ScrollPanel(matchList);
+	  scrollPanel.setAlwaysShowScrollBars(false);
+	  verticalPanel.add(scrollPanel);
+	  
+	  matchList.setKeyboardPagingPolicy(KeyboardPagingPolicy.INCREASE_RANGE);
+	  matchList.setKeyboardSelectionPolicy(KeyboardSelectionPolicy.BOUND_TO_SELECTION);
+	  final SingleSelectionModel<Cell> selectionModel = new SingleSelectionModel<Cell>();
+	  matchList.setSelectionModel(selectionModel);
+	  selectionModel.addSelectionChangeHandler(new SelectionChangeEvent.Handler() {
+		  public void onSelectionChange(SelectionChangeEvent event) {
+			  selectId = selectionModel.getSelectedObject().getId();
+			  if (selectId != null) {
+				  graphics.presenter.setId(selectId);
+				  chessService.getGame(selectId, new AsyncCallback<Match>() {
+					  public void onFailure(Throwable error) {
+						  if (Storage.isLocalStorageSupported()) {
+							  deleteButton.setEnabled(false);
+							  graphics.presenter.setAi(false);
+							  graphics.presenter.setSide(Presenter.storage.getItem(selectId+"_side").charAt(0));
+							  graphics.presenter.setKey(loginInfo.getEmailAddress(), Presenter.storage.getItem(selectId+"_opponent"));
+							  graphics.presenter.setState(StateHistory.decode(Presenter.storage.getItem(selectId+"")));
+							  graphics.presenter.setGameService(chessService);
+						  }
+						  //Window.alert("Get Game Error: " + error.getMessage());
+					  }
+					  public void onSuccess(Match result) {
+						  deleteButton.setEnabled(true);
+						  setGetState(result);
+					  }
+				  });
+			  }
+		  }
+	  });
+	  list.setSpacing(10);
+	  list.add(notification);
+	  list.add(listLabel);
+	  list.add(verticalPanel);
+	  list.add(deleteButton);
+  }
+  
+  static class ContentCell extends AbstractCell<Cell> {
+	  @Override
+	  public void render(Context context, Cell value, SafeHtmlBuilder sb) {
+		  if (value == null) {
+		        return;
+		  }
+		  sb.appendHtmlConstant("<table>");
+		  sb.appendHtmlConstant("<td>");
+		  if (value.getOpponent() != null) {
+			  sb.appendEscaped(messages.gameStatus(value.getId(), value.getOpponent()));
+		  } else {
+			  sb.appendEscaped(messages.gameId(value.getId()));
+		  }
+		  sb.appendHtmlConstant("</td></tr><tr><td>");
+		  DateTimeFormat format = DateTimeFormat.getFormat(DateTimeFormat.PredefinedFormat.DATE_TIME_MEDIUM);
+		  sb.appendEscaped(format.format(value.getStartDate()));
+		  sb.appendHtmlConstant("</td></tr><tr><td>");
+		  if (value.getOver() == true) {
+			  if (value.getTurn() == null) {
+				  sb.appendEscaped(messages.setNoWin());
+			  } else {
+				  sb.appendEscaped(messages.setWon(value.getTurn()));
+			  }
+		  } else {
+			  sb.appendEscaped(messages.setTurn(value.getTurn()));
+		  }
+		  sb.appendHtmlConstant("</td></tr></table>");
+	  }
+  }
+  
+  private void setGetState(Match tmpGame) {
+	  String opponent;
+	  if (tmpGame.getPlayer1() != null && 
+			  tmpGame.getPlayer1().equals(loginInfo.getEmailAddress())) {
+		  opponent = tmpGame.getPlayer2();
+		  graphics.presenter.setSide('W');
+	  } else {
+		  opponent = tmpGame.getPlayer1();
+		  graphics.presenter.setSide('B');
+	  }
+	  graphics.presenter.setAi(false);
+	  graphics.presenter.setKey(loginInfo.getEmailAddress(), opponent);
+	  graphics.presenter.setState(StateHistory.decode(tmpGame.state));
+	  graphics.presenter.setGameService(chessService);
+  }
+  
+  private void updateLoginInfo() {
+	  chessService.updateInfo(loginInfo.getEmailAddress(), new AsyncCallback<LoginInfo>() {
+		  public void onFailure(Throwable error) {
+			  //Window.alert("Cancel Game Error: " + error.getMessage());
+		  }
+		  public void onSuccess(LoginInfo result) {
+			  loginInfo.copyMatch(result.getMatch());
+			  loginInfo.setRank(result.getRank());
+			  rankLabel.setText(messages.rank((int) loginInfo.getRank()));
+			  setMatchList();
+		  }
+	  });
+  }
+}

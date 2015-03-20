@@ -1,0 +1,699 @@
+package org.leozis.hw3;
+
+import java.util.Date;
+import java.util.logging.Logger;
+
+import org.leozis.hw10.MyDragController;
+import org.leozis.hw10.MyDropController;
+import org.leozis.hw3.Presenter.View;
+import org.leozis.hw5.PieceAnimation;
+import org.leozis.hw6.client.ChessService;
+import org.leozis.hw6.client.ChessServiceAsync;
+import org.leozis.hw6.server.Player;
+import org.shared.chess.Color;
+import org.shared.chess.GameResult;
+import org.shared.chess.Move;
+import org.shared.chess.Piece;
+import org.shared.chess.State;
+
+import com.allen_sauer.gwt.dnd.client.PickupDragController;
+import com.google.gwt.appengine.channel.client.Channel;
+import com.google.gwt.appengine.channel.client.ChannelError;
+import com.google.gwt.appengine.channel.client.ChannelFactory;
+import com.google.gwt.appengine.channel.client.ChannelFactoryImpl;
+import com.google.gwt.appengine.channel.client.Socket;
+import com.google.gwt.appengine.channel.client.SocketListener;
+import com.google.gwt.core.client.GWT;
+import com.google.gwt.event.dom.client.ClickEvent;
+import com.google.gwt.event.dom.client.ClickHandler;
+import com.google.gwt.event.logical.shared.ValueChangeEvent;
+import com.google.gwt.event.logical.shared.ValueChangeHandler;
+import com.google.gwt.i18n.client.DateTimeFormat;
+import com.google.gwt.resources.client.ImageResource;
+import com.google.gwt.storage.client.Storage;
+import com.google.gwt.uibinder.client.UiBinder;
+import com.google.gwt.uibinder.client.UiField;
+import com.google.gwt.user.client.Element;
+import com.google.gwt.user.client.History;
+import com.google.gwt.user.client.Window;
+import com.google.gwt.user.client.rpc.AsyncCallback;
+import com.google.gwt.user.client.ui.AbsolutePanel;
+import com.google.gwt.user.client.ui.Anchor;
+import com.google.gwt.user.client.ui.Button;
+import com.google.gwt.user.client.ui.Composite;
+import com.google.gwt.user.client.ui.FlexTable;
+import com.google.gwt.user.client.ui.Grid;
+import com.google.gwt.user.client.ui.Image;
+import com.google.gwt.user.client.ui.Label;
+import com.google.gwt.user.client.ui.SimplePanel;
+import com.google.gwt.user.client.ui.Widget;
+
+public class Graphics extends Composite implements View {
+	private static GameImages gameImages = GWT.create(GameImages.class);
+	private static GraphhicsUiBinder uiBinder = GWT
+			.create(GraphhicsUiBinder.class);
+	private ChessServiceAsync chessSvc = GWT.create(ChessService.class);
+
+	interface GraphhicsUiBinder extends
+			UiBinder<Widget, Graphics> {
+	}
+
+	@UiField
+	AbsolutePanel absolutePanel;
+	@UiField
+	GameCss css;
+	@UiField
+	Label user1;
+	@UiField
+	Label user2;
+	@UiField
+	Label gameStatus;
+
+	@UiField
+	Grid promoteGrid;
+	@UiField
+	Button singleplayer;
+	@UiField
+	Button save;
+	@UiField
+	Button load;
+	@UiField
+	Button newgame;
+	@UiField
+	Anchor signout;
+	@UiField
+	Label date;
+
+	private Image[][] board = new Image[8][8];
+	private Image[] promote = new Image[4];
+
+	private Logger logger = Logger.getLogger(Graphics.class
+			.toString());
+
+	private Presenter presenter;
+
+	//private ChessMessages messages;
+	private FlexTable gameGrid = new FlexTable();
+	public static PickupDragController dragController;
+
+	public Graphics(final Presenter presenter) {
+		//messages = GWT.create(ChessMessages.class);
+		this.presenter = presenter;
+		initWidget(uiBinder.createAndBindUi(this));
+		
+		absolutePanel.add(gameGrid, 0, 0);
+		absolutePanel.setPixelSize(480, 480);
+		gameGrid.setBorderWidth(1);
+		
+		dragController = new PickupDragController(absolutePanel, false);
+		MyDragController myDragHandler = new MyDragController(this.presenter);
+		dragController.addDragHandler(myDragHandler);
+		dragController.setBehaviorDragStartSensitivity(2);
+		dragController.setBehaviorMultipleSelection(false);
+		
+		gameGrid.setCellPadding(0);
+		gameGrid.setCellSpacing(0);
+		gameGrid.setBorderWidth(0);
+		promoteGrid.resize(1, 4);
+		for (int row = 0; row < 8; row++) {
+			for (int col = 0; col < 8; col++) {
+				final Image image = new Image();
+				board[row][col] = image;
+				image.setWidth("100%");
+				image.setHeight("100%");
+				final int i = row;
+				final int j = col;
+				image.addClickHandler(new ClickHandler() {
+					@Override
+					public void onClick(ClickEvent event) {
+						presenter.clickedOn(i, j);
+					}
+				});
+
+				if (row % 2 == 0 && col % 2 == 1 || row % 2 == 1
+						&& col % 2 == 0) {
+					gameGrid.getCellFormatter().addStyleName(row, col,
+							"blackTile");
+				} else {
+					gameGrid.getCellFormatter().addStyleName(row, col,
+							"whiteTile");
+				}
+
+				gameGrid.setWidget(row, col, board[row][col]);
+			}
+		}
+
+		for (int i = 0; i < 4; i++) {
+			final Image image = new Image();
+			promote[i] = image;
+			final int col = i;
+			image.addClickHandler(new ClickHandler() {
+				@Override
+				public void onClick(ClickEvent event) {
+					presenter.clickedOnPromote(col);
+				}
+			});
+
+			promoteGrid.setWidget(0, i, image);
+			promoteGrid.setVisible(false);
+
+		}
+
+		promote[0].setResource(gameImages.whiteQ());
+		promote[1].setResource(gameImages.whiteR());
+		promote[2].setResource(gameImages.whiteN());
+		promote[3].setResource(gameImages.whiteB());
+
+		singleplayer.addClickHandler(new ClickHandler() {
+			@Override
+			public void onClick(ClickEvent event) {
+				presenter.setSinglePlayerGame(true);
+				presenter.setMyColor(Color.WHITE);
+				signout.setText("");
+				user1.setText("");
+				user2.setText("");
+				gameStatus.setText("single player started");
+			}
+		});
+
+		// save / load on click events
+		save.addClickHandler(new ClickHandler() {
+			@Override
+			public void onClick(ClickEvent event) {
+				String stateStr = presenter.getStateToken();
+				Storage chessStore = Storage.getLocalStorageIfSupported();
+				if (chessStore != null) {
+					chessStore.setItem("chessState", stateStr);
+				}
+			}
+		});
+
+		load.addClickHandler(new ClickHandler() {
+			@Override
+			public void onClick(ClickEvent event) {
+				Storage chessStore = Storage.getLocalStorageIfSupported();
+				if (chessStore != null) {
+					String stateStr = chessStore.getItem("chessState");
+					presenter.setStateFromString(stateStr);
+					setHistory(stateStr);
+				}
+			}
+		});
+
+		newgame.addClickHandler(new ClickHandler() {
+			@Override
+			public void onClick(ClickEvent event) {
+				presenter.setState(new State());
+				setHistory(StateEncoder.encode(new State()));
+				sendState(StateEncoder.encode(new State()));
+			}
+		});
+
+		// History
+		History.addValueChangeHandler(new ValueChangeHandler<String>() {
+
+			@Override
+			public void onValueChange(ValueChangeEvent<String> event) {
+				String token = event.getValue();
+
+				if (token.isEmpty()) {
+					presenter.setState(new State());
+				} else {
+					presenter.setState(StateEncoder.decode(token));
+				}
+
+				presenter.setSelected(null);
+				presenter.clearHighlighted();
+				presenter.clearSelected();
+			}
+		});
+
+
+//		save.setText(messages.save());
+//		load.setText(messages.load());
+//		singleplayer.setText(messages.singleplayer());
+//		newgame.setText(messages.newgame());
+//		user1.setText(messages.notsignedin("user1"));
+//		user2.setText(messages.notsignedin("user2"));
+		
+
+		this.connect();
+		this.setSignout();
+		this.setDate();
+		// this.setSignin();
+		presenter.setGameStarted(true);
+
+	}
+
+	private ImageResource getImg(Piece p) {
+		if (p == null) {
+			return null;
+		} else {
+			switch (p.getKind()) {
+			case KING:
+				if (p.getColor().isWhite()) {
+					return gameImages.whiteK();
+				} else {
+					return gameImages.blackK();
+				}
+
+			case PAWN:
+				if (p.getColor().isWhite()) {
+					return gameImages.whiteP();
+				} else {
+					return gameImages.blackP();
+				}
+
+			case ROOK:
+				if (p.getColor().isWhite()) {
+					return gameImages.whiteR();
+				} else {
+					return gameImages.blackR();
+				}
+
+			case KNIGHT:
+				if (p.getColor().isWhite()) {
+					return gameImages.whiteN();
+				} else {
+					return gameImages.blackN();
+				}
+
+			case BISHOP:
+				if (p.getColor().isWhite()) {
+					return gameImages.whiteB();
+
+				} else {
+					return gameImages.blackB();
+				}
+
+			case QUEEN:
+				if (p.getColor().isWhite()) {
+					return gameImages.whiteQ();
+				} else {
+					return gameImages.blackQ();
+				}
+
+			default:
+				return null;
+			}
+		}
+	}
+	
+	@Override
+	public void setPiece(int row, int col, Piece p) {
+		ImageResource img = getImg(p);
+		gameGrid.clearCell(row, col);
+
+		SimplePanel simplePan = new SimplePanel();
+		simplePan.setPixelSize(50, 50);
+		gameGrid.setWidget(row, col, simplePan);
+		MyDropController dropController = new MyDropController(simplePan);
+		dragController.registerDropController(dropController);
+	
+		
+		if (img == null) {
+			
+			board[row][col].setWidth("100%");
+			board[row][col].setUrl("");
+			board[row][col].setHeight("100%");
+			
+		} else {
+			board[row][col].setResource(img);
+			Image image = new Image(img);
+			simplePan.setWidget(image);
+			//gameGrid.setWidget(row, col, image);
+			dragController.makeDraggable(image);
+		}
+		
+
+		
+	}
+
+	
+
+	@Override
+	public void setHighlighted(int row, int col, boolean highlighted) {
+		Element element = board[row][col].getElement();
+		if (highlighted) {
+			element.setClassName(css.highlighted());
+		} else {
+			element.removeClassName(css.highlighted());
+		}
+	}
+
+	@Override
+	public void setSelected(int row, int col, boolean selected) {
+		Element element = board[row][col].getElement();
+		if (selected) {
+			element.setClassName(css.selected());
+		} else {
+			element.removeClassName(css.selected());
+		}
+	}
+
+	@Override
+	public void setWhoseTurn(Color color) {
+		if (color.isWhite()) {
+			gameStatus.setText("white turn");
+		} else {
+			gameStatus.setText("black turn");
+		}
+	}
+
+	@Override
+	public void setGameResult(GameResult gameResult) {
+		if (gameResult != null) {
+			this.sendResult(gameResult);
+			switch (gameResult.getGameResultReason()) {
+			case CHECKMATE:
+				if (gameResult.getWinner().isWhite()) {
+					gameStatus.setText("white wins");
+				} else {
+					gameStatus.setText("black wins");
+				}
+				break;
+			case STALEMATE:
+				gameStatus.setText("stalemate");
+				break;
+			case FIFTY_MOVE_RULE:
+				gameStatus.setText("draw");
+				break;
+			default:
+				break;
+			}
+		}
+	}
+
+	/* SERVER COMMUNICATION METHODS */
+
+	public void setUser() {
+		// Initialize the service proxy.
+		if (chessSvc == null) {
+			chessSvc = GWT.create(ChessService.class);
+		}
+
+		// Set up the callback object.
+		AsyncCallback<String> callback = new AsyncCallback<String>() {
+			public void onFailure(Throwable caught) {
+				// TODO: Do something with errors.
+			}
+
+			public void onSuccess(String result) {
+				user1.setText(result);
+			}
+		};
+
+		// Make the call to the stock price service.
+		chessSvc.getUser(callback);
+
+	}
+
+	public void setDate() {
+		// Initialize the service proxy.
+		if (chessSvc == null) {
+			chessSvc = GWT.create(ChessService.class);
+		}
+
+		// Set up the callback object.
+		AsyncCallback<Date> callback = new AsyncCallback<Date>() {
+			public void onFailure(Throwable caught) {
+				// TODO: Do something with errors.
+			}
+
+			public void onSuccess(Date result) {
+
+				String todayStr = DateTimeFormat.getFormat(
+						DateTimeFormat.PredefinedFormat.DATE_SHORT).format(
+						result);
+				date.setText(todayStr);
+
+			}
+		};
+
+		// Make the call to the stock price service.
+		chessSvc.getDate(callback);
+
+	}
+
+	private void setSignout() {
+		// Initialize the service proxy.
+		if (chessSvc == null) {
+			chessSvc = GWT.create(ChessService.class);
+		}
+
+		// Set up the callback object.
+		AsyncCallback<String> callback = new AsyncCallback<String>() {
+			public void onFailure(Throwable caught) {
+				// TODO: Do something with errors.
+			}
+
+			public void onSuccess(String result) {
+				signout.setHref(result);
+			}
+		};
+
+		// Make the call to the stock price service.
+		chessSvc.getSignout(Window.Location.getHref(), callback);
+	}
+
+	// private void setSignin() {
+	// // Initialize the service proxy.
+	// if (chessSvc == null) {
+	// chessSvc = GWT.create(ChessService.class);
+	// }
+	//
+	// // Set up the callback object.
+	// AsyncCallback<String> callback = new AsyncCallback<String>() {
+	// public void onFailure(Throwable caught) {
+	// // TODO: Do something with errors.
+	// }
+	//
+	// public void onSuccess(String result) {
+	// signin.setHref(result);
+	// }
+	// };
+	//
+	// // Make the call to the stock price service.
+	// chessSvc.getSignin(Window.Location.getHref(),callback);
+	// }
+
+	@Override
+	public void setPromoteVisible(boolean visible) {
+		this.promoteGrid.setVisible(visible);
+	}
+
+	@Override
+	public void setHistory(String hist) {
+		History.newItem(hist);
+	}
+
+	public void connect() {
+		// Initialize the service proxy.
+		if (chessSvc == null) {
+			chessSvc = GWT.create(ChessService.class);
+		}
+
+		// Set up the callback object.
+		AsyncCallback<Player> callback = new AsyncCallback<Player>() {
+			public void onFailure(Throwable caught) {
+				logger.severe(caught.getMessage());
+			}
+
+			public void onSuccess(Player player) {
+				createChannel(player);
+			}
+		};
+
+		// Make the call to the stock price service.
+		chessSvc.connect(callback);
+	}
+
+	public void createChannel(final Player player) {
+		ChannelFactory channelFactory = new ChannelFactoryImpl();
+		Channel channel = channelFactory.createChannel(player.getChannelId());
+		Socket socket = channel.open(new SocketListener() {
+			@Override
+			public void onOpen() {
+				channelOpened(player);
+			}
+
+			@Override
+			public void onMessage(String message) {
+				// logger.info(message);
+				if (!presenter.isSinglePlayerGame()) {
+					if (message.charAt(0) == 'U') {
+						String[] messageArr = message.substring(1).split("ELO");
+
+						user2.setText("Opponent: " + messageArr[0] + " ELO: "
+								+ messageArr[1]);
+						presenter.setGameStarted(true);
+					} else if (message.charAt(0) == 'R') {
+						user1.setText("New Elo: " + message.substring(1));
+					} else {
+						State newState = StateEncoder.decode(message);
+						presenter.setState(newState);
+						setHistory(message);
+						presenter.setGameStarted(true);
+					}
+					presenter.setGameStarted(true);
+				}
+			}
+
+			@Override
+			public void onError(ChannelError error) {
+				logger.severe(error.toString());
+				Window.alert("Channel error: " + error.getCode() + " : "
+						+ error.getDescription());
+			}
+
+			@Override
+			public void onClose() {
+				Window.alert("Channel closed!");
+			}
+		});
+	}
+
+	// when channel opens, we send a request to see how many players are on this
+	// channel
+	// if it is two, then we send another request to get the name of the 2nd
+	// player
+	public void channelOpened(Player player) {
+		// Initialize the service proxy.
+		if (chessSvc == null) {
+			chessSvc = GWT.create(ChessService.class);
+		}
+
+		// Set up the callback object.
+		AsyncCallback<String> callback = new AsyncCallback<String>() {
+			public void onFailure(Throwable caught) {
+				logger.severe(caught.getMessage());
+			}
+
+			public void onSuccess(String result) {
+
+			}
+
+		};
+
+		presenter.setMyColor(player.getColor());
+		presenter.setClientId(player.getClientId());
+		user1.setText(player.getUser() + ": " + presenter.getMyColor()
+				+ " | ELO: " + player.getElo());
+
+		// Make the call to the stock price service.
+		chessSvc.sendReady(presenter.getMyColor().toString(), callback);
+	}
+
+	@Override
+	public void sendState(String stateToken) {
+		// Initialize the service proxy.
+		if (chessSvc == null) {
+			chessSvc = GWT.create(ChessService.class);
+		}
+
+		// Set up the callback object.
+		AsyncCallback<String> callback = new AsyncCallback<String>() {
+			public void onFailure(Throwable caught) {
+				logger.severe(caught.getMessage());
+			}
+
+			public void onSuccess(String result) {
+
+			}
+
+		};
+
+		// Make the call to the stock price service.
+		chessSvc.updateBoard(stateToken, callback);
+	}
+
+	private void sendResult(GameResult gameResult) {
+		// Initialize the service proxy.
+		if (chessSvc == null) {
+			chessSvc = GWT.create(ChessService.class);
+		}
+
+		// Set up the callback object.
+		AsyncCallback<String> callback = new AsyncCallback<String>() {
+			public void onFailure(Throwable caught) {
+				logger.severe(caught.getMessage());
+			}
+
+			public void onSuccess(String result) {
+
+			}
+
+		};
+
+		// Make the call to the stock price service.
+		chessSvc.sendResult(presenter.getStateToken(), callback);
+
+	}
+
+	/* END OF SERVER COMMUNICATION METHODS */
+
+//	public void attachDragOverHandler(final Image image) {
+//		// drag over
+//		image.addDragOverHandler(new DragOverHandler() {
+//			public void onDragOver(DragOverEvent event) {
+//				resetDragHighlighting();
+//				image.getElement().setClassName(css.dragover());
+//			}
+//		});
+//	}
+//
+//	public void attachDragStartHandler(final Image image, final int row,
+//			final int col) {
+//		// Add a DragStartHandler.
+//		image.addDragStartHandler(new DragStartHandler() {
+//			public void onDragStart(DragStartEvent event) {
+//				// Required: set data for the event.
+//				event.setData("fromRow", row + "");
+//				event.setData("fromCol", col + "");
+//			}
+//		});
+//	}
+//
+//	public void attachDragDropHandler(final Image image, final int row,
+//			final int col) {
+//		// Add a DropHandler.
+//		image.addDropHandler(new DropHandler() {
+//			public void onDrop(DropEvent event) {
+//				// Prevent the native text drop.
+//				event.preventDefault();
+//				// Get the data out of the event.
+//				String fromRow = event.getData("fromRow");
+//				String fromCol = event.getData("fromCol");
+//
+//				if (!presenter.makeDragMove(row, col, Integer.parseInt(fromRow),
+//						Integer.parseInt(fromCol))) {
+//					resetDragHighlighting();
+//				}
+//
+//				Audio audio = PieceAudio.createAudio();
+//				if (audio != null) {
+//					audio.play();
+//				}
+//			}
+//		});
+//	}
+//
+//	private void resetDragHighlighting() {
+//		// remove all previous drag over classes
+//		for (int r = 0; r < 8; r++) {
+//			for (int c = 0; c < 8; c++) {
+//				board[r][c].getElement().removeClassName(css.dragover());
+//			}
+//		}
+//	}
+
+	@Override
+	public void doPieceAnimation(int row, int col, int toRow, int toCol, Move m) {
+		Element piece = board[row][col].getElement();
+		PieceAnimation animation = new PieceAnimation(piece, presenter, m);
+		Element toSquare = board[toRow][toCol].getElement();
+		animation.moveTo(toSquare.getAbsoluteLeft(), toSquare.getAbsoluteTop(),
+				1000);
+	}
+
+}

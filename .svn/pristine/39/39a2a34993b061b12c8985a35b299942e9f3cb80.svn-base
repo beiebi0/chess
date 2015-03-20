@@ -1,0 +1,527 @@
+package org.chenji.hw1;
+import org.junit.Test;
+
+import static org.junit.Assert.assertEquals;
+import static org.shared.chess.Color.BLACK;
+import static org.shared.chess.Color.WHITE;
+import static org.shared.chess.PieceKind.*;
+import org.shared.chess.*;
+
+public abstract class AbstractEnpassantForWhiteTest extends AbstractStateChangerTest{
+  private State beforeCaptureEnpassant;  // For capture tests
+  private State initialState;  // For update tests
+  private State expectedState;
+  
+  public void setup(Position blackOldPosition, Position blackNewPosition, Position whiteOldPosition, Position whiteNewPosition){
+	beforeCaptureEnpassant = start.copy();
+	beforeCaptureEnpassant.setTurn(WHITE);
+	beforeCaptureEnpassant.setPiece(whiteOldPosition,null);
+	beforeCaptureEnpassant.setPiece(whiteNewPosition,new Piece(WHITE, PAWN));
+	beforeCaptureEnpassant.setPiece(blackOldPosition,null);
+	beforeCaptureEnpassant.setPiece(blackNewPosition,new Piece(BLACK, PAWN));
+	beforeCaptureEnpassant.setEnpassantPosition(blackNewPosition);
+  }
+  
+  // used for capture cases...
+  public void captureEnpassant(Position blackPosition, Position whitePosition, Position whitePositionAfterCapture){
+	expectedState = beforeCaptureEnpassant.copy();
+	expectedState.setTurn(BLACK);
+	expectedState.setPiece(whitePosition, null);
+	expectedState.setPiece(whitePositionAfterCapture, new Piece(WHITE,PAWN));
+	expectedState.setPiece(blackPosition, null);
+	expectedState.setNumberOfMovesWithoutCaptureNorPawnMoved(0);
+	expectedState.setEnpassantPosition(null);
+  }
+  
+  // 14 cases of capture;
+  @Test
+  public void testWhiteA5CaptureBlackB5(){
+	Position blackOldPosition = new Position(6,1); //
+	Position blackNewPosition = new Position(4,1); //
+	Position whiteOldPosition = new Position(1,0); //
+	Position whiteNewPosition = new Position(4,0); //
+	setup(blackOldPosition, blackNewPosition, whiteOldPosition, whiteNewPosition);
+
+    Position whitePositionAfterCaptureEnpassant = new Position(5,1); //
+	captureEnpassant(blackNewPosition, whiteNewPosition, whitePositionAfterCaptureEnpassant);
+    
+    Move move = new Move(whiteNewPosition, whitePositionAfterCaptureEnpassant, null);
+	stateChanger.makeMove(beforeCaptureEnpassant, move);
+	assertEquals(expectedState, beforeCaptureEnpassant);
+  }
+  
+  @Test
+  public void testWhiteB5CaptureBlackA5(){
+	Position blackOldPosition = new Position(6,0); //
+	Position blackNewPosition = new Position(4,0); //
+	Position whiteOldPosition = new Position(1,1); //
+	Position whiteNewPosition = new Position(4,1); //
+	setup(blackOldPosition, blackNewPosition, whiteOldPosition, whiteNewPosition);
+
+    Position whitePositionAfterCaptureEnpassant = new Position(5,0); //
+	captureEnpassant(blackNewPosition, whiteNewPosition, whitePositionAfterCaptureEnpassant);
+    
+    Move move = new Move(whiteNewPosition, whitePositionAfterCaptureEnpassant, null);
+	stateChanger.makeMove(beforeCaptureEnpassant, move);
+	assertEquals(expectedState, beforeCaptureEnpassant);
+  }
+  
+  @Test
+  public void testWhiteB5CaptureBlackC5(){
+	Position blackOldPosition = new Position(6,2); //
+	Position blackNewPosition = new Position(4,2); //
+	Position whiteOldPosition = new Position(1,1); //
+	Position whiteNewPosition = new Position(4,1); //
+	setup(blackOldPosition, blackNewPosition, whiteOldPosition, whiteNewPosition);
+
+    Position whitePositionAfterCaptureEnpassant = new Position(5,2); //
+	captureEnpassant(blackNewPosition, whiteNewPosition, whitePositionAfterCaptureEnpassant);
+    
+    Move move = new Move(whiteNewPosition, whitePositionAfterCaptureEnpassant, null);
+	stateChanger.makeMove(beforeCaptureEnpassant, move);
+	assertEquals(expectedState, beforeCaptureEnpassant);
+  }
+  
+  @Test
+  public void testWhiteC5CaptureBlackB5(){
+	Position blackOldPosition = new Position(6,1); //
+	Position blackNewPosition = new Position(4,1); //
+	Position whiteOldPosition = new Position(1,2); //
+	Position whiteNewPosition = new Position(4,2); //
+	setup(blackOldPosition, blackNewPosition, whiteOldPosition, whiteNewPosition);
+
+    Position whitePositionAfterCaptureEnpassant = new Position(5,1); //
+	captureEnpassant(blackNewPosition, whiteNewPosition, whitePositionAfterCaptureEnpassant);
+    
+    Move move = new Move(whiteNewPosition, whitePositionAfterCaptureEnpassant, null);
+	stateChanger.makeMove(beforeCaptureEnpassant, move);
+	assertEquals(expectedState, beforeCaptureEnpassant);
+  }
+  
+  @Test
+  public void testWhiteC5CaptureBlackD5(){
+    Position blackOldPosition = new Position(6,3); //
+	Position blackNewPosition = new Position(4,3); //
+	Position whiteOldPosition = new Position(1,2); //
+	Position whiteNewPosition = new Position(4,2); //
+	setup(blackOldPosition, blackNewPosition, whiteOldPosition, whiteNewPosition);
+
+    Position whitePositionAfterCaptureEnpassant = new Position(5,3); //
+	captureEnpassant(blackNewPosition, whiteNewPosition, whitePositionAfterCaptureEnpassant);
+    
+    Move move = new Move(whiteNewPosition, whitePositionAfterCaptureEnpassant, null);
+	stateChanger.makeMove(beforeCaptureEnpassant, move);
+	assertEquals(expectedState, beforeCaptureEnpassant);
+  }
+  
+  @Test
+  public void testWhiteD5CaptureBlackC5(){
+    Position blackOldPosition = new Position(6,2); //
+	Position blackNewPosition = new Position(4,2); //
+	Position whiteOldPosition = new Position(1,3); //
+	Position whiteNewPosition = new Position(4,3); //
+	setup(blackOldPosition, blackNewPosition, whiteOldPosition, whiteNewPosition);
+
+    Position whitePositionAfterCaptureEnpassant = new Position(5,2); //
+	captureEnpassant(blackNewPosition, whiteNewPosition, whitePositionAfterCaptureEnpassant);
+    
+    Move move = new Move(whiteNewPosition, whitePositionAfterCaptureEnpassant, null);
+	stateChanger.makeMove(beforeCaptureEnpassant, move);
+	assertEquals(expectedState, beforeCaptureEnpassant);
+  }
+  
+  @Test
+  public void testWhiteD5CaptureBlackE5(){
+    Position blackOldPosition = new Position(6,4); //
+	Position blackNewPosition = new Position(4,4); //
+	Position whiteOldPosition = new Position(1,3); //
+	Position whiteNewPosition = new Position(4,3); //
+	setup(blackOldPosition, blackNewPosition, whiteOldPosition, whiteNewPosition);
+
+    Position whitePositionAfterCaptureEnpassant = new Position(5,4); //
+	captureEnpassant(blackNewPosition, whiteNewPosition, whitePositionAfterCaptureEnpassant);
+    
+    Move move = new Move(whiteNewPosition, whitePositionAfterCaptureEnpassant, null);
+	stateChanger.makeMove(beforeCaptureEnpassant, move);
+	assertEquals(expectedState, beforeCaptureEnpassant);
+  }
+  
+  @Test
+  public void testWhiteE5CaptureBlackD5(){
+    Position blackOldPosition = new Position(6,3); //
+	Position blackNewPosition = new Position(4,3); //
+	Position whiteOldPosition = new Position(1,4); //
+	Position whiteNewPosition = new Position(4,4); //
+	setup(blackOldPosition, blackNewPosition, whiteOldPosition, whiteNewPosition);
+
+    Position whitePositionAfterCaptureEnpassant = new Position(5,3); //
+	captureEnpassant(blackNewPosition, whiteNewPosition, whitePositionAfterCaptureEnpassant);
+    
+    Move move = new Move(whiteNewPosition, whitePositionAfterCaptureEnpassant, null);
+	stateChanger.makeMove(beforeCaptureEnpassant, move);
+	assertEquals(expectedState, beforeCaptureEnpassant);
+  }
+  
+  @Test
+  public void testWhiteE5CaptureBlackF5(){
+    Position blackOldPosition = new Position(6,5); //
+	Position blackNewPosition = new Position(4,5); //
+	Position whiteOldPosition = new Position(1,4); //
+	Position whiteNewPosition = new Position(4,4); //
+	setup(blackOldPosition, blackNewPosition, whiteOldPosition, whiteNewPosition);
+
+    Position whitePositionAfterCaptureEnpassant = new Position(5,5); //
+	captureEnpassant(blackNewPosition, whiteNewPosition, whitePositionAfterCaptureEnpassant);
+    
+    Move move = new Move(whiteNewPosition, whitePositionAfterCaptureEnpassant, null);
+	stateChanger.makeMove(beforeCaptureEnpassant, move);
+	assertEquals(expectedState, beforeCaptureEnpassant);
+  }
+  
+  @Test
+  public void testWhiteF5CaptureBlackE5(){
+    Position blackOldPosition = new Position(6,4); //
+	Position blackNewPosition = new Position(4,4); //
+	Position whiteOldPosition = new Position(1,5); //
+	Position whiteNewPosition = new Position(4,5); //
+	setup(blackOldPosition, blackNewPosition, whiteOldPosition, whiteNewPosition);
+
+    Position whitePositionAfterCaptureEnpassant = new Position(5,4); //
+	captureEnpassant(blackNewPosition, whiteNewPosition, whitePositionAfterCaptureEnpassant);
+    
+    Move move = new Move(whiteNewPosition, whitePositionAfterCaptureEnpassant, null);
+	stateChanger.makeMove(beforeCaptureEnpassant, move);
+	assertEquals(expectedState, beforeCaptureEnpassant);
+  }
+  
+  @Test
+  public void testWhiteF5CaptureBlackG5(){
+    Position blackOldPosition = new Position(6,6); //
+	Position blackNewPosition = new Position(4,6); //
+	Position whiteOldPosition = new Position(1,5); //
+	Position whiteNewPosition = new Position(4,5); //
+	setup(blackOldPosition, blackNewPosition, whiteOldPosition, whiteNewPosition);
+
+    Position whitePositionAfterCaptureEnpassant = new Position(5,6); //
+	captureEnpassant(blackNewPosition, whiteNewPosition, whitePositionAfterCaptureEnpassant);
+    
+    Move move = new Move(whiteNewPosition, whitePositionAfterCaptureEnpassant, null);
+	stateChanger.makeMove(beforeCaptureEnpassant, move);
+	assertEquals(expectedState, beforeCaptureEnpassant);
+  }
+  
+  @Test
+  public void testWhiteG5CaptureBlackF5(){
+    Position blackOldPosition = new Position(6,5); //
+	Position blackNewPosition = new Position(4,5); //
+	Position whiteOldPosition = new Position(1,6); //
+	Position whiteNewPosition = new Position(4,6); //
+	setup(blackOldPosition, blackNewPosition, whiteOldPosition, whiteNewPosition);
+
+    Position whitePositionAfterCaptureEnpassant = new Position(5,5); //
+	captureEnpassant(blackNewPosition, whiteNewPosition, whitePositionAfterCaptureEnpassant);
+    
+    Move move = new Move(whiteNewPosition, whitePositionAfterCaptureEnpassant, null);
+	stateChanger.makeMove(beforeCaptureEnpassant, move);
+	assertEquals(expectedState, beforeCaptureEnpassant);
+  }
+
+  @Test
+  public void testWhiteG5CaptureBlackH5(){
+    Position blackOldPosition = new Position(6,7); //
+	Position blackNewPosition = new Position(4,7); //
+	Position whiteOldPosition = new Position(1,6); //
+	Position whiteNewPosition = new Position(4,6); //
+	setup(blackOldPosition, blackNewPosition, whiteOldPosition, whiteNewPosition);
+
+    Position whitePositionAfterCaptureEnpassant = new Position(5,7); //
+	captureEnpassant(blackNewPosition, whiteNewPosition, whitePositionAfterCaptureEnpassant);
+    
+    Move move = new Move(whiteNewPosition, whitePositionAfterCaptureEnpassant, null);
+	stateChanger.makeMove(beforeCaptureEnpassant, move);
+	assertEquals(expectedState, beforeCaptureEnpassant);
+  }
+  
+  @Test
+  public void testWhiteH5CaptureBlackG5(){
+    Position blackOldPosition = new Position(6,6); //
+	Position blackNewPosition = new Position(4,6); //
+	Position whiteOldPosition = new Position(1,7); //
+	Position whiteNewPosition = new Position(4,7); //
+	setup(blackOldPosition, blackNewPosition, whiteOldPosition, whiteNewPosition);
+
+    Position whitePositionAfterCaptureEnpassant = new Position(5,6); //
+	captureEnpassant(blackNewPosition, whiteNewPosition, whitePositionAfterCaptureEnpassant);
+    
+    Move move = new Move(whiteNewPosition, whitePositionAfterCaptureEnpassant, null);
+	stateChanger.makeMove(beforeCaptureEnpassant, move);
+	assertEquals(expectedState, beforeCaptureEnpassant);
+  }
+  
+  // used for cases of enpassant position update
+  public void setupInitialState(){
+	  initialState = start.copy();
+	  initialState.setTurn(WHITE);
+	  initialState.setPiece(6, 1, null); 
+	  initialState.setPiece(4, 1, new Piece(BLACK, PAWN)); // Black B7 move to B5
+	  for(int i = 1; i < State.COLS; i ++){
+		  initialState.setPiece(1, i, null); // Set all white pawns null except the first one.
+	  }
+	  initialState.setEnpassantPosition(new Position(4,1));
+	  initialState.setNumberOfMovesWithoutCaptureNorPawnMoved(0);
+  }
+
+  // 7 cases of update
+  @Test
+  public void testEnpassantPositionUpdate_PawnMoveTwoSquares(){
+	Move move = new Move(new Position(1, 0), new Position(3, 0), null);
+	setupInitialState();
+	expectedState = initialState.copy();
+	expectedState.setTurn(BLACK);
+	expectedState.setPiece(1, 0, null);
+	expectedState.setPiece(3, 0, new Piece(WHITE, PAWN));
+	expectedState.setNumberOfMovesWithoutCaptureNorPawnMoved(0);
+	expectedState.setEnpassantPosition(new Position(3, 0));
+    stateChanger.makeMove(initialState, move);
+    assertEquals(expectedState, initialState);
+  }
+  
+  @Test
+  public void testEnpassantPositionUpdate_PawnMoveOneSquare(){
+	Move move = new Move(new Position(1, 0), new Position(2, 0), null);
+	setupInitialState();
+	expectedState = initialState.copy();
+	expectedState.setTurn(BLACK);
+	expectedState.setPiece(1, 0, null);
+	expectedState.setPiece(2, 0, new Piece(WHITE, PAWN));
+	expectedState.setNumberOfMovesWithoutCaptureNorPawnMoved(0);
+	expectedState.setEnpassantPosition(null);
+    stateChanger.makeMove(initialState, move);
+    assertEquals(expectedState, initialState);
+  }
+  
+  @Test
+  public void testEnpassantPositionUpdate_RookMove(){
+	Move move = new Move(new Position(0, 7), new Position(1, 7), null);
+	setupInitialState();
+	expectedState = initialState.copy();
+	expectedState.setTurn(BLACK);
+	expectedState.setPiece(0, 7, null);
+	expectedState.setPiece(1, 7, new Piece(WHITE, ROOK));
+	expectedState.setNumberOfMovesWithoutCaptureNorPawnMoved(1);
+  expectedState.setCanCastleKingSide(WHITE, false);
+	expectedState.setEnpassantPosition(null);
+    stateChanger.makeMove(initialState, move);
+    assertEquals(expectedState, initialState);
+  }
+  
+  @Test
+  public void testEnpassantPositionUpdate_KnightMove(){
+	Move move = new Move(new Position(0, 6), new Position(2, 5), null);
+	setupInitialState();
+	expectedState = initialState.copy();
+	expectedState.setTurn(BLACK);
+	expectedState.setPiece(0, 6, null);
+	expectedState.setPiece(2, 5, new Piece(WHITE, KNIGHT));
+	expectedState.setNumberOfMovesWithoutCaptureNorPawnMoved(1);
+	expectedState.setEnpassantPosition(null);
+    stateChanger.makeMove(initialState, move);
+    assertEquals(expectedState, initialState);
+  }
+  
+  @Test
+  public void testEnpassantPositionUpdate_BishopMove(){
+	Move move = new Move(new Position(0, 5), new Position(2, 7), null);
+	setupInitialState();
+	expectedState = initialState.copy();
+	expectedState.setTurn(BLACK);
+	expectedState.setPiece(0, 5, null);
+	expectedState.setPiece(2, 7, new Piece(WHITE, BISHOP));
+	expectedState.setNumberOfMovesWithoutCaptureNorPawnMoved(1);
+	expectedState.setEnpassantPosition(null);
+    stateChanger.makeMove(initialState, move);
+    assertEquals(expectedState, initialState);
+  }
+  
+  @Test
+  public void testEnpassantPositionUpdate_KingMove(){
+	Move move = new Move(new Position(0, 4), new Position(1, 4), null);
+	setupInitialState();
+	expectedState = initialState.copy();
+	expectedState.setTurn(BLACK);
+	expectedState.setPiece(0, 4, null);
+	expectedState.setPiece(1, 4, new Piece(WHITE, KING));
+	expectedState.setNumberOfMovesWithoutCaptureNorPawnMoved(1);
+	expectedState.setCanCastleKingSide(WHITE, false);
+	expectedState.setCanCastleQueenSide(WHITE, false);
+	expectedState.setEnpassantPosition(null);
+    stateChanger.makeMove(initialState, move);
+    assertEquals(expectedState, initialState);
+  }
+  
+  @Test
+  public void testEnpassantPositionUpdate_QueenMove(){
+	Move move = new Move(new Position(0, 3), new Position(1, 3), null);
+	setupInitialState();
+	expectedState = initialState.copy();
+	expectedState.setTurn(BLACK);
+	expectedState.setPiece(0, 3, null);
+	expectedState.setPiece(1, 3, new Piece(WHITE, QUEEN));
+	expectedState.setNumberOfMovesWithoutCaptureNorPawnMoved(1);
+	expectedState.setEnpassantPosition(null);
+    stateChanger.makeMove(initialState, move);
+    assertEquals(expectedState, initialState);
+  }
+  
+  // 3 cases of illegal move
+  @Test(expected = IllegalMove.class)
+  public void testCannotCaptureWhenEnpassantPossitionIsNull() {
+	Position blackOldPosition = new Position(6,0); //A7
+	Position blackNewPosition = new Position(4,0); //A5
+	Position whiteOldPosition = new Position(1,1); //B2
+	Position whiteNewPosition = new Position(4,1); //B5
+	setup(blackOldPosition, blackNewPosition, whiteOldPosition, whiteNewPosition);
+	beforeCaptureEnpassant.setEnpassantPosition(null);
+    Position whitePositionAfterCaptureEnpassant = new Position(5,0); //A6
+	 
+    Move move = new Move(whiteNewPosition, whitePositionAfterCaptureEnpassant, null);
+    stateChanger.makeMove(beforeCaptureEnpassant, move);
+  }
+  
+  @Test(expected = IllegalMove.class)
+  public void testCannotCaptureWhenEnpassantPossitionIsDifferent() {
+	Position blackOldPosition = new Position(6,0); //A7
+	Position blackNewPosition = new Position(4,0); //A5
+	Position whiteOldPosition = new Position(1,1); //B2
+	Position whiteNewPosition = new Position(4,1); //B5
+	setup(blackOldPosition, blackNewPosition, whiteOldPosition, whiteNewPosition);
+	
+    Position whitePositionAfterCaptureEnpassant = new Position(5,2); //C6
+	 
+    Move move = new Move(whiteNewPosition, whitePositionAfterCaptureEnpassant, null);
+    stateChanger.makeMove(beforeCaptureEnpassant, move);
+  }
+  
+  @Test(expected = IllegalMove.class)
+  public void testCannotCaptureEnpassantIfWillExploseKing() {
+    Piece[][] board = new Piece[State.ROWS][State.COLS];
+	board[7][0] = new Piece(BLACK, KING);
+    board[7][4] = new Piece(BLACK, QUEEN);
+    board[4][5] = new Piece(BLACK, PAWN);
+	board[4][4] = new Piece(WHITE, PAWN);
+	board[0][4] = new Piece(WHITE, KING);
+	State newState = new State(WHITE, board, 
+	        new boolean[] {false, false}, new boolean[] {false, false}, 
+            new Position(4, 5), 0, null);
+	Move move = new Move(new Position(4, 4), new Position(5, 5), null);
+	stateChanger.makeMove(newState, move);
+  }
+  
+  // 4 under check tests
+  @Test(expected = IllegalMove.class)
+  public void testCannotCaptureEnpassantIfIsUnderCheck() {
+    Piece[][] board = new Piece[State.ROWS][State.COLS];
+    board[7][0] = new Piece(BLACK, KING);
+    board[7][1] = new Piece(BLACK, QUEEN);
+    board[4][5] = new Piece(BLACK, PAWN);
+    board[4][4] = new Piece(WHITE, PAWN);
+    board[0][1] = new Piece(WHITE, KING);
+    State newState = new State(WHITE, board, 
+	        new boolean[] {false, false}, new boolean[] {false, false}, 
+	        new Position(4, 5), 0, null);
+    Move move = new Move(new Position(4, 4), new Position(5, 5), null);
+    stateChanger.makeMove(newState, move);
+  }
+ 
+
+  @Test
+  public void testCaptureEnpassantUnderCheck_ByPawn() {
+	Piece[][] board = new Piece[State.ROWS][State.COLS];
+	board[7][0] = new Piece(BLACK, KING);
+	board[4][5] = new Piece(BLACK, PAWN);
+	board[4][4] = new Piece(WHITE, PAWN);
+	board[3][4] = new Piece(WHITE, KING);
+	State newState = new State(WHITE, board, 
+	        new boolean[] {false, false}, new boolean[] {false, false}, 
+	        new Position(4, 5), 0, null);
+	Move move = new Move(new Position(4, 4), new Position(5, 5), null);
+	expectedState = newState.copy();
+	expectedState.setTurn(BLACK);
+	expectedState.setPiece(4, 4, null);
+	expectedState.setPiece(5, 5, new Piece(WHITE, PAWN));
+	expectedState.setPiece(4, 5, null);
+	expectedState.setNumberOfMovesWithoutCaptureNorPawnMoved(0);
+	expectedState.setEnpassantPosition(null);
+    stateChanger.makeMove(newState, move);
+    assertEquals(expectedState, newState);
+  }
+  
+  @Test
+  public void testCaptureEnpassantUnderCheck_ByQueen() {
+	Piece[][] board = new Piece[State.ROWS][State.COLS];
+	board[7][0] = new Piece(BLACK, KING);
+	board[5][0] = new Piece(BLACK, QUEEN);
+	board[4][5] = new Piece(BLACK, PAWN);
+	board[4][4] = new Piece(WHITE, PAWN);
+	board[5][6] = new Piece(WHITE, KING);
+	State newState = new State(WHITE, board, 
+	        new boolean[] {false, false}, new boolean[] {false, false}, 
+	        new Position(4, 5), 0, null);
+	Move move = new Move(new Position(4, 4), new Position(5, 5), null);
+	expectedState = newState.copy();
+	expectedState.setTurn(BLACK);
+	expectedState.setPiece(4, 4, null);
+	expectedState.setPiece(5, 5, new Piece(WHITE, PAWN));
+	expectedState.setPiece(4, 5, null);
+	expectedState.setNumberOfMovesWithoutCaptureNorPawnMoved(0);
+	expectedState.setEnpassantPosition(null);
+    stateChanger.makeMove(newState, move);
+    assertEquals(expectedState, newState);
+  }
+  
+  @Test
+  public void testCaptureEnpassantUnderCheck_ByRook() {
+	Piece[][] board = new Piece[State.ROWS][State.COLS];
+	board[7][0] = new Piece(BLACK, KING);
+	board[5][0] = new Piece(BLACK, ROOK);
+	board[4][5] = new Piece(BLACK, PAWN);
+	board[4][4] = new Piece(WHITE, PAWN);
+	board[5][6] = new Piece(WHITE, KING);
+	State newState = new State(WHITE, board, 
+	        new boolean[] {false, false}, new boolean[] {false, false}, 
+	        new Position(4, 5), 0, null);
+	Move move = new Move(new Position(4, 4), new Position(5, 5), null);
+	expectedState = newState.copy();
+	expectedState.setTurn(BLACK);
+	expectedState.setPiece(4, 4, null);
+	expectedState.setPiece(5, 5, new Piece(WHITE, PAWN));
+	expectedState.setPiece(4, 5, null);
+	expectedState.setNumberOfMovesWithoutCaptureNorPawnMoved(0);
+	expectedState.setEnpassantPosition(null);
+    stateChanger.makeMove(newState, move);
+    assertEquals(expectedState, newState);
+  }
+  
+  @Test
+  public void testCaptureEnpassantUnderCheck_ByBishop() {
+	Piece[][] board = new Piece[State.ROWS][State.COLS];
+	board[7][0] = new Piece(BLACK, KING);
+	board[7][3] = new Piece(BLACK, BISHOP);
+	board[4][5] = new Piece(BLACK, PAWN);
+	board[4][4] = new Piece(WHITE, PAWN);
+	board[4][6] = new Piece(WHITE, KING);
+	State newState = new State(WHITE, board, 
+	        new boolean[] {false, false}, new boolean[] {false, false}, 
+	        new Position(4, 5), 0, null);
+	Move move = new Move(new Position(4, 4), new Position(5, 5), null);
+	expectedState = newState.copy();
+	expectedState.setTurn(BLACK);
+	expectedState.setPiece(4, 4, null);
+	expectedState.setPiece(5, 5, new Piece(WHITE, PAWN));
+	expectedState.setPiece(4, 5, null);
+	expectedState.setNumberOfMovesWithoutCaptureNorPawnMoved(0);
+	expectedState.setEnpassantPosition(null);
+    stateChanger.makeMove(newState, move);
+    assertEquals(expectedState, newState);
+  }
+}

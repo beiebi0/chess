@@ -1,0 +1,747 @@
+package org.shihweihuang.hw3;
+
+import org.shihweihuang.hw5.ChessAnimation;
+import org.shihweihuang.hw5.MyCalender;
+import org.shihweihuang.hw6.client.ChessPlatformServiceAsync;
+import org.shihweihuang.hw6.client.LoginInfo;
+import org.shihweihuang.hw6.client.MoveSerializer;
+import org.shihweihuang.hw8.MyMessage;
+import org.shihweihuang.hw9.AlphaBetaPruning;
+import org.shihweihuang.hw9.DateTimer;
+import org.shihweihuang.hw9.Heuristic;
+
+import java.util.Date;
+import java.util.HashSet;
+import java.util.Set;
+
+import org.shared.chess.Color;
+import org.shared.chess.GameResult;
+import org.shared.chess.Move;
+import org.shared.chess.Piece;
+import org.shared.chess.PieceKind;
+import org.shared.chess.State;
+import org.shared.chess.Position;
+
+import org.shihweihuang.hw2.StateChangerImpl;
+import org.shihweihuang.hw2_5.StateExplorerImpl;
+
+import com.google.gwt.dom.client.AudioElement;
+import com.google.gwt.dom.client.MediaElement;
+import com.google.gwt.event.dom.client.ClickEvent;
+import com.google.gwt.event.dom.client.ClickHandler;
+import com.google.gwt.event.dom.client.DragEvent;
+import com.google.gwt.event.dom.client.DragHandler;
+import com.google.gwt.event.dom.client.DragOverEvent;
+import com.google.gwt.event.dom.client.DragOverHandler;
+import com.google.gwt.event.dom.client.DropEvent;
+import com.google.gwt.event.dom.client.DropHandler;
+import com.google.gwt.event.dom.client.HasAllDragAndDropHandlers;
+import com.google.gwt.event.dom.client.HasClickHandlers;
+import com.google.gwt.i18n.client.DateTimeFormat;
+import com.google.gwt.media.client.Audio;
+import com.google.gwt.storage.client.Storage;
+import com.google.gwt.user.client.Timer;
+import com.google.gwt.user.client.rpc.AsyncCallback;
+import com.google.gwt.user.client.ui.AbsolutePanel;
+import com.google.gwt.user.client.ui.Anchor;
+import com.google.gwt.user.client.ui.ListBox;
+
+public class Presenter {
+	public interface View {
+		/**
+		 * Renders the piece at this position. If piece is null then the position is
+		 * empty.
+		 */
+		void setPiece(int row, int col, Piece piece);
+
+		/**
+		 * Turns the highlighting on or off at this cell. Cells that can be clicked
+		 * should be highlighted.
+		 */
+		void setHighlighted(int row, int col, boolean highlighted);
+
+		/**
+		 * Indicate whose turn it is.
+		 */
+		void setWhoseTurn(String turnMessage);
+
+		/**
+		 * Indicate whether the game is in progress or over.
+		 */
+		void setGameResult(String gameResult);
+
+		/**
+		 * Control the PromotionGrid visible or not
+		 * 
+		 * @param visible
+		 */
+		void setPromotionGridVisible(boolean visible);
+
+		/**
+		 * Different style while different players
+		 * 
+		 * @param color
+		 */
+		void setPromotionGrid(Color color);
+
+		/**
+		 * Disable Save and Load buttons when not support
+		 */
+		void setDisableStorageButtons();
+
+		void addHistory(State state);
+
+		void addHistorySupport(State state);
+
+		/**
+		 * @param row
+		 *          row of board image
+		 * @param col
+		 *          column of board image
+		 * @return board image at (row, col)
+		 */
+		HasClickHandlers getBoardImage(int row, int col);
+
+		/**
+		 * @return Restart Button
+		 */
+		HasClickHandlers getRestartButton();
+
+		/**
+		 * @return Save Button
+		 */
+		HasClickHandlers getSaveButton();
+
+		/**
+		 * @return Load Button
+		 */
+		HasClickHandlers getLoadButton();
+
+		/**
+		 * @return Delete Button
+		 */
+		HasClickHandlers getDeleteButton();
+
+		/**
+		 * @param index
+		 *          1:QUEEN 2:BISHOP 3:KNIGHT 4:ROOK
+		 * @return relative promotion button
+		 */
+		HasClickHandlers getPromotionButton(int index);
+
+		Anchor getLogin();
+
+		void setUserInfo(String info);
+
+		/**
+		 * @param row
+		 *          row of board image
+		 * @param col
+		 *          column of board image
+		 * @return board image at (row, col)
+		 */
+		HasAllDragAndDropHandlers getDragImag(int row, int col);
+
+		/**
+		 * Use only for check state
+		 * 
+		 * @param log
+		 */
+		void setLog(String log);
+
+		/**
+		 * @return AbsolutePanel contains game grid
+		 */
+		AbsolutePanel getAp();
+
+		/**
+		 * @return ListBox for local storage
+		 */
+		ListBox getStateList();
+		
+		void setStartDate(String date);
+
+	}
+
+	private State state;
+	private View view;
+	private StateChangerImpl stateChanger;
+	private StateExplorerImpl stateExplorer;
+	private Position from;
+	private Position selectedPosition;
+	private Audio crackingAudio;
+	private Audio gameoverAudio;
+	private Storage stateStore = null;
+	ChessPlatformServiceAsync chessPlatformService;
+	private LoginInfo loginInfo;
+	private Color myColor;
+	private boolean isSinglePlayer = true;
+	private String matchID;
+	private Date startDate;
+	double playerRanking;
+	private MyMessage messages;
+	private static DateTimeFormat dtf = DateTimeFormat.getFormat("MM/dd/yyyy");
+	private AlphaBetaPruning abPruning;
+	private Heuristic heuristic = new Heuristic();
+	private static final int DEPTH = 5;
+
+	public Presenter() {
+		stateChanger = new StateChangerImpl();
+		stateExplorer = new StateExplorerImpl();
+		from = null;
+		abPruning = new AlphaBetaPruning(heuristic);
+//		if (myColor.isBlack()){
+//			Move move = abPruning.findBestMove(state, DEPTH, new DateTimer(5000));
+//			stateChanger.makeMove(state, move);
+//			updateBoardAndHighlightNextMove(new HashSet<Move>());
+//		}
+	}
+
+	public void printLog(String log) {
+		view.setLog(log);
+	}
+
+	private void loadState() {
+		for (int i = 0; i < stateStore.getLength(); i++) {
+			String key = stateStore.key(i);
+			view.getStateList().addItem(key);
+		}
+	}
+
+	private void initializeLocalStorage() {
+		stateStore = Storage.getLocalStorageIfSupported();
+		loadState();
+		view.getSaveButton().addClickHandler(new ClickHandler() {
+
+			@Override
+			public void onClick(ClickEvent event) {
+				clickSave();
+			}
+
+		});
+
+		view.getLoadButton().addClickHandler(new ClickHandler() {
+
+			@Override
+			public void onClick(ClickEvent event) {
+				clickLoad();
+			}
+
+		});
+
+		view.getDeleteButton().addClickHandler(new ClickHandler() {
+
+			@Override
+			public void onClick(ClickEvent event) {
+				clickDelete();
+			}
+
+		});
+
+	}
+
+	private void clickSave() {
+		String time = MyCalender.getTime();
+		stateStore.setItem(time, state.toString());
+		view.getStateList().addItem(time);
+	}
+
+	private void clickDelete() {
+		int index = view.getStateList().getSelectedIndex();
+		String key = view.getStateList().getItemText(index);
+		stateStore.removeItem(key);
+		view.getStateList().removeItem(index);
+	}
+
+	private void clickLoad() {
+		int index = view.getStateList().getSelectedIndex();
+		String key = view.getStateList().getItemText(index);
+		String loadState = stateStore.getItem(key);
+		state = StateParser.parse(loadState);
+		// History.newItem(state.toString());
+		// view.addHistory(state);
+		updateBoardAndHighlightNextMove(new HashSet<Move>());
+	}
+
+	public void addHandlers() {
+		if (Audio.isSupported()) {
+			crackingAudio = createCrackingAudio();
+			gameoverAudio = createGameoverAudio();
+		}
+		// view.addHistorySupport(state);
+		addDragAndDropHandlers();
+
+		view.getRestartButton().addClickHandler(new ClickHandler() {
+			@Override
+			public void onClick(ClickEvent event) {
+				clickedRestart();
+			}
+		});
+		for (int r = 0; r < 8; r++) {
+			for (int c = 0; c < 8; c++) {
+				final int row = 7 - r;
+				final int col = c;
+				view.getBoardImage(r, c).addClickHandler(new ClickHandler() {
+					@Override
+					public void onClick(ClickEvent event) {
+						clickedOn(row, col);
+					}
+				});
+			}
+		}
+		for (int i = 0; i < 4; i++) {
+			final int index = i;
+			view.getPromotionButton(i).addClickHandler(new ClickHandler() {
+				@Override
+				public void onClick(ClickEvent event) {
+					clickedPromotion(index);
+				}
+			});
+		}
+
+		if (!Storage.isLocalStorageSupported()) {
+			view.setDisableStorageButtons();
+		} else {
+			initializeLocalStorage();
+		}
+	}
+
+	private void addDragAndDropHandlers() {
+		for (int r = 0; r < 8; r++) {
+			for (int c = 0; c < 8; c++) {
+				final int row = 7 - r;
+				final int col = c;
+				view.getDragImag(r, c).addDragHandler(new DragHandler() {
+					@Override
+					public void onDrag(DragEvent event) {
+						dragOn(row, col);
+					}
+				});
+				view.getDragImag(r, c).addDragOverHandler(new DragOverHandler() {
+					@Override
+					public void onDragOver(DragOverEvent event) {
+					}
+				});
+				view.getDragImag(r, c).addDropHandler(new DropHandler() {
+					@Override
+					public void onDrop(DropEvent event) {
+						event.preventDefault();
+						dropOn(row, col);
+					}
+				});
+			}
+		}
+	}
+
+	public void setView(View view) {
+		this.view = view;
+	}
+
+	public void setState() {
+		// test("QWEQWEQWE");
+		view.setWhoseTurn(getTurnMessage());
+		view.setGameResult(getResultMessage());
+		getUserInfo();
+		view.setStartDate(getTitleMessage());
+		// view.setLog(myColor.toString());
+		for (int r = 0; r < 8; r++) {
+			for (int c = 0; c < 8; c++) {
+				view.setPiece(r, c, state.getPiece(r, c));
+			}
+		}
+	}
+
+	private String getTurnMessage() {
+		if (isSinglePlayer) {
+			String c = state.getTurn().isBlack() ? "BLACK" : "WHITE";
+			return c + "'s Turn";
+		} else {
+
+			if (state.getTurn().equals(myColor)) {
+				String myColorString = myColor.isBlack() ? "BLACK" : "WHITE";
+				return messages.yourTurn(myColorString);
+			} else {
+				String myColorString = myColor.isBlack() ? "WHITE" : "BLACK";
+				return messages.opponentTurn(myColorString);
+			}
+		}
+	}
+
+	private void dragOn(int row, int col) {
+		if (isMyturn()) {
+			selectedPosition = new Position(row, col);
+			Set<Position> startPositions = stateExplorer
+					.getPossibleStartPositions(state);
+			if (startPositions.contains(selectedPosition)) {
+				// Drag on a valid start position, highlight possible "to" positions
+				from = new Position(row, col);
+				updateBoardAndHighlightNextMove(stateExplorer
+						.getPossibleMovesFromPosition(state, from));
+			} else {
+				updateBoardAndHighlightNextMove(new HashSet<Move>());
+			}
+		}
+	}
+
+	private void dropOn(int row, int col) {
+		selectedPosition = new Position(row, col);
+		Set<Move> movesFromPosition = stateExplorer.getPossibleMovesFromPosition(
+				state, from);
+		if (from != null
+				&& movesFromPosition.contains(new Move(from, selectedPosition, null))) {
+			// Drop on a valid "to" position, without promotion
+//			crackingAudio.play();
+			// stateChanger.makeMove(state, new Move(from, selectedPosition, null));
+			if (!isSinglePlayer) {
+				sendMove(new Move(from, selectedPosition, null));
+				crackingAudio.play();
+			} else {
+				stateChanger.makeMove(state, new Move(from, selectedPosition, null));
+				updateBoardAndHighlightNextMove(new HashSet<Move>());
+				crackingAudio.play();
+				Move aiMove = abPruning.findBestMove(state, DEPTH, new DateTimer(5000));
+				
+				stateChanger.makeMove(state, aiMove);
+				updateBoardAndHighlightNextMove(new HashSet<Move>());
+				crackingAudio.play();
+			}
+			// History.newItem(state.toString());
+			// view.addHistory(state);
+			updateBoardAndHighlightNextMove(new HashSet<Move>());
+			from = null;
+		} else if (from != null
+				&& movesFromPosition.contains(new Move(from, selectedPosition,
+						PieceKind.QUEEN))) {
+			// Drop on a valid "to" position, need to promote. Show promotion table
+			// which contain four buttons for player to select
+			view.setPromotionGrid(state.getTurn());
+			view.setPromotionGridVisible(true);
+		} else {
+			updateBoardAndHighlightNextMove(new HashSet<Move>());
+		}
+	}
+
+	private void clickedOn(int row, int col) {
+		if (isMyturn()) {
+			selectedPosition = new Position(row, col);
+			Set<Position> startPositions = stateExplorer
+					.getPossibleStartPositions(state);
+			Set<Move> movesFromPosition = stateExplorer.getPossibleMovesFromPosition(
+					state, from);
+			if (startPositions.contains(selectedPosition)) {
+				// Click on a valid start position, highlight possible "to" positions
+				from = new Position(row, col);
+				updateBoardAndHighlightNextMove(stateExplorer
+						.getPossibleMovesFromPosition(state, from));
+			} else if (from != null
+					&& movesFromPosition.contains(new Move(from, selectedPosition, null))) {
+				// Click on a valid "to" position, without promotion
+				view.setPiece(from.getRow(), from.getCol(), null);
+				// ChessAnimation ca = new ChessAnimation(from, selectedPosition,
+				// state.getPiece(from), view.getAp());
+				// ca.run(500);
+				// Timer t = new Timer() {
+				// @Override
+				// public void run() {
+				// stateChanger.makeMove(state, new Move(from, selectedPosition, null));
+				if (!isSinglePlayer) {
+					sendMove(new Move(from, selectedPosition, null));
+					crackingAudio.play();
+				} else {
+					stateChanger.makeMove(state, new Move(from, selectedPosition, null));
+					updateBoardAndHighlightNextMove(new HashSet<Move>());
+					crackingAudio.play();
+					Move aiMove = abPruning.findBestMove(state, DEPTH, new DateTimer(5000));
+					stateChanger.makeMove(state, aiMove);
+					updateBoardAndHighlightNextMove(new HashSet<Move>());
+//					crackingAudio.play();
+				}
+				// History.newItem(state.toString());
+				// view.addHistory(state);
+				updateBoardAndHighlightNextMove(new HashSet<Move>());
+				from = null;
+//				crackingAudio.play();
+				// }
+				// };
+				// t.schedule(500);
+			} else if (from != null
+					&& movesFromPosition.contains(new Move(from, selectedPosition,
+							PieceKind.QUEEN))) {
+				// Click on a valid "to" position, need to promote. Show promotion table
+				// which contain four buttons for player to select
+				view.setPiece(from.getRow(), from.getCol(), null);
+				view.setPromotionGrid(state.getTurn());
+				view.setPromotionGridVisible(true);
+			} else {
+				updateBoardAndHighlightNextMove(new HashSet<Move>());
+			}
+		}
+	}
+
+	private void clickedRestart() {
+		// Click on restart button, state initialized
+		state = new State();
+		// History.newItem(state.toString());
+		// view.addHistory(state);
+		updateBoardAndHighlightNextMove(new HashSet<Move>());
+	}
+
+	private void clickedPromotion(int index) {
+		// Click on the promotion table, promote piece and hide promotion table
+		final PieceKind promoteTo;
+		switch (index) {
+		case 0:
+			promoteTo = PieceKind.QUEEN;
+			break;
+		case 1:
+			promoteTo = PieceKind.BISHOP;
+			break;
+		case 2:
+			promoteTo = PieceKind.KNIGHT;
+			break;
+		case 3:
+			promoteTo = PieceKind.ROOK;
+			break;
+		default:
+			promoteTo = null;
+			break;
+		}
+		view.setPiece(from.getRow(), from.getCol(), null);
+		// ChessAnimation ca = new ChessAnimation(from, selectedPosition,
+		// state.getPiece(from), view.getAp());
+		// ca.run(500);
+		// Timer t = new Timer() {
+		// @Override
+		// public void run() {
+		// stateChanger.makeMove(state,
+		// new Move(from, selectedPosition, promoteTo));
+		if (!isSinglePlayer) {
+			sendMove(new Move(from, selectedPosition, promoteTo));
+			crackingAudio.play();
+		} else {
+			stateChanger.makeMove(state, new Move(from, selectedPosition, promoteTo));
+			updateBoardAndHighlightNextMove(new HashSet<Move>());
+			crackingAudio.play();
+			Move aiMove = abPruning.findBestMove(state, DEPTH, new DateTimer(5000));
+			stateChanger.makeMove(state, aiMove);
+			updateBoardAndHighlightNextMove(new HashSet<Move>());
+			crackingAudio.play();
+		}
+		from = null;
+		// History.newItem(state.toString());
+		// view.addHistory(state);
+		updateBoardAndHighlightNextMove(new HashSet<Move>());
+//		crackingAudio.play();
+		// }
+		// };
+		// t.schedule(500);
+	}
+
+	public void updateBoardAndHighlightNextMove(
+			Set<Move> possibleMovesFromPosition) {
+		// update board after every user input. Turn all highlight off before turn
+		// those needed on
+		if (state.getGameResult() != null) {
+			gameoverAudio.play();
+		}
+		setState();
+		view.setPromotionGridVisible(false);
+		for (int row = 0; row < 8; row++) {
+			for (int col = 0; col < 8; col++) {
+				view.setHighlighted(row, col, false);
+			}
+		}
+		for (Move move : possibleMovesFromPosition) {
+			Position to = move.getTo();
+			view.setHighlighted(to.getRow(), to.getCol(), true);
+		}
+	}
+
+	/**
+	 * Set current state to input state
+	 * 
+	 * @param state
+	 */
+	public void setState(State state) {
+		this.state = state;
+	}
+
+	private Audio createCrackingAudio() {
+		Audio audio = Audio.createIfSupported();
+		if (audio == null) {
+			return null;
+		}
+		if (MediaElement.CAN_PLAY_PROBABLY.equals(audio
+				.canPlayType(AudioElement.TYPE_WAV))) {
+			audio.setSrc("shihweihuang_audio/cracking.wav");
+		} else if (MediaElement.CAN_PLAY_PROBABLY.equals(audio
+				.canPlayType(AudioElement.TYPE_MP3))) {
+			audio.setSrc("shihweihuang_audio/cracking.mp3");
+		} else if (MediaElement.CAN_PLAY_MAYBE.equals(audio
+				.canPlayType(AudioElement.TYPE_WAV))) {
+			audio.setSrc("shihweihuang_audio/cracking.mp3");
+		} else if (MediaElement.CAN_PLAY_MAYBE.equals(audio
+				.canPlayType(AudioElement.TYPE_MP3))) {
+			audio.setSrc("shihweihuang_audio/cracking.mp3");
+		}
+		// audio.setControls(false);
+		// audio.setVisible(false);
+		return audio;
+	}
+
+	private Audio createGameoverAudio() {
+		Audio audio = Audio.createIfSupported();
+		if (audio == null) {
+			return null;
+		}
+		if (MediaElement.CAN_PLAY_PROBABLY.equals(audio
+				.canPlayType(AudioElement.TYPE_WAV))) {
+			audio.setSrc("shihweihuang_audio/gameover.wav");
+		} else if (MediaElement.CAN_PLAY_PROBABLY.equals(audio
+				.canPlayType(AudioElement.TYPE_MP3))) {
+			audio.setSrc("shihweihuang_audio/gameover.mp3");
+		} else if (MediaElement.CAN_PLAY_MAYBE.equals(audio
+				.canPlayType(AudioElement.TYPE_WAV))) {
+			audio.setSrc("shihweihuang_audio/gameover.mp3");
+		} else if (MediaElement.CAN_PLAY_MAYBE.equals(audio
+				.canPlayType(AudioElement.TYPE_MP3))) {
+			audio.setSrc("shihweihuang_audio/gameover.mp3");
+		}
+		// audio.setControls(false);
+		// audio.setVisible(false);
+		return audio;
+	}
+
+
+	public void setLogin(String text, String href) {
+		Anchor login = view.getLogin();
+		login.setText(text);
+		login.setHref(href);
+	}
+
+	public void setLoginInfo(LoginInfo loginInfo) {
+		this.loginInfo = loginInfo;
+	}
+
+	private void sendMove(Move move) {
+		chessPlatformService.publishMove(matchID, MoveSerializer.serialize(move),
+				new AsyncCallback<Void>() {
+					@Override
+					public void onSuccess(Void result) {
+						// TODO Auto-generated method stub
+						// openChannel(result);
+					}
+
+					@Override
+					public void onFailure(Throwable caught) {
+						// TODO Auto-generated method stub
+					}
+				});
+	}
+
+	public void moveFromServer(final Move move) {
+		// final Position from = move.getFrom();
+		// final Position to = move.getTo();
+		// view.setPiece(from.getRow(), from.getCol(), null);
+		// ChessAnimation ca = new ChessAnimation(from, to, state.getPiece(from),
+		// view.getAp());
+		// ca.run(500);
+		// Timer t = new Timer() {
+		// @Override
+		// public void run() {
+		// stateChanger.makeMove(state, move);
+
+		// History.newItem(state.toString());
+		// view.addHistory(state);
+		// updateBoardAndHighlightNextMove(new HashSet<Move>());
+		// crackingAudio.play();
+		// }
+		// };
+		// t.schedule(500);
+	}
+
+	public void setColor(Color color) {
+		this.myColor = color;
+	}
+
+	private boolean isMyturn() {
+//		if (isSinglePlayer) {
+//			return true;
+//		} else {
+			return state.getTurn().equals(myColor);
+//		}
+	}
+
+	public void setSinglePlayer(boolean isSinglePlayer) {
+		this.isSinglePlayer = isSinglePlayer;
+	}
+
+	public void setMatchID(String matchID) {
+		// TODO Auto-generated method stub
+		this.matchID = matchID;
+	}
+
+	public String getMatchID() {
+		return matchID;
+	}
+
+	private void getUserInfo() {
+		chessPlatformService.getPlayerRanking(loginInfo,
+				new AsyncCallback<Double>() {
+					@Override
+					public void onSuccess(Double rank) {
+						playerRanking = rank;
+						view.setUserInfo(loginInfo.getNickname() + "-"
+								+ loginInfo.getEmailAddress() + "(" + playerRanking + ")");
+					}
+
+					@Override
+					public void onFailure(Throwable caught) {
+
+					}
+				});
+
+	}
+	
+	private String getResultMessage() {
+		GameResult gr = state.getGameResult();
+		if (gr == null){
+			return "";
+		}
+		else if (gr.isDraw()){
+			return "DRAW: " + gr.getGameResultReason();
+		} else if (gr.getWinner() == myColor){
+			return "YOU WIN: " + gr.getGameResultReason();
+		} else {
+			return "YOU LOSE: " + gr.getGameResultReason();
+		}
+	}
+	
+	private String getTitleMessage() {
+		if (matchID != "") {
+			return messages.startOn(dtf.format(startDate));
+		} else {
+			return "";
+		}
+	}
+
+	public void setStartDate(Date startDate) {
+		// TODO Auto-generated method stub
+		this.startDate = startDate;
+	}
+
+	public void setRanking(double ranking) {
+		// TODO Auto-generated method stub
+		playerRanking = ranking;
+	}
+	
+	public void setMessages(MyMessage messages){
+		this.messages = messages;
+	}
+
+	public void setChessPlatformService(
+			ChessPlatformServiceAsync chessPlatformService) {
+		// TODO Auto-generated method stub
+		this.chessPlatformService = chessPlatformService;
+	}
+}

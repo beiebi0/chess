@@ -1,0 +1,230 @@
+package org.ashishmanral.hw2_5;
+import static org.junit.Assert.*;
+
+import java.util.Set;
+
+import org.junit.Test;
+import org.shared.chess.AbstractStateExplorerTest;
+import org.shared.chess.Color;
+import org.shared.chess.GameResult;
+import org.shared.chess.GameResultReason;
+import org.shared.chess.Move;
+import org.shared.chess.Piece;
+import org.shared.chess.PieceKind;
+import org.shared.chess.Position;
+import org.shared.chess.State;
+import org.shared.chess.StateExplorer;
+
+import com.google.appengine.labs.repackaged.com.google.common.collect.Sets;
+
+public class StateExplorerImplTest extends AbstractStateExplorerTest{
+
+  @Override
+  public StateExplorer getStateExplorer() {
+    return new StateExplorerImpl();
+  }
+
+  /*
+   * Begin Tests by Ashish Manral <ashish.manral09@gmail.com>
+   */
+  @Test
+  public void testGetPossibleStartPositionsFromInitialState() {
+    Set<Position> expectedPositions = Sets.newHashSet();
+    for (int c = 0; c < 8; c++)
+      expectedPositions.add(new Position(1, c));
+    expectedPositions.add(new Position(0, 1));
+    expectedPositions.add(new Position(0, 6));
+    assertEquals(expectedPositions,stateExplorer.getPossibleStartPositions(start));
+  }
+  
+  @Test
+  public void testGetPossibleMovesFromInitialState() {
+    Set<Move> expectedMoves = Sets.newHashSet();
+    for (int c = 0; c < 8; c++) {
+      expectedMoves.add(new Move(new Position(1, c), new Position(2, c), null));
+      expectedMoves.add(new Move(new Position(1, c), new Position(3, c), null));
+    }
+    expectedMoves.add(new Move(new Position(0, 1), new Position(2, 0), null));
+    expectedMoves.add(new Move(new Position(0, 1), new Position(2, 2), null));
+    expectedMoves.add(new Move(new Position(0, 6), new Position(2, 5), null));
+    expectedMoves.add(new Move(new Position(0, 6), new Position(2, 7), null));
+    assertEquals(expectedMoves,stateExplorer.getPossibleMoves(start));
+  }
+  
+  @Test
+  public void testGetPossibleMovesFromPositionQueenSideBlackKnight() {
+    Set<Move> expectedMoves = Sets.newHashSet();
+    start.setPiece(1,0,null);
+    start.setPiece(2,0,new Piece(Color.WHITE,PieceKind.PAWN));
+    start.setTurn(Color.BLACK);
+    expectedMoves.add(new Move(new Position(7, 1), new Position(5, 0), null));
+    expectedMoves.add(new Move(new Position(7, 1), new Position(5, 2), null));
+    assertEquals(expectedMoves,stateExplorer.getPossibleMovesFromPosition(start, new Position(7, 1)));
+  }
+
+  @Test
+  public void testGetPossibleMovesFromPositionKingSideBlackKnight() {
+    Set<Move> expectedMoves = Sets.newHashSet();
+    start.setPiece(1,0,null);
+    start.setPiece(2,0,new Piece(Color.WHITE,PieceKind.PAWN));
+    start.setTurn(Color.BLACK);
+    expectedMoves.add(new Move(new Position(7, 6), new Position(5, 7), null));
+    expectedMoves.add(new Move(new Position(7, 6), new Position(5, 5), null));
+    assertEquals(expectedMoves,stateExplorer.getPossibleMovesFromPosition(start, new Position(7, 6)));
+  }
+  
+  @Test
+  public void testGetPossibleMovesFromWhiteKingWhichCanCastle() {
+    Set<Move> expectedMoves = Sets.newHashSet();
+    start.setPiece(0,1,null);
+    start.setPiece(0,2,null);
+    start.setPiece(0,3,null);
+    expectedMoves.add(new Move(new Position(0, 4), new Position(0, 3), null));
+    expectedMoves.add(new Move(new Position(0, 4), new Position(0, 2), null));
+    assertEquals(expectedMoves,stateExplorer.getPossibleMovesFromPosition(start, new Position(0, 4)));
+  }
+  
+  @Test
+  public void testGetPossibleMovesFromPawnWhichCanDoEnpassantCapture() {
+    Set<Move> expectedMoves = Sets.newHashSet();
+    start.setPiece(1,0,null);
+    start.setPiece(3,0,new Piece(Color.WHITE,PieceKind.PAWN));
+    start.setEnpassantPosition(new Position(3,0));
+    start.setPiece(6,1,null);
+    start.setPiece(3,1,new Piece(Color.BLACK,PieceKind.PAWN));
+    start.setTurn(Color.BLACK);
+    expectedMoves.add(new Move(new Position(3, 1), new Position(2, 1), null));
+    expectedMoves.add(new Move(new Position(3, 1), new Position(2, 0), null));
+    assertEquals(expectedMoves,stateExplorer.getPossibleMovesFromPosition(start, new Position(3, 1)));
+  }
+  
+  @Test
+  public void testGetPossibleMovesWhenKingUnderCheck() {
+    Set<Move> expectedMoves = Sets.newHashSet();
+    boolean[] canCastleKingSide = new boolean[] { false, false };
+	boolean[] canCastleQueenSide = new boolean[] { false, false };
+    start = new State(Color.WHITE, new Piece[8][8], canCastleKingSide,
+			canCastleQueenSide, null, 0, null);
+    start.setPiece(7,4,new Piece(Color.BLACK,PieceKind.KING));
+    start.setPiece(0,4,new Piece(Color.WHITE,PieceKind.KING));
+    start.setPiece(2,6,new Piece(Color.BLACK,PieceKind.KNIGHT));
+    start.setPiece(2,7,new Piece(Color.BLACK,PieceKind.KNIGHT));
+    start.setPiece(3,4,new Piece(Color.BLACK,PieceKind.ROOK));
+    start.setPiece(3,5,new Piece(Color.BLACK,PieceKind.BISHOP));
+    expectedMoves.add(new Move(new Position(0, 4), new Position(0, 3), null));
+    assertEquals(expectedMoves,stateExplorer.getPossibleMoves(start));
+  }
+  
+  @Test
+  public void testGetStartPositionsWhenKingUnderCheck() {
+    Set<Position> expectedPositions = Sets.newHashSet();
+    boolean[] canCastleKingSide = new boolean[] { false, false };
+	boolean[] canCastleQueenSide = new boolean[] { false, false };
+    start = new State(Color.WHITE, new Piece[8][8], canCastleKingSide,
+			canCastleQueenSide, null, 0, null);
+    start.setPiece(7,4,new Piece(Color.BLACK,PieceKind.KING));
+    start.setPiece(0,4,new Piece(Color.WHITE,PieceKind.KING));
+    start.setPiece(2,0,new Piece(Color.WHITE,PieceKind.ROOK));
+    start.setPiece(2,6,new Piece(Color.BLACK,PieceKind.KNIGHT));
+    start.setPiece(2,7,new Piece(Color.BLACK,PieceKind.KNIGHT));
+    start.setPiece(3,4,new Piece(Color.BLACK,PieceKind.ROOK));
+    start.setPiece(3,5,new Piece(Color.BLACK,PieceKind.BISHOP));
+    start.setPiece(3,6,new Piece(Color.BLACK,PieceKind.BISHOP));
+    start.setPiece(6,6,new Piece(Color.WHITE,PieceKind.BISHOP));
+    expectedPositions.add(new Position(2,0));
+    assertEquals(expectedPositions,stateExplorer.getPossibleStartPositions(start));
+  }
+  
+  @Test
+  public void testGetStartPositionsWhenKingUnderCheckAdvanced() {
+    Set<Position> expectedPositions = Sets.newHashSet();
+    boolean[] canCastleKingSide = new boolean[] { false, false };
+	boolean[] canCastleQueenSide = new boolean[] { false, false };
+    start = new State(Color.WHITE, new Piece[8][8], canCastleKingSide,
+			canCastleQueenSide, null, 0, null);
+    start.setPiece(7,4,new Piece(Color.BLACK,PieceKind.KING));
+    start.setPiece(0,4,new Piece(Color.WHITE,PieceKind.KING));
+    start.setPiece(2,0,new Piece(Color.WHITE,PieceKind.ROOK));
+    start.setPiece(2,6,new Piece(Color.BLACK,PieceKind.KNIGHT));
+    start.setPiece(2,7,new Piece(Color.BLACK,PieceKind.KNIGHT));
+    start.setPiece(3,4,new Piece(Color.BLACK,PieceKind.ROOK));
+    start.setPiece(3,5,new Piece(Color.BLACK,PieceKind.BISHOP));
+    start.setPiece(3,6,new Piece(Color.BLACK,PieceKind.BISHOP));
+    start.setPiece(6,0,new Piece(Color.WHITE,PieceKind.BISHOP));
+    expectedPositions.add(new Position(2,0));
+    expectedPositions.add(new Position(6,0));
+    assertEquals(expectedPositions,stateExplorer.getPossibleStartPositions(start));
+  }
+  
+  @Test
+  public void testMovesWhenKingUnderCheck() {
+    Set<Move> expectedMoves = Sets.newHashSet();
+    boolean[] canCastleKingSide = new boolean[] { false, false };
+	boolean[] canCastleQueenSide = new boolean[] { false, false };
+    start = new State(Color.WHITE, new Piece[8][8], canCastleKingSide,
+			canCastleQueenSide, null, 0, null);
+    start.setPiece(7,4,new Piece(Color.BLACK,PieceKind.KING));
+    start.setPiece(0,4,new Piece(Color.WHITE,PieceKind.KING));
+    start.setPiece(2,0,new Piece(Color.WHITE,PieceKind.ROOK));
+    start.setPiece(2,6,new Piece(Color.BLACK,PieceKind.KNIGHT));
+    start.setPiece(2,7,new Piece(Color.BLACK,PieceKind.KNIGHT));
+    start.setPiece(3,4,new Piece(Color.BLACK,PieceKind.ROOK));
+    start.setPiece(3,5,new Piece(Color.BLACK,PieceKind.BISHOP));
+    start.setPiece(3,6,new Piece(Color.BLACK,PieceKind.BISHOP));
+    start.setPiece(6,0,new Piece(Color.WHITE,PieceKind.BISHOP));
+    expectedMoves.add(new Move(new Position(6,0),new Position(2,4),null));
+    expectedMoves.add(new Move(new Position(2,0),new Position(2,4),null));
+    assertEquals(expectedMoves,stateExplorer.getPossibleMoves(start));
+  }
+  
+  @Test
+  public void testPromotionWithoutCapture() {
+    Set<Move> expectedMoves = Sets.newHashSet();
+    boolean[] canCastleKingSide = new boolean[] { false, false };
+	boolean[] canCastleQueenSide = new boolean[] { false, false };
+    start = new State(Color.WHITE, new Piece[8][8], canCastleKingSide,
+			canCastleQueenSide, null, 0, null);
+    start.setPiece(6,0,new Piece(Color.WHITE,PieceKind.PAWN));
+    start.setPiece(7,4,new Piece(Color.BLACK,PieceKind.KING));
+    start.setPiece(0,4,new Piece(Color.WHITE,PieceKind.KING));
+    expectedMoves.add(new Move(new Position(6, 0), new Position(7, 0), PieceKind.ROOK));
+    expectedMoves.add(new Move(new Position(6, 0), new Position(7, 0), PieceKind.KNIGHT));
+    expectedMoves.add(new Move(new Position(6, 0), new Position(7, 0), PieceKind.BISHOP));
+    expectedMoves.add(new Move(new Position(6, 0), new Position(7, 0), PieceKind.QUEEN));
+    assertEquals(expectedMoves,stateExplorer.getPossibleMovesFromPosition(start,new Position(6,0)));
+  }
+  
+  @Test
+  public void testPromotionWithCapture() {
+    Set<Move> expectedMoves = Sets.newHashSet();
+    boolean[] canCastleKingSide = new boolean[] { false, false };
+	boolean[] canCastleQueenSide = new boolean[] { false, false };
+    start = new State(Color.WHITE, new Piece[8][8], canCastleKingSide,
+			canCastleQueenSide, null, 0, null);
+    start.setPiece(6,0,new Piece(Color.WHITE,PieceKind.PAWN));
+    start.setPiece(7,4,new Piece(Color.BLACK,PieceKind.KING));
+    start.setPiece(7,1,new Piece(Color.BLACK,PieceKind.KNIGHT));
+    start.setPiece(0,4,new Piece(Color.WHITE,PieceKind.KING));
+    expectedMoves.add(new Move(new Position(6, 0), new Position(7, 0), PieceKind.ROOK));
+    expectedMoves.add(new Move(new Position(6, 0), new Position(7, 0), PieceKind.KNIGHT));
+    expectedMoves.add(new Move(new Position(6, 0), new Position(7, 0), PieceKind.BISHOP));
+    expectedMoves.add(new Move(new Position(6, 0), new Position(7, 0), PieceKind.QUEEN));
+    expectedMoves.add(new Move(new Position(6, 0), new Position(7, 1), PieceKind.ROOK));
+    expectedMoves.add(new Move(new Position(6, 0), new Position(7, 1), PieceKind.KNIGHT));
+    expectedMoves.add(new Move(new Position(6, 0), new Position(7, 1), PieceKind.BISHOP));
+    expectedMoves.add(new Move(new Position(6, 0), new Position(7, 1), PieceKind.QUEEN));
+    assertEquals(expectedMoves,stateExplorer.getPossibleMovesFromPosition(start,new Position(6,0)));
+  }
+  
+  @Test
+  public void testMoveAfterGameEnded() {
+    Set<Move> expectedMoves = Sets.newHashSet();
+    start.setGameResult(new GameResult(null,GameResultReason.FIFTY_MOVE_RULE));
+    assertEquals(expectedMoves,stateExplorer.getPossibleStartPositions(start));
+  }
+  
+  /*
+   * End Tests by Ashish Manral <ashish.manral09@gmail.com>
+   */
+	
+}

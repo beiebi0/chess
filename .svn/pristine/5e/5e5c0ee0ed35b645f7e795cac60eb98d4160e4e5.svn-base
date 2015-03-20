@@ -1,0 +1,553 @@
+package org.bohuang.hw1;
+
+import org.junit.Test;
+import org.shared.chess.AbstractStateChangerTest;
+import org.shared.chess.IllegalMove;
+import org.shared.chess.Move;
+import org.shared.chess.Piece;
+import org.shared.chess.Position;
+import org.shared.chess.State;
+
+import static org.junit.Assert.*;
+import static org.shared.chess.Color.WHITE;
+import static org.shared.chess.Color.BLACK;
+import static org.shared.chess.PieceKind.KING;
+import static org.shared.chess.PieceKind.PAWN;
+import static org.shared.chess.PieceKind.ROOK;
+import static org.shared.chess.PieceKind.KNIGHT;
+import static org.shared.chess.PieceKind.BISHOP;
+import static org.shared.chess.PieceKind.QUEEN;
+
+
+public abstract class AbstractStateChangerBlackCheckWhiteTest extends AbstractStateChangerTest{
+	
+   /*
+    * 26 conditions involved
+    * 
+    * endangerBy***AfterKingMove : 6
+    * illegal move , expect exception 
+    * When Checked by BLACK , WHITE player try to move KING to a new POSITION however the POSITION 
+    * is under direct attack by another PIECE *** .
+    * 
+    * 
+    * notEscapeFrom*** : 6
+    * illegal move , expect exception
+    * When Checked by BLACK , WHITE player did not move the KING , and the KING is still under 
+    * attack by the PIECE which check it .
+    * 
+    * 
+    * stillCheckBy*** : 6
+    * illegal move , expect exception
+    * When Checked by BLACK , WHITE player try to move KING to a new POSITION however the POSITION
+    * is still under direct attack by the PIECE which check it .
+    * 
+    * 
+    * escapeFrom***By*** : 5
+    * legal move , expect assrtEqual for two STATEs
+    * 
+    * escapedFromPawnBlack : 
+    * WHITE player move the KING to a safe POSITION
+    * 
+    * escapedFromQueenBlackByCaptureIt : 
+    * WHITE player CAPTURE the BLACK QUEEN with a ROOK and safe the KING
+    * 
+    * escapedFromQueenBlackByMoveAPieceInTheCheckWay : 
+    * WHITE player move a BISHOP between BLACK QUEEN and WHITE KING 
+    * 
+    * escapedFromQueenBlackByMoveAPieceInTheCheckWayAndPromoteToRook :
+    * WHITE player move a PAWN between BLACK QUEEN and WHITE KING and promoted it to a ROOK
+    * 
+    * escapedFromRookBlackCaptureKnightBlack :
+    * WHITE player move the KING to a POSITION occupied by a BLACK KNIGHT , the KING is safed and 
+    * the KNIGHT is captured                                                                                    
+    * 
+    * 
+    * tryToEscapeFrom**** : 3
+    * illegal move , expect exception
+    * 
+    * tryToEscapeFromBishopBlackByCastlingKingSide :
+    * WHITE player try to CASTLING KINGSIDE when checked
+    * 
+    * tryToEscapeFromKnightBlackByCastlingQueenSide :
+    * WHITE player try to CASTLING QUEENSIDE when checked
+    * 
+    * tryToEscapeFromQueenBlackByMoveAPiceInTheCheckWayButEndangerByOther :
+    * WHITE player try to move a PIECE between BLACK QUEEN and WHITE KING however expose WHITE KING
+    * to direct attack by a BLACK ROOK
+    */
+
+	
+  @Test (expected = IllegalMove.class)
+  public void notEscapeFromPawnBlack(){
+	 State checked = start.copy();
+	 checked.setTurn(WHITE);
+	 checked.setPiece(0, 4, null);
+	 checked.setPiece(3, 4, new Piece(WHITE, KING));
+	 checked.setPiece(6, 3, null);
+	 checked.setPiece(4, 3, new Piece(BLACK, PAWN));
+	 Move move = new Move (new Position(1, 0), new Position(2, 0), null);
+	 stateChanger.makeMove(checked, move);
+  }
+  
+  @Test (expected = IllegalMove.class)
+  public void notEscapeFromRookBlack(){
+	 State checked = start.copy();
+	 checked.setTurn(WHITE);
+	 checked.setPiece(0, 4, null);
+	 checked.setPiece(3, 4, new Piece(WHITE, KING));
+	 checked.setPiece(7, 0, null);
+	 checked.setPiece(3, 6, new Piece(BLACK, ROOK));
+	 Move move = new Move (new Position(1, 0), new Position(2, 0), null);
+	 stateChanger.makeMove(checked, move); 
+  }
+  
+  @Test (expected = IllegalMove.class)
+  public void notEscapeFromKnightBlack(){
+	 State checked = start.copy();
+	 checked.setTurn(WHITE);
+	 checked.setPiece(0, 4, null);
+	 checked.setPiece(3, 4, new Piece(WHITE, KING));
+	 checked.setPiece(7, 1, null);
+	 checked.setPiece(5, 3, new Piece(BLACK, KNIGHT));
+	 Move move = new Move (new Position(1, 0), new Position(2, 0), null);
+	 stateChanger.makeMove(checked, move); 
+  }
+  
+  @Test (expected = IllegalMove.class)
+  public void notEscapeFromBishopBlack(){
+	 State checked = start.copy();
+	 checked.setTurn(WHITE);
+	 checked.setPiece(0, 4, null);
+	 checked.setPiece(3, 4, new Piece(WHITE, KING));
+	 checked.setPiece(7, 2, null);
+	 checked.setPiece(5, 2, new Piece(BLACK, BISHOP));
+	 Move move = new Move (new Position(1, 0), new Position(2, 0), null);
+	 stateChanger.makeMove(checked, move); 	  
+  }
+  
+  @Test (expected = IllegalMove.class)
+  public void notEscapeFromQueenBlack(){
+	 State checked = start.copy();
+	 checked.setTurn(WHITE);
+	 checked.setPiece(0, 4, null);
+	 checked.setPiece(3, 4, new Piece(WHITE, KING));
+	 checked.setPiece(7, 3, null);
+	 checked.setPiece(3, 0, new Piece(BLACK, QUEEN));
+	 Move move = new Move (new Position(1, 0), new Position(2, 0), null);
+	 stateChanger.makeMove(checked, move); 	  
+	  
+  }
+  
+  @Test (expected = IllegalMove.class)
+  public void notEscapeFromKingBlack(){
+	  /* a KING can not CHECK a KING , it will first violate the rules */
+  }
+  
+  @Test (expected = IllegalMove.class)
+  public void stillCheckByPawnBlackAfterKingMove(){
+	  /* not possible if KING move */
+  }
+  
+  @Test (expected = IllegalMove.class)
+  public void stillCheckByRookBlackAfterKingMove(){
+	 State checked = start.copy();
+	 checked.setTurn(WHITE);
+	 checked.setPiece(0, 4, null);
+	 checked.setPiece(3, 4, new Piece(WHITE, KING));
+	 checked.setPiece(7, 0, null);
+	 checked.setPiece(3, 6, new Piece(BLACK, ROOK));
+	 Move move = new Move (new Position(3, 4), new Position(3, 3), null);
+	 stateChanger.makeMove(checked, move); 	  
+  }
+  
+  @Test (expected = IllegalMove.class)
+  public void stillCheckByKnightBlackAfterKingMove(){
+	 State checked = start.copy();
+	 checked.setTurn(WHITE);
+	 checked.setPiece(0, 4, null);
+	 checked.setPiece(3, 4, new Piece(WHITE, KING));
+	 checked.setPiece(7, 1, null);
+	 checked.setPiece(5, 3, new Piece(BLACK, KNIGHT));
+	 Move move = new Move (new Position(3, 4), new Position(4, 5), null);
+	 stateChanger.makeMove(checked, move); 	  
+  }
+  
+  @Test (expected = IllegalMove.class)
+  public void stillCheckByBishopBlackAfterKingMove(){
+	 State checked = start.copy();
+	 checked.setTurn(WHITE);
+	 checked.setPiece(0, 4, null);
+	 checked.setPiece(3, 4, new Piece(WHITE, KING));
+	 checked.setPiece(7, 2, null);
+	 checked.setPiece(5, 2, new Piece(BLACK, BISHOP));
+	 Move move = new Move (new Position(3, 4), new Position(4, 3), null);
+	 stateChanger.makeMove(checked, move); 	  	  
+  }
+  
+  @Test (expected = IllegalMove.class)
+  public void stillCheckByQueenBlackAfterKingMove(){
+	 State checked = start.copy();
+	 checked.setTurn(WHITE);
+	 checked.setPiece(0, 4, null);
+	 checked.setPiece(3, 4, new Piece(WHITE, KING));
+	 checked.setPiece(7, 3, null);
+	 checked.setPiece(3, 0, new Piece(BLACK, QUEEN));
+	 Move move = new Move (new Position(3, 4), new Position(3, 5), null);
+	 stateChanger.makeMove(checked, move); 	  	  
+  }
+  
+  @Test (expected = IllegalMove.class)
+  public void stillCheckByKingBlackAfterKingMove(){
+	  /* not possible to happen because KING can't CHECK KING */
+  }
+  
+  @Test (expected = IllegalMove.class)
+  public void endangerByPawnAfterKingMove(){
+	 State checked = start.copy();
+	 checked.setTurn(WHITE);
+	 checked.setPiece(0, 4, null);
+	 checked.setPiece(3, 4, new Piece(WHITE, KING));
+	 checked.setPiece(6, 3, null);
+	 checked.setPiece(4, 3, new Piece(BLACK, PAWN));
+	 Move move = new Move (new Position(3, 4), new Position(4, 4), null);
+	 checked.setPiece(6, 5, null);
+	 checked.setPiece(5, 5, new Piece(BLACK, PAWN));
+	 stateChanger.makeMove(checked, move);	  
+  }
+  
+  @Test (expected = IllegalMove.class)
+  public void endangerByRookAfterKingMove(){
+	 State checked = start.copy();
+	 checked.setTurn(WHITE);
+	 checked.setPiece(0, 4, null);
+	 checked.setPiece(3, 4, new Piece(WHITE, KING));
+	 checked.setPiece(6, 3, null);
+	 checked.setPiece(4, 3, new Piece(BLACK, PAWN));
+	 Move move = new Move (new Position(3, 4), new Position(4, 4), null);
+	 checked.setPiece(7, 7, null);
+	 checked.setPiece(7, 4, new Piece(BLACK, ROOK));
+	 stateChanger.makeMove(checked, move);	  	  
+  }
+  
+  @Test (expected = IllegalMove.class)
+  public void endangerByKnightAfterKingMove(){
+	 State checked = start.copy();
+	 checked.setTurn(WHITE);
+	 checked.setPiece(0, 4, null);
+	 checked.setPiece(3, 4, new Piece(WHITE, KING));
+	 checked.setPiece(6, 3, null);
+	 checked.setPiece(4, 3, new Piece(BLACK, PAWN));
+	 Move move = new Move (new Position(3, 4), new Position(4, 4), null);
+	 checked.setPiece(7, 6, null);
+	 checked.setPiece(5, 6, new Piece(BLACK, KNIGHT));
+	 stateChanger.makeMove(checked, move);	  	  
+  }
+  
+  @Test (expected = IllegalMove.class)
+  public void endangerByBishopAfterKingMove(){
+	 State checked = start.copy();
+	 checked.setTurn(WHITE);
+	 checked.setPiece(0, 4, null);
+	 checked.setPiece(3, 4, new Piece(WHITE, KING));
+	 checked.setPiece(6, 3, null);
+	 checked.setPiece(4, 3, new Piece(BLACK, PAWN));
+	 Move move = new Move (new Position(3, 4), new Position(4, 4), null);
+	 checked.setPiece(7, 5, null);
+	 checked.setPiece(5, 5, new Piece(BLACK, BISHOP));
+	 stateChanger.makeMove(checked, move);	  	  
+  }
+  
+  @Test (expected = IllegalMove.class)
+  public void endangerByQueenAfterKingMove(){
+	 State checked = start.copy();
+	 checked.setTurn(WHITE);
+	 checked.setPiece(0, 4, null);
+	 checked.setPiece(3, 4, new Piece(WHITE, KING));
+	 checked.setPiece(6, 3, null);
+	 checked.setPiece(4, 3, new Piece(BLACK, PAWN));
+	 Move move = new Move (new Position(3, 4), new Position(4, 4), null);
+	 checked.setPiece(7, 3, null);
+	 checked.setPiece(5, 4, new Piece(BLACK, QUEEN));
+	 stateChanger.makeMove(checked, move);	  	  
+  }
+  
+  @Test (expected = IllegalMove.class)
+  public void endangerByKingAfterKingMove(){
+	 State checked = start.copy();
+	 checked.setTurn(WHITE);
+	 checked.setPiece(0, 4, null);
+	 checked.setPiece(3, 4, new Piece(WHITE, KING));
+	 checked.setPiece(6, 3, null);
+	 checked.setPiece(4, 3, new Piece(BLACK, PAWN));
+	 Move move = new Move (new Position(3, 4), new Position(4, 4), null);
+	 checked.setPiece(7, 4, null);
+	 checked.setPiece(5, 4, new Piece(BLACK, KING));
+	 stateChanger.makeMove(checked, move);	  	  
+  }
+
+ @Test
+ public void escapeFromPawnBlack(){
+	 
+	 State checked = start.copy();
+	 for(int row = 0 ; row <= 7 ; row++){
+		 for(int col = 0 ; col <= 7 ; col++){
+			 checked.setPiece(row, col, null);
+		 }
+	 }
+	 checked.setPiece(3, 3, new Piece(WHITE, KING));
+	 checked.setPiece(4, 4, new Piece(BLACK, PAWN));
+	 checked.setPiece(7, 7, new Piece(BLACK, KING));
+	 checked.setTurn(WHITE);
+	 checked.setCanCastleKingSide(WHITE, false);
+	 checked.setCanCastleQueenSide(WHITE, false);
+	 checked.setNumberOfMovesWithoutCaptureNorPawnMoved(0);
+	 
+	 State escaped = checked.copy();
+	 escaped.setPiece(3, 3, null);
+	 escaped.setPiece(2, 3, new Piece(WHITE, KING));
+	 escaped.setTurn(BLACK);
+	 escaped.setCanCastleKingSide(WHITE, false);
+	 escaped.setCanCastleQueenSide(WHITE, false);
+	 escaped.setNumberOfMovesWithoutCaptureNorPawnMoved(1);
+	 
+	 Move move = new Move(new Position(3, 3), new Position(2, 3), null);
+	 stateChanger.makeMove(checked, move);
+	 
+	 assertEquals(checked,escaped);
+ }
+ 
+ @Test
+ public void escapeFromRookBlackCaptureKnightBlack(){
+	 
+	 State checked = start.copy();
+	 for(int row = 0 ; row <= 7 ; row++){
+		 for(int col = 0 ; col <= 7 ; col++){
+			 checked.setPiece(row, col, null);
+		 }
+	 }
+	 checked.setPiece(3, 3, new Piece(WHITE, KING));
+	 checked.setPiece(3, 0, new Piece(BLACK, ROOK));
+	 checked.setPiece(2, 3, new Piece(BLACK, KNIGHT));
+	 checked.setPiece(7, 7, new Piece(BLACK, KING));
+	 checked.setTurn(WHITE);
+	 checked.setCanCastleKingSide(WHITE, false);
+	 checked.setCanCastleQueenSide(WHITE, false);
+	 checked.setCanCastleKingSide(BLACK, false);
+	 checked.setCanCastleQueenSide(BLACK, false);
+	 checked.setNumberOfMovesWithoutCaptureNorPawnMoved(0);
+	 
+	 State escaped = checked.copy();
+	 escaped.setPiece(3, 3, null);
+	 escaped.setPiece(2, 3, new Piece(WHITE, KING));
+	 escaped.setTurn(BLACK);
+	 escaped.setNumberOfMovesWithoutCaptureNorPawnMoved(0);
+	 
+	 Move move = new Move(new Position(3, 3), new Position(2, 3), null);
+	 stateChanger.makeMove(checked, move);
+	 
+	 assertEquals(checked,escaped);
+ }
+
+ @Test (expected = IllegalMove.class)
+ public void tryToEscapeFromKnightBlackByCastlingQueenSide(){
+	 
+	 State checked = start.copy();
+	 for(int row = 0 ; row <= 7 ; row++){
+		 for(int col = 0 ; col <= 7 ; col++){
+			 checked.setPiece(row, col, null);
+		 }
+	 }
+	 checked.setPiece(0, 4, new Piece(WHITE, KING));
+	 checked.setPiece(0, 0, new Piece(WHITE, ROOK));
+	 checked.setPiece(1, 2, new Piece(BLACK, KNIGHT));
+	 checked.setPiece(7, 7, new Piece(BLACK, KING));
+	 checked.setTurn(WHITE);
+	 checked.setCanCastleKingSide(WHITE, true);
+	 checked.setCanCastleQueenSide(WHITE, true);
+	 checked.setNumberOfMovesWithoutCaptureNorPawnMoved(0);
+	 
+	 /*
+	 State escaped = checked.copy();
+	 escaped.setPiece(0, 4, null);
+	 escaped.setPiece(0, 2, new Piece(WHITE, KING));
+	 escaped.setPiece(0, 0, null);
+	 escaped.setPiece(0, 3, new Piece(WHITE, ROOK));
+	 escaped.setTurn(BLACK);
+	 escaped.setCanCastleKingSide(false);
+	 escaped.setCanCastleQueenSide(false);
+	 escaped.setNumberOfMovesWithoutCaptureNorPawnMoved(1);
+	 */
+	 
+	 Move moveKing = new Move(new Position(0, 4), new Position(0, 2), null);
+	 stateChanger.makeMove(checked, moveKing);
+	 
+	 
+ }
+  
+ @Test (expected = IllegalMove.class)
+ public void tryToEscapeFromBishopBlackByCastlingKingSide(){
+	 
+	 State checked = start.copy();
+	 for(int row = 0 ; row <= 7 ; row++){
+		 for(int col = 0 ; col <= 7 ; col++){
+			 checked.setPiece(row, col, null);
+		 }
+	 }
+	 checked.setPiece(0, 4, new Piece(WHITE, KING));
+	 checked.setPiece(0, 7, new Piece(WHITE, ROOK));
+	 checked.setPiece(2, 6, new Piece(BLACK, BISHOP));
+	 checked.setPiece(7, 7, new Piece(BLACK, KING));
+	 checked.setTurn(WHITE);
+	 checked.setCanCastleKingSide(WHITE, true);
+	 checked.setCanCastleQueenSide(WHITE, true);
+	 checked.setNumberOfMovesWithoutCaptureNorPawnMoved(0);
+	 
+	 /*
+	 State escaped = checked.copy();
+	 escaped.setPiece(0, 4, null);
+	 escaped.setPiece(0, 6, new Piece(WHITE, KING));
+	 escaped.setPiece(0, 7, null);
+	 escaped.setPiece(0, 5, new Piece(WHITE, ROOK));
+	 escaped.setTurn(BLACK);
+	 escaped.setCanCastleKingSide(false);
+	 escaped.setCanCastleQueenSide(false);
+	 escaped.setNumberOfMovesWithoutCaptureNorPawnMoved(1);
+	 */
+	 
+	 Move moveKing = new Move(new Position(0, 4), new Position(0, 6), null);
+	 stateChanger.makeMove(checked, moveKing);
+	 
+	 
+ }
+ 
+ @Test
+ public void escapeFromQueenBlackByCaptureIt(){
+	 
+	 State checked = start.copy();
+	 for(int row = 0 ; row <= 7 ; row++){
+		 for(int col = 0 ; col <= 7 ; col++){
+			 checked.setPiece(row, col, null);
+		 }
+	 }
+	 checked.setPiece(3, 3, new Piece(WHITE, KING));
+	 checked.setPiece(3, 0, new Piece(BLACK, QUEEN));
+	 checked.setPiece(0, 0, new Piece(WHITE, ROOK));
+	 checked.setPiece(7, 7, new Piece(BLACK, KING));
+	 checked.setTurn(WHITE);
+	 checked.setCanCastleKingSide(WHITE, false);
+	 checked.setCanCastleQueenSide(WHITE, false);
+	 checked.setNumberOfMovesWithoutCaptureNorPawnMoved(0);
+	 
+	 State escaped = checked.copy();
+	 escaped.setPiece(0, 0, null);
+	 escaped.setPiece(4, 3, new Piece(WHITE, ROOK));
+	 escaped.setTurn(BLACK);
+	 escaped.setCanCastleKingSide(WHITE, false);
+	 escaped.setCanCastleQueenSide(WHITE, false);
+	 escaped.setNumberOfMovesWithoutCaptureNorPawnMoved(0);
+	 
+	 Move move = new Move(new Position(0, 0), new Position(0, 3), null);
+	 stateChanger.makeMove(checked, move);
+	 
+	 assertEquals(checked,escaped);
+ }
+ 
+ @Test
+ public void escapeFromQueenBlackByMoveAPiceInTheCheckWay(){
+	 
+	 State checked = start.copy();
+	 for(int row = 0 ; row <= 7 ; row++){
+		 for(int col = 0 ; col <= 7 ; col++){
+			 checked.setPiece(row, col, null);
+		 }
+	 }
+	 checked.setPiece(3, 3, new Piece(WHITE, KING));
+	 checked.setPiece(3, 0, new Piece(BLACK, QUEEN));
+	 checked.setPiece(0, 5, new Piece(WHITE, BISHOP));
+	 checked.setPiece(7, 7, new Piece(BLACK, KING));
+	 checked.setTurn(WHITE);
+	 checked.setCanCastleKingSide(WHITE, false);
+	 checked.setCanCastleQueenSide(WHITE, false);
+	 checked.setNumberOfMovesWithoutCaptureNorPawnMoved(0);
+	 
+	 State escaped = checked.copy();
+	 escaped.setPiece(0, 5, null);
+	 escaped.setPiece(3, 2, new Piece(WHITE, BISHOP));
+	 escaped.setTurn(BLACK);
+	 escaped.setCanCastleKingSide(WHITE, false);
+	 escaped.setCanCastleQueenSide(WHITE, false);
+	 escaped.setNumberOfMovesWithoutCaptureNorPawnMoved(1);
+	 
+	 Move move = new Move(new Position(0, 5), new Position(3, 2), null);
+	 stateChanger.makeMove(checked, move);
+	 
+	 assertEquals(checked,escaped);
+ }
+ 
+ @Test(expected = IllegalMove.class)
+ public void tryToEscapeFromQueenBlackByMoveAPiceInTheCheckWayButEndangerByOther(){
+	 
+	 State checked = start.copy();
+	 for(int row = 0 ; row <= 7 ; row++){
+		 for(int col = 0 ; col <= 7 ; col++){
+			 checked.setPiece(row, col, null);
+		 }
+	 }
+	 checked.setPiece(3, 3, new Piece(WHITE, KING));
+	 checked.setPiece(3, 0, new Piece(BLACK, QUEEN));
+	 checked.setPiece(4, 3, new Piece(WHITE, KNIGHT));
+	 checked.setPiece(5, 3, new Piece(BLACK, ROOK));
+	 checked.setPiece(7, 7, new Piece(BLACK, KING));
+	 checked.setTurn(WHITE);
+	 checked.setCanCastleKingSide(WHITE, false);
+	 checked.setCanCastleQueenSide(WHITE, false);
+	 checked.setCanCastleKingSide(BLACK, false);
+	 checked.setCanCastleQueenSide(BLACK, false);
+	 checked.setNumberOfMovesWithoutCaptureNorPawnMoved(0);
+	 
+	 /*
+	 State escaped = checked.copy();
+	 escaped.setPiece(4, 3, null);
+	 escaped.setPiece(3, 1, new Piece(WHITE, KNIGHT));
+	 escaped.setTurn(BLACK);
+	 escaped.setNumberOfMovesWithoutCaptureNorPawnMoved(1);
+	 */
+	 
+	 Move move = new Move(new Position(4, 3), new Position(3, 1), null);
+	 stateChanger.makeMove(checked, move);
+	 
+ }
+ 
+ @Test
+ public void escapeFromQueenBlackByMoveAPiceInTheCheckWayAndPromoteToROOK(){
+	 
+	 State checked = start.copy();
+	 for(int row = 0 ; row <= 7 ; row++){
+		 for(int col = 0 ; col <= 7 ; col++){
+			 checked.setPiece(row, col, null);
+		 }
+	 }
+	 checked.setPiece(7, 3, new Piece(WHITE, KING));
+	 checked.setPiece(7, 0, new Piece(BLACK, QUEEN));
+	 checked.setPiece(6, 2, new Piece(WHITE, PAWN));
+	 checked.setPiece(7, 7, new Piece(BLACK, KING));
+	 checked.setTurn(WHITE);
+	 checked.setCanCastleKingSide(WHITE, false);
+	 checked.setCanCastleQueenSide(WHITE, false);
+	 checked.setNumberOfMovesWithoutCaptureNorPawnMoved(0);
+	 
+	 State escaped = checked.copy();
+	 escaped.setPiece(6, 2, null);
+	 escaped.setPiece(7, 2, new Piece(WHITE, ROOK));
+	 escaped.setTurn(BLACK);
+	 escaped.setCanCastleKingSide(WHITE, false);
+	 escaped.setCanCastleQueenSide(WHITE, false);
+	 escaped.setNumberOfMovesWithoutCaptureNorPawnMoved(0);
+	 
+	 Move move = new Move(new Position(6, 2), new Position(7, 2), ROOK);
+	 stateChanger.makeMove(checked, move);
+	 
+	 assertEquals(checked,escaped);
+ }
+ 
+}

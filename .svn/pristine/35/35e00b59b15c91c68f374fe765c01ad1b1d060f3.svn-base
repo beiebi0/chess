@@ -1,0 +1,853 @@
+package org.vorasahil.hw3;
+
+import org.vorasahil.hw2.StateChangerImpl;
+import org.vorasahil.hw2_5.StateExplorerImpl;
+import org.shared.chess.*;
+import org.vorasahil.hw9.*;
+import org.vorasahil.hw9.Timer;
+
+import static org.shared.chess.Color.*;
+import static org.shared.chess.PieceKind.*;
+
+import java.util.*;
+
+/**
+ * 
+ * @author Sahil Vora
+ * 
+ */
+public class Presenter {
+	public interface View {
+		/**
+		 * Renders the piece at this position. If piece is null then the
+		 * position is empty.
+		 */
+		void setPiece(int row, int col, Piece piece);
+
+		/**
+		 * Turns the highlighting on or off at this cell. Cells that can be
+		 * clicked should be highlighted.
+		 */
+		void setHighlighted(int row, int col, boolean highlighted);
+
+		/**
+		 * Sets Piece (on Piece board) to be highlighted or not.
+		 * 
+		 * @param highlighted
+		 */
+		void setPieceHighlighted(boolean highlighted);
+
+		void restartSound();
+
+		void moveSound();
+
+		void gameOverSound();
+
+		/**
+		 * Sets the Possible moves to be highlighted
+		 * 
+		 * @param row
+		 * @param col
+		 * @param highlighted
+		 */
+		void setToMoveHighlighted(int row, int col, boolean highlighted);
+
+		/**
+		 * Updates history
+		 * 
+		 * @param text
+		 */
+		// void updateHistory(String text);
+		void updateOtherPlayer(String text,GameResult gResult);
+
+		/**
+		 * Indicate whose turn it is.
+		 */
+		void setWhoseTurn(Color color);
+
+		/**
+		 * Indicate whether the game is in progress or over.
+		 */
+		void setGameResult(GameResult gameResult);
+
+		/**
+		 * Sets the game status.
+		 * 
+		 * @param text
+		 */
+		void setGameStatus(String text);
+
+		/**
+		 * Calls the animation function.
+		 * 
+		 * @param row
+		 * @param col
+		 * @param toRow
+		 * @param toCol
+		 */
+		void animate(int row, int col, int toRow, int toCol);
+
+	}
+
+	private boolean promotion = false; // if the move started is a promotion
+										// move
+	private PieceKind promote = null; // if the move is promotion move, then
+										// this PieceKind
+	private boolean moveStarted = false;// If a move has started
+	private int pos[];// Holds the position of the fromRow and fromCol
+	private View view;
+	private StateExplorerImpl stateExplorer = new StateExplorerImpl();
+	private StateChangerImpl stateChanger = new StateChangerImpl();
+	private State state = new State();
+	private Set<Move> set;
+
+	public void setView(View view) {
+		this.view = view;
+	}
+
+	/**
+	 * Starts the game.
+	 */
+	public void start(String token) {
+
+		if (token.equals(""))
+			state = new State();
+		else
+			state = deSerialize(token);
+		promotion = false;
+		promote = null;
+		moveStarted = false;
+		pos = null;
+		set = null;
+		view.setGameStatus("Lets play Chesss! ");
+		setState(state, null);
+	}
+
+	/**
+	 * Restarts the game.
+	 */
+	public void reStart() {
+		view.restartSound();
+		State copy = state.copy();
+		state = new State();
+		promotion = false;
+		promote = null;
+		moveStarted = false;
+		if (pos != null) {
+			view.setHighlighted(pos[0], pos[1], false);
+		}
+		if (set != null) {
+			for (Move m : set) {
+				view.setToMoveHighlighted(m.getTo().getRow(), m.getTo()
+						.getCol(), false);
+			}
+		}
+		pos = null;
+		set = null;
+		view.setPieceHighlighted(false);
+		view.setGameStatus("Game Restarted. ");
+		setState(state, copy);
+	}
+
+	/**
+	 * Sets the state and calls the appropriate methods of the view instance.
+	 * Efficiency is improved as only the positions which are out of place are
+	 * set (for the State state as compared to the State old).
+	 * 
+	 * @param state
+	 * @param old
+	 */
+	public void setState(State state, State old) {
+		/*
+		 * if(enableHistory){ view.updateHistory(seriaLize(state)); }
+		 */
+		view.setWhoseTurn(state.getTurn());
+		if (state.getGameResult() != null) {
+			view.setGameResult(state.getGameResult());
+			view.gameOverSound();
+		}
+		if (old == null) {
+			setState(state);
+		} else {
+			for (int r = 0; r < 8; r++) {
+				for (int c = 0; c < 8; c++) {
+					boolean valid = true;
+					if (old.getPiece(r, c) == null
+							&& state.getPiece(r, c) == null)
+						valid = false;
+					if (valid
+							&& (old.getPiece(r, c) == null || state.getPiece(r,
+									c) == null)) {
+						view.setPiece(r, c, state.getPiece(r, c));
+						view.setHighlighted(r, c, false);
+					} else if (valid
+							&& !(old.getPiece(r, c)
+									.equals(state.getPiece(r, c)))) {
+						view.setHighlighted(r, c, false);
+						view.setPiece(r, c, state.getPiece(r, c));
+					}
+				}
+			}
+
+			/*
+			 * if(change){ view.updateOtherPlayer(seriaLize(state)); }
+			 */
+		}
+		if (set != null) {
+			for (Move m : set) {
+				view.setToMoveHighlighted(m.getTo().getRow(), m.getTo()
+						.getCol(), false);
+			}
+		}
+		set = null;
+	}
+
+	/**
+	 * Called by the History value changed method. It calls the setState(State
+	 * state, State old) method, changing the view.
+	 * 
+	 * @param token
+	 */
+	public void setState(String token) {
+		State c;
+		if (token.isEmpty()) {
+			c = new State();
+		} else {
+			c = deSerialize(token);
+		}
+		if (c != null) {
+			promotion = false;
+			promote = null;
+			moveStarted = false;
+			if (pos != null) {
+				view.setHighlighted(pos[0], pos[1], false);
+			}
+			pos = null;
+			State copy = state.copy();
+			state = c.copy();
+			setState(state, copy);
+		}
+
+	}
+
+	/**
+	 * Sets the state and sets the entire board.
+	 * 
+	 * @param state
+	 */
+	public void setState(State state) {
+		for (int r = 0; r < 8; r++) {
+			for (int c = 0; c < 8; c++) {
+				view.setPiece(r, c, state.getPiece(r, c));
+				view.setHighlighted(r, c, false);
+			}
+		}
+	}
+
+	boolean canMove = true;
+
+	void enableMove() {
+		canMove = true;
+	}
+
+	String getNewState() {
+		return seriaLize(new State());
+	}
+
+	void disableMove() {
+		canMove = false;
+	}
+
+	/**
+	 * Select cell manages the click events for the ChessBoard.
+	 * 
+	 * @param row
+	 * @param col
+	 */
+	public void selectCell(int row, int col) {
+		if (canMove) {
+			Move moveToAnimate = null;
+			if (!promotion) {
+				if (!moveStarted) {
+					pos = new int[2];
+					pos[0] = row;
+					pos[1] = col;
+					if (state.getPiece(row, col) != null) {
+						set = stateExplorer.getPossibleMovesFromPosition(state,
+								new Position(row, col));
+						List<Position> p = new ArrayList<Position>();
+						if (set.size() > 0) {
+							view.moveSound();
+							for (Move m : set) {
+								view.setToMoveHighlighted(m.getTo().getRow(), m
+										.getTo().getCol(), true);
+								p.add(m.getTo());
+								if (m.getPromoteToPiece() != null) {
+									promotion = true;
+								}
+							}
+							if (!promotion) {
+								view.setGameStatus("(" + row + "," + col
+										+ ") Selected. Possible Moves: " + p);
+								view.setHighlighted(row, col, true);
+								moveStarted = true;
+							} else {
+								view.setHighlighted(row, col, true);
+
+								view.setGameStatus("("
+										+ row
+										+ ","
+										+ col
+										+ ") Selected. Select which Piece to Promote to BELOW");
+
+								view.setPieceHighlighted(true);
+								moveStarted = true;
+							}
+						} else {
+							view.setGameStatus("("
+									+ row
+									+ ","
+									+ col
+									+ ") Selected. No Possible Moves, Select Something else");
+						}
+					}
+
+					else {
+						view.setGameStatus("("
+								+ row
+								+ ","
+								+ col
+								+ ") Selected. No Possible Moves, Select Something else");
+					}
+				}
+
+				else {
+					view.moveSound();
+					if (row == pos[0] && col == pos[1]) {
+						view.setGameStatus("(" + row + "," + col
+								+ ") De-Selected. Make another MOVE.");
+						view.setHighlighted(row, col, false);
+					} else {
+						State copy = state.copy();
+						boolean valid = true;
+						Move move = new Move(new Position(pos[0], pos[1]),
+								new Position(row, col), promote);
+						try {
+							stateChanger.makeMove(state, move);
+						} catch (Exception e) {
+							valid = false;
+						}
+						if (valid) {
+
+							moveToAnimate = move;
+							view.setGameStatus(move.toString() + " PLAYED");
+							setState(state, copy);
+							GameResult gState=state.getGameResult();
+							view.updateOtherPlayer(seriaLize(state),gState);
+							moveToAnimate = move;
+						} else {
+							state = copy.copy();
+							view.setGameStatus("INVALID MOVE: "
+									+ move.toString());
+						}
+					}
+					if (pos != null)
+						view.setHighlighted(pos[0], pos[1], false);
+
+					if (set != null) {
+						for (Move m : set) {
+							view.setToMoveHighlighted(m.getTo().getRow(), m
+									.getTo().getCol(), false);
+						}
+					}
+
+					set = null;
+					promote = null;
+					pos = null;
+					moveStarted = false;
+				}
+
+			}
+			if (moveToAnimate != null) {
+				view.animate(moveToAnimate.getFrom().getRow(), moveToAnimate
+						.getFrom().getCol(), moveToAnimate.getTo().getRow(),
+						moveToAnimate.getTo().getCol());
+			}
+		}
+	}
+
+	/**
+	 * This manages the click event on the Piece Board.
+	 * 
+	 * @param col
+	 */
+	public void selectCell(int col) {
+		if (promotion) {
+			switch (col) {
+			case 0:
+				promote = PieceKind.BISHOP;
+				break;
+			case 1:
+				promote = PieceKind.KNIGHT;
+				break;
+			case 2:
+				promote = PieceKind.ROOK;
+				break;
+			case 3:
+				promote = PieceKind.QUEEN;
+				break;
+			}
+			view.setGameStatus(promote + " Selected!");
+			view.setPieceHighlighted(false);
+			promotion = false;
+		}
+	}
+
+	/**
+	 * Getter method
+	 * 
+	 * @return
+	 */
+	public boolean isPromotion() {
+		return promotion;
+	}
+
+	/**
+	 * Setter method
+	 * 
+	 * @param promotion
+	 */
+	public void setPromotion(boolean promotion) {
+		this.promotion = promotion;
+	}
+
+	/**
+	 * Getter method
+	 * 
+	 * @return
+	 */
+	public PieceKind getPromote() {
+		return promote;
+	}
+
+	/**
+	 * Setter method
+	 * 
+	 * @param promotion
+	 */
+
+	public void setPromote(PieceKind promote) {
+		this.promote = promote;
+	}
+
+	/**
+	 * Getter method
+	 * 
+	 * @return
+	 */
+	public boolean isMoveStarted() {
+		return moveStarted;
+	}
+
+	/**
+	 * Setter method
+	 * 
+	 * @param promotion
+	 */
+	public void setMoveStarted(boolean moveStarted) {
+		this.moveStarted = moveStarted;
+	}
+
+	/**
+	 * Getter method
+	 * 
+	 * @return
+	 */
+	public int[] getPos() {
+		return pos;
+	}
+
+	/**
+	 * Setter method
+	 * 
+	 * @param promotion
+	 */
+	public void setPos(int[] pos) {
+		this.pos = pos;
+	}
+
+	/**
+	 * Getter method
+	 * 
+	 * @return
+	 */
+	public State getState() {
+		return state;
+	}
+
+	/**
+	 * Setter method
+	 * 
+	 * @param promotion
+	 */
+	public void setStateCopy(State state) {
+		this.state = state;
+	}
+
+	/**
+	 * Checks if the string represents a game that has ended or not.
+	 * 
+	 * @param st
+	 * @return 0:Game has not ended. 1:Game has ended and is a draw by
+	 *         FIFTY_MOVE_RULE, 2:Game has ended and is a draw by
+	 *         THREEFOLD_REPETITION_RULE 3:Game has ended and is a draw by
+	 *         STALEMATE 4:Game has ended and white won the game. 5:Game has
+	 *         ended and black won the game.
+	 */
+	public int hasGameEnded(String st) {
+		State gState = deSerialize(st);
+		GameResult gResult = gState.getGameResult();
+		if (gResult == null)
+			return 0;
+		else {
+			GameResultReason gReason = gResult.getGameResultReason();
+			switch (gReason) {
+			case CHECKMATE:
+				if (gResult.getWinner().equals(WHITE)) {
+					return 4;
+				} else {
+					return 5;
+				}
+			case FIFTY_MOVE_RULE:
+				return 1;
+			case STALEMATE:
+				return 2;
+			case THREEFOLD_REPETITION_RULE:
+				return 3;
+			default:
+				return -1;
+			}
+		}
+	}
+
+	/**
+	 * Serializes the state and returns a string value.
+	 * 
+	 * @param state
+	 * @return
+	 */
+	public String seriaLize(State state) {
+		StringBuilder sb = new StringBuilder();
+		// turn
+		char turn = state.getTurn().equals(WHITE) ? 'w' : 'b';
+		sb.append("" + turn + '#');
+		sb.append(getBoardString(state) + "#");
+		sb.append(getCanCastleString(state) + "#");
+		sb.append(getEnPassantString(state) + "#");
+		sb.append(getCapturOrPawnMovedString(state) + "#");
+		sb.append(getGameResultString(state) + "#");
+		return sb.toString();
+	}
+
+	/**
+	 * Deserializes the string and returns a valid state.
+	 * 
+	 * @param string
+	 * @return
+	 */
+	public State deSerialize(String string) {
+		State start = null;
+		String[] token = string.split("#");
+		if (token.length != 6)
+			return start;
+
+		Color turn = token[0].equals("w") ? WHITE : BLACK;
+
+		Piece[][] board = getBoard(token[1]);
+		boolean[] whitecc = getCC(WHITE, token[2]);
+		boolean[] blackcc = getCC(BLACK, token[2]);
+		Position enp = getEnp(token[3]);
+		int num = Integer.parseInt(token[4]);
+		GameResult gr = getGR(token[5]);
+		start = new State(turn, board, whitecc, blackcc, enp, num, gr);
+		return start;
+	}
+
+	/**
+	 * Deserializer for Game Result
+	 * 
+	 * @param string
+	 * @return
+	 */
+	private GameResult getGR(String string) {
+		GameResult gr = null;
+		int n = Integer.parseInt(string);
+		switch (n) {
+		case 1:
+			gr = new GameResult(WHITE, GameResultReason.CHECKMATE);
+			break;
+		case 2:
+			gr = new GameResult(BLACK, GameResultReason.CHECKMATE);
+			break;
+		case 3:
+			gr = new GameResult(null, GameResultReason.FIFTY_MOVE_RULE);
+			break;
+		case 4:
+			gr = new GameResult(null, GameResultReason.STALEMATE);
+			break;
+		case 5:
+			gr = new GameResult(null,
+					GameResultReason.THREEFOLD_REPETITION_RULE);
+			break;
+		default:
+			break;
+		}
+
+		return gr;
+	}
+
+	/**
+	 * Deserializer for Board
+	 * 
+	 * @param string
+	 * @return
+	 */
+	private Piece[][] getBoard(String string) {
+		Piece[][] board = new Piece[8][8];
+		String[] pos = string.split(";");
+		for (int i = 0; i < pos.length; i++) {
+			char p = pos[i].charAt(0);
+			int r = Integer.parseInt("" + pos[i].charAt(1));
+			int c = Integer.parseInt("" + pos[i].charAt(2));
+			switch (p) {
+			case 'b':
+				board[r][c] = new Piece(WHITE, BISHOP);
+				break;
+			case 'B':
+				board[r][c] = new Piece(BLACK, BISHOP);
+				break;
+			case 'n':
+				board[r][c] = new Piece(WHITE, KNIGHT);
+				break;
+			case 'N':
+				board[r][c] = new Piece(BLACK, KNIGHT);
+				break;
+			case 'q':
+				board[r][c] = new Piece(WHITE, QUEEN);
+				break;
+			case 'Q':
+				board[r][c] = new Piece(BLACK, QUEEN);
+				break;
+			case 'r':
+				board[r][c] = new Piece(WHITE, ROOK);
+				break;
+			case 'R':
+				board[r][c] = new Piece(BLACK, ROOK);
+				break;
+			case 'k':
+				board[r][c] = new Piece(WHITE, KING);
+				break;
+			case 'K':
+				board[r][c] = new Piece(BLACK, KING);
+				break;
+			case 'p':
+				board[r][c] = new Piece(WHITE, PAWN);
+				break;
+			case 'P':
+				board[r][c] = new Piece(BLACK, PAWN);
+				break;
+			}
+		}
+		return board;
+	}
+
+	/**
+	 * Deserializer for Enpassant Position
+	 * 
+	 * @param string
+	 * @return
+	 */
+	private Position getEnp(String string) {
+		if (string.equals("null"))
+			return null;
+		else
+			return new Position(Integer.parseInt(string.charAt(0) + ""),
+					Integer.parseInt(string.charAt(1) + ""));
+	}
+
+	/**
+	 * Deserializer for Can Castle Variables
+	 * 
+	 * @param white
+	 * @param string
+	 * @return
+	 */
+	private boolean[] getCC(Color white, String string) {
+		boolean[] cc = new boolean[2];
+		if (white.equals(WHITE)) {
+			cc[0] = string.charAt(1) == '1';
+
+			cc[1] = string.charAt(3) == '1';
+		} else {
+			cc[0] = string.charAt(0) == '1';
+
+			cc[1] = string.charAt(2) == '1';
+		}
+
+		return cc;
+	}
+
+	/**
+	 * Serializer for Game Result
+	 * 
+	 * @param state
+	 * @return
+	 */
+	private String getGameResultString(State state) {
+		StringBuilder sb = new StringBuilder();
+		GameResult x = state.getGameResult();
+		if (x == null) {
+			sb.append("0");
+		} else {
+			int n = 0;
+			switch (x.getGameResultReason()) {
+			case CHECKMATE:
+				n = x.getWinner().equals(WHITE) ? 1 : 2;
+				break;
+			case FIFTY_MOVE_RULE:
+				n = 3;
+				break;
+			case STALEMATE:
+				n = 4;
+				break;
+			case THREEFOLD_REPETITION_RULE:
+				n = 5;
+				break;
+			default:
+				break;
+			}
+			sb.append("" + n);
+		}
+		return sb.toString();
+	}
+
+	/**
+	 * Serializer for CaptureOrPawnMoved
+	 * 
+	 * @param state
+	 * @return
+	 */
+	private String getCapturOrPawnMovedString(State state) {
+		StringBuilder sb = new StringBuilder();
+		int x = state.getNumberOfMovesWithoutCaptureNorPawnMoved();
+		sb.append("" + x);
+		return sb.toString();
+	}
+
+	/**
+	 * Serializer for Can Castle strings
+	 * 
+	 * @param state
+	 * @return
+	 */
+	private String getCanCastleString(State state) {
+		StringBuilder sb = new StringBuilder();
+		int x = 0;
+		x = state.isCanCastleQueenSide(WHITE) ? 1 : 0;
+		sb.append("" + x);
+		x = state.isCanCastleKingSide(WHITE) ? 1 : 0;
+		sb.append("" + x);
+		x = state.isCanCastleQueenSide(BLACK) ? 1 : 0;
+		sb.append("" + x);
+		x = state.isCanCastleKingSide(BLACK) ? 1 : 0;
+		sb.append("" + x);
+
+		return sb.toString();
+	}
+
+	/**
+	 * Serializer for Enpassant Position
+	 * 
+	 * @param state
+	 * @return
+	 */
+	private String getEnPassantString(State state) {
+		StringBuilder sb = new StringBuilder();
+		Position x;
+		x = state.getEnpassantPosition();
+		if (x != null) {
+			sb.append(("" + x.getRow()) + ("" + x.getCol()));
+		} else {
+			sb.append("null");
+		}
+		return sb.toString();
+	}
+
+	/**
+	 * Serializer for Board
+	 * 
+	 * @param state
+	 * @return
+	 */
+	private String getBoardString(State state) {
+		StringBuilder sb = new StringBuilder();
+		// board
+		for (int i = 0; i < 8; i++) {
+			for (int j = 0; j < 8; j++) {
+				Piece piece = state.getPiece(i, j);
+				if (piece != null) {
+					char kind = ' ';
+					int color = piece.getColor().equals(WHITE) ? 0 : -32;
+					switch (piece.getKind()) {
+					case BISHOP:
+						kind = ((char) ((int) 'b' + color));
+						break;
+					case KING:
+						kind = ((char) ((int) 'k' + color));
+						break;
+					case KNIGHT:
+						kind = ((char) ((int) 'n' + color));
+						break;
+					case PAWN:
+						kind = ((char) ((int) 'p' + color));
+						break;
+					case QUEEN:
+						kind = ((char) ((int) 'q' + color));
+						break;
+					case ROOK:
+						kind = ((char) ((int) 'r' + color));
+						break;
+					default:
+						break;
+					}
+					sb.append(kind + ("" + i) + ("" + j) + ";");
+				}
+			}
+		}
+		return sb.toString();
+	}
+
+	Heuristic heuristic = new Heuristic();
+	AlphaBetaPruning abp = new AlphaBetaPruning(heuristic);
+	
+	void makeAIMove(String stateString){
+		System.out.println("In makeAIMove");
+		Move move=abp.findBestMove(deSerialize(stateString),4,new Timer(3000));
+		boolean valid=true;
+		State copy=state.copy();
+		try {
+			stateChanger.makeMove(state, move);
+		} catch (Exception e) {
+			valid = false;
+		}
+		if (valid) {
+			setState(state, copy);
+			GameResult gState=state.getGameResult();
+			view.updateOtherPlayer(seriaLize(state),gState);
+		} else {
+			state = copy.copy();
+			view.setGameStatus("AI ERROR");
+		}
+	}
+	
+}

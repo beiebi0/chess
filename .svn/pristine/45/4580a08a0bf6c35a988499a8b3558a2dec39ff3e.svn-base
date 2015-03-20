@@ -1,0 +1,18 @@
+package org.kuangchelee.hw8;
+
+//import java.util.Date;
+
+import com.google.gwt.i18n.client.Messages;
+
+public interface ChessMessages extends Messages{
+	@DefaultMessage("Welcome back! You''re logged in as {0}!")
+	String loggInAs(String UID);
+	@DefaultMessage("Successfully created a match with {0}!")
+	String createMatchWith(String UID);
+	@DefaultMessage("Start Date : {0}")
+	String startDate(String date);
+	@DefaultMessage("Rating: {0}, RD: {1}")
+	String rating(int rating, int rd);
+	@DefaultMessage("Winner = {0}, Reason = {1}")
+	String gameresult(String winner, String reason);
+}

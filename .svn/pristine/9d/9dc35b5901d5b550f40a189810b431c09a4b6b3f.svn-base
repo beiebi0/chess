@@ -1,0 +1,29 @@
+<!DOCTYPE ui:UiBinder SYSTEM "http://dl.google.com/gwt/DTD/xhtml.ent">
+<ui:UiBinder xmlns:ui="urn:ui:com.google.gwt.uibinder"
+	xmlns:g="urn:import:com.google.gwt.user.client.ui">
+	<ui:style field="css" type="org.chenji.hw6.GameCss">
+		.highlighted {
+			outline: dotted green 2px;
+		}
+		.selected {
+      background-color:yellow !important;
+	  }
+		.mouseOver {
+      background-color:yellow !important;
+		}
+		
+		td img {
+			display: block
+		}
+	</ui:style>
+	<g:HTMLPanel>
+    <g:Label ui:field="playerStatus" text="" />
+		<g:Label ui:field="gameStatus" text="Status" />
+		<g:AbsolutePanel ui:field="gamePanel">
+			<g:Grid ui:field="boardGrid" />
+		</g:AbsolutePanel>
+    <g:Grid ui:field="promotion"/>
+		<p/>
+		<g:Button ui:field="restart">restart</g:Button>
+	</g:HTMLPanel>
+</ui:UiBinder> 

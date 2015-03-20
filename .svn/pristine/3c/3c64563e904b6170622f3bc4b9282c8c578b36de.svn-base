@@ -1,0 +1,99 @@
+package org.mengyanhuang.hw2_5;
+
+import java.util.HashSet;
+import java.util.Set;
+
+import org.mengyanhuang.hw2.StateChangerImpl;
+import org.shared.chess.Color;
+import org.shared.chess.Move;
+import org.shared.chess.Piece;
+import org.shared.chess.PieceKind;
+import org.shared.chess.Position;
+import org.shared.chess.State;
+import org.shared.chess.StateExplorer;
+
+public class StateExplorerImpl implements StateExplorer {
+
+	  StateChangerImpl statechanger = new StateChangerImpl();
+	
+	  @Override
+	  public Set<Move> getPossibleMoves(State state) {
+	    // TODO
+		if (state.getGameResult() != null) return new HashSet<Move>();
+		Set<Move> all_moves = new HashSet<Move>();
+		for(int i = 0; i < 8; i++)
+			for(int j = 0; j < 8; j++){
+				if(state.getPiece(new Position(i,j))!=null 
+						&& state.getPiece(new Position(i,j)).getColor() == state.getTurn())
+					all_moves.addAll(getPossibleMovesFromPosition(state, new Position(i,j)));
+			}
+	    return all_moves;
+	  }
+
+	  @Override
+	  public Set<Move> getPossibleMovesFromPosition(State state, Position start) {
+	    // TODO
+		if(statechanger.isOnBoard(start)==false)
+			return new HashSet<Move>();
+		if(state.getPiece(start)==null)
+			return new HashSet<Move>();
+		Set<Move> moves = new HashSet<Move>();
+		Set<Position> poses = statechanger.canReachPositions(state, start);
+		//State state_copy = state.copy();
+		PieceKind[] promote_kinds = {PieceKind.QUEEN, PieceKind.KNIGHT, PieceKind.ROOK, PieceKind.BISHOP};
+		
+		if(state.getPiece(start).getKind() == PieceKind.PAWN 
+				&& state.getPiece(start).getColor()== Color.BLACK 
+				&& start.getRow() == 1){
+			for(Position pos : poses){
+			    for(int i = 0; i < 4; i++){
+			    	State state_copy = state.copy();
+				    Move move = new Move(start, pos, promote_kinds[i]);
+				    Piece piece = state.getPiece(start);
+					state_copy.setPiece(pos, piece);
+					state_copy.setPiece(start, null);
+				    if(!statechanger.isUnderAttack(state_copy, statechanger.getKingPosition(state_copy, Color.BLACK), Color.BLACK)){
+				       moves.add(move);}
+			    }
+			}
+		}else if(state.getPiece(start).getKind() == PieceKind.PAWN 
+				&& state.getPiece(start).getColor()== Color.WHITE 
+				&& start.getRow() == 6){
+			for(Position pos : poses){
+			    for(int i = 0; i < 4; i++){
+			    	State state_copy = state.copy();
+				    Move move = new Move(start, pos, promote_kinds[i]);
+				    Piece piece = state.getPiece(start);
+					state_copy.setPiece(pos, piece);
+					state_copy.setPiece(start, null);
+				    if(!statechanger.isUnderAttack(state_copy, statechanger.getKingPosition(state_copy, Color.WHITE), Color.WHITE)){
+				       moves.add(move);}
+			    }
+			}
+		}else{
+			for(Position pos : poses){
+				State state_copy = state.copy();
+			    Move move = new Move(start, pos, null);
+			    Piece piece = state.getPiece(start);
+				state_copy.setPiece(pos, piece);
+				state_copy.setPiece(start, null);
+			    if(!statechanger.isUnderAttack(state_copy, statechanger.getKingPosition(state_copy, state_copy.getTurn()), state_copy.getTurn())){
+			       moves.add(move);}
+		    } 
+		}
+	    return moves;
+	  }
+
+	  @Override
+	  public Set<Position> getPossibleStartPositions(State state) {
+	    // TODO
+		if (state.getGameResult() != null) return new HashSet<Position>();
+		Set<Move> all_moves = getPossibleMoves(state);
+		Set<Position> all_positions = new HashSet<Position>();
+		
+		for(Move move : all_moves){
+			all_positions.add(move.getFrom());
+		}
+	    return all_positions;
+	  }
+	}

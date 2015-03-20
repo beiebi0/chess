@@ -1,0 +1,27 @@
+package org.sanjana.hw7;
+
+import java.util.ArrayList;
+
+import org.sanjana.hw6.LoginDetails;
+import org.shared.chess.Color;
+
+import com.google.gwt.user.client.rpc.RemoteService;
+import com.google.gwt.user.client.rpc.RemoteServiceRelativePath;
+
+@RemoteServiceRelativePath("multiplayer")
+public interface MultiplayerChessService extends RemoteService{
+
+	public String match();
+	public void removeMatch(Long matchID);
+	public void sendMove(Long matchID, String moveString);
+	public String automatch();
+	public void cancelAutoMatch();
+	public Boolean emailMatch(String email);
+	public ArrayList<String> loadAllMatches(LoginDetails user);
+	public String getMatch(Long matchId);
+	public void UpdateRank(Long matchID, String stateString);
+	void addToken(String token);
+	public String AIMatch(Color whichColor);
+	public String makeAIMove(Long matchId,String state);
+	public Match getGame(Long id); 
+}

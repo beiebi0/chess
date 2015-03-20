@@ -1,0 +1,5 @@
+loggInAs = 歡迎回來，{0}!
+createMatchWith = 成功與{0}開啟新遊戲!
+startDate = 遊戲開始時間：{0}
+rating = 積分：{0}, 積分差：{1}
+gameresult = 贏家 = {0}, 原因 = {1}
